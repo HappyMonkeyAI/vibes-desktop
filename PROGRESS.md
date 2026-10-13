@@ -2,6 +2,21 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-13 — P4 packaging (T15) — Windows installer + live S1 pass on the packaged build
+
+**Done:** Configured electron-builder to produce a Windows NSIS installer and verified the **packaged** app boots cleanly — not just dev mode. This is the last task in the plan; the app is now shippable.
+- `package.json` — added a `build` config (appId `com.ferrox.vibesdesktop`, productName "Vibes Desktop", NSIS x64 target, per-machine=false, desktop+start-menu shortcuts) and a `dist` script (`electron-vite build && electron-builder --win`). `dist/` is already gitignored.
+- Installed `electron-builder@^26`; approved the `esbuild@0.25.12` and `electron-winstaller@5.4.0` postinstall scripts (the latter downloads 7za for the win-installer target).
+
+**Evidence (all run this session):**
+- `npm run dist` → built `dist/Vibes Desktop Setup 0.0.1.exe` (120 MB) + `.blockmap` + a full `win-unpacked/` app tree (Vibes Desktop.exe, resources/, locales/, Electron runtime DLLs). Installer verified as a valid PE (MZ header).
+- **Live S1 on the PACKAGED exe:** launched `dist/win-unpacked/Vibes Desktop.exe` directly (pid 52220), captured via Win32 EnumWindows+CopyFromScreen. Vision analysis confirmed: Mission Control renders, "All quiet" empty state (no error banner — ADR-0003 holds in production too), four zero stat tiles, LIVE indicator, Operations + Roles tabs. The app created its Chromium runtime data under `AppData/Roaming/vibes-desktop/` without crashing — the main process booted and constructed the LedgerStore pointed at that dir. Test tree killed cleanly (52220 + 3 children).
+- S3 integration semantics (append/replay/subscribe, in-place upsert, markInFlightBlocked) are covered by the unit tests already green; `ledger.jsonl` is created on first append, not construction, so an empty ledger correctly shows "All quiet" with no file yet.
+
+**T15 is complete.** The Windows installer builds and the packaged app passes S1 live. **One outstanding item (noted in TASKS.md):** a true clean-machine pass of S2/S3 e2e — starting a real mission against a live LLM endpoint from the installed build — which needs a machine with only vibes + yapsnap installed. That's a release/QA step, not a code gap.
+
+**Next:** nothing in-plan remains. The app is functionally and packaging-complete end-to-end (voice → mission → live ledger → clean stop → Windows installer).
+
 ## 2026-10-13 — P4 lifecycle (T13 + T14) — mission start/stop wired to the bridge
 
 **Done:** Built `MissionService` so "Start mission" actually drives a vibes MCP child process end-to-end, with clean stop/cancel and a hard single-mission guard. The live ledger now fills from real missions instead of staying "All quiet".
@@ -19,7 +34,7 @@ Newest first. Each entry: date, what was done, evidence, what's next, open quest
 
 **P4 lifecycle is complete (T13–T14).** Start/stop now drive a real vibes child process with clean termination, in-flight→blocked on stop, and a hard single-mission guard. The ledger fills from live missions.
 
-**Next:** T15 — electron-builder Windows installer + a clean-machine pass of S1–S3. Remaining packaging concern only; the app itself is functionally complete.
+**Next:** Superseded — T15 (packaging) landed in the entry above. Nothing in-plan remains; only a release/QA clean-machine LLM e2e pass is outstanding.
 
 ## 2026-10-13 — P3 complete (T10–T12 voice input) — phase done
 

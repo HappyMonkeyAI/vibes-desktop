@@ -56,3 +56,9 @@ Lessons learned while building Vibes Desktop. Imperative rules with the why; one
 - On stop/cancel, rewrite in-flight tasks (`running`/`verifying`, source `vibes-mission`) to `blocked` **in place** (same id) so the renderer's upsert replaces the row instead of duplicating it. Return the blocked count.
 - Depend on a minimal structural bridge interface (`on`, `start`, `planMission`, `executePlanned`, `stop`) rather than the full class — tests inject a fake without implementing `client`/`queryStatus`. The real bridge satisfies it structurally.
 - Write `.vibes/config.json` from the roles store **before each spawn** (the child reads its per-role endpoints from that file, not env). Fall back to a known checkout path when VIBES_PATH is unset — dev convenience only; packaging sets it explicitly.
+
+## Packaging (T15)
+
+- electron-builder needs its postinstall scripts approved on this machine: `esbuild` (binary download) **and** `electron-winstaller` (downloads 7za for the win-installer target). Run `npm install-scripts approve <pkg>` for both after any install that pulls them, or the build fails to find the binary.
+- Build a Windows NSIS installer with a `dist` script (`electron-vite build && electron-builder --win`) and a `build` config in package.json (appId, productName, `win.target` = nsis/x64, `files: ["out/**/*", "package.json"]`). Output lands in `dist/` (already gitignored). The installer is a valid PE — verify the MZ header before claiming success.
+- Verify the **packaged** app, not just dev mode: launch `dist/win-unpacked/<Product>.exe` directly and capture via Win32 EnumWindows+CopyFromScreen. S1 ("All quiet", no error banner) must hold in production too — the Arco/React 19 shim and ADR-0003 are only proven when the bundled build boots clean.
