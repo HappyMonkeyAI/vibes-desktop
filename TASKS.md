@@ -3,8 +3,8 @@
 Status: `todo` → `doing` → `review` → `done`. One task per line; evidence links in PROGRESS.md.
 
 ## P0 — Scaffold
-- [ ] T1 Electron + Vite + React skeleton with three-process boundaries (main/preload/renderer) and a contextBridge channel map — SPEC S7
-- [ ] T2 Local quality gates: vitest config, typecheck script, `npm test` / `npm run typecheck` / `npm run build` working — SPEC S7
+- [x] T1 Electron + Vite + React skeleton with three-process boundaries (main/preload/renderer) and a contextBridge channel map — SPEC S7 ✅ 2026-10-13
+- [x] T2 Local quality gates: vitest config, typecheck script, `npm test` / `npm run typecheck` / `npm run build` working — SPEC S7 ✅ 2026-10-13 (8/8 tests green)
 
 ## P1 — Bridge + Ledger
 - [ ] T3 JSON-RPC stdio transport (request/response + notifications, timeout, crash detection) — SPEC S2
