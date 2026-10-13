@@ -59,8 +59,11 @@ export class JsonRpcClient extends EventEmitter {
       }
     });
 
-    proc.on('error', (err: Error) => {
-      this.rejectAll(new Error(`child process spawn error: ${err.message}`));
+    proc.on('error', (err: Error & { code?: string }) => {
+      const friendly = err.code === 'ENOENT'
+        ? `child interpreter not found on PATH (${(proc as unknown as { spawnfile?: string }).spawnfile ?? 'tsx'}) — install it or fix vibesPath`
+        : `child process spawn error: ${err.message}`;
+      this.rejectAll(new Error(friendly));
       this.emit('error', err);
     });
 

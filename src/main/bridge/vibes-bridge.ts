@@ -88,6 +88,10 @@ export class VibesBridge extends EventEmitter {
       this.emit('log', line);
     });
     this.client.on('exit', (code: number | null) => this.emit('exit', code));
+    // A child 'error' with no listener is an uncaught exception that kills the
+    // main process (spec S2 violation). Swallow it here — pending requests are
+    // already rejected by the client and surface as a failed mission.
+    this.client.on('error', () => {});
   }
 
   get isRunning(): boolean {
@@ -101,14 +105,31 @@ export class VibesBridge extends EventEmitter {
       throw new Error(`vibes checkout not found: ${serverScript} missing. Set vibesPath to a vibes repo.`);
     }
 
-    // Prefer the checkout's local tsx; fall back to whatever is on PATH.
-    const localTsx = path.join(root, 'node_modules', '.bin', 'tsx');
-    const tsxBinary = existsSync(localTsx) ? localTsx : 'tsx';
+    // Prefer the checkout's local tsx CLI run by the bundled Node runtime (the
+    // Electron binary with ELECTRON_RUN_AS_NODE); fall back to whatever `tsx`
+    // resolves on PATH. A bare .bin/tsx shim is a cmd batch file on Windows and
+    // cannot be spawned directly without shell:true, so we point at the real JS
+    // entry when the package is installed locally. If neither exists, fail fast
+    // with an actionable message instead of a spawn ENOENT crash (S2).
+    const localTsxCli = path.join(root, 'node_modules', 'tsx', 'dist', 'cli.mjs');
+    const shim = path.join(root, 'node_modules', '.bin', 'tsx');
+    let tsxBinary: string;
+    let tsxArgs: string[];
+    if (existsSync(localTsxCli)) {
+      tsxBinary = process.execPath;
+      tsxArgs = [localTsxCli, '--no-warnings', serverScript];
+    } else if (existsSync(shim)) {
+      tsxBinary = shim;
+      tsxArgs = ['--no-warnings', serverScript];
+    } else {
+      throw new Error('tsx not found — run `npm install` inside the vibes checkout so its local tsx CLI is available.');
+    }
 
     const env = buildChildEnv(this.options.llmEnv ?? {});
+    if (tsxBinary === process.execPath) env.ELECTRON_RUN_AS_NODE = '1';
     env.VIBES_LAUNCH_DIR = this.options.workspaceRoot;
 
-    const proc = spawn(tsxBinary, ['--no-warnings', serverScript], {
+    const proc = spawn(tsxBinary, tsxArgs, {
       cwd: this.options.workspaceRoot,
       stdio: ['pipe', 'pipe', 'pipe'],
       env,
