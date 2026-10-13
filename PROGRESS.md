@@ -2,6 +2,22 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-13 — P1 complete (T6 ledger view) — phase done
+
+**Done:** Finished the operations-view port with windowed pagination, completing all of P1 (bridge + ledger).
+- `src/renderer/useActivityPagination.ts` (T6) — self-contained port of the fork's `useCatalogPagination`: a 48-item window over the entry list, page navigation, start-index clamping to the last partial page, and reset-to-page-0 when the reset key (the entry-id list) changes. No i18n or shared-library dependency.
+- `src/renderer/PaginationControls.tsx` — "Back / Show more (N of M)" controls with a live range readout; hidden entirely when everything fits one page.
+- `src/renderer/App.tsx` — OperationsView now windows first, then filters the visible slice per group (fork semantics), so section headers show true totals while only a page of rows mounts. "All quiet" empty state and live-push upsert unchanged.
+
+**Evidence (all run this session):**
+- `npm test` → **32/32 passed**. New: 5 pagination-hook tests (first-page window + remainder, hide-controls under one page, advance/rewind a full page, clamp to last partial page, reset-key snaps back to page 0).
+- `npm run typecheck` → clean on both configs.
+- `npm run build` → main/preload/renderer all emit.
+
+**P1 is complete (T3–T6).** The full data path now exists: bridge `[TASK_STATUS]` events → LedgerStore upsert → live IPC push → windowed, grouped renderer. UI stays "All quiet" until T13 wires a real mission start to the bridge.
+
+**Next:** P2/T7–T9 — Roles tab (per-role baseUrl/model/apiKey forms), encrypted key storage via safeStorage/electron-store, test-connection probe, and the `.vibes/config.json` writer. These feed `buildChildEnv`'s llmEnv so missions actually reach a configured endpoint.
+
 ## 2026-10-13 — P1 ledger store (T5)
 
 **Done:** Built the LedgerStore and wired it through to a live-updating renderer.
@@ -17,7 +33,7 @@ Newest first. Each entry: date, what was done, evidence, what's next, open quest
 - `npm run typecheck` → clean on both configs.
 - `npm run build` → main/preload/renderer all emit.
 
-**Next:** P1/T6 — port the full mission-control operations view (pagination, detail expansion) on top of this store. The bridge's task-status events feed the ledger once T13 wires a real mission start; until then the UI stays "All quiet".
+**Superseded:** T6 (ledger view) landed in the entry above — P1 is complete. Next phase: P2 roles & config.
 
 ## 2026-10-13 — P1 bridge layer (T3 + T4)
 

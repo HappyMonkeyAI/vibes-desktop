@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Button, Tabs, Tag } from '@arco-design/web-react';
 import type { LedgerEntry, LedgerSnapshot } from '@shared/channels';
+import { useActivityPagination } from './useActivityPagination';
+import { PaginationControls } from './PaginationControls';
 import styles from './MissionControl.module.css';
 
 /** Accent color per status — ported from the fork's mission-control page. */
@@ -71,6 +73,11 @@ const OperationsView: React.FC = () => {
   const entries = snapshot?.entries ?? [];
   const groupCounts = snapshot?.groupCounts ?? { 'needs-you': 0, running: 0, upcoming: 0, recent: 0 };
 
+  // Windowed rendering (T6): only a page of rows mounts at a time. The reset key
+  // is the entry-id list — any change to the set returns the window to page 0.
+  const windowResetKey = useMemo(() => entries.map((entry) => entry.id).join('|'), [entries]);
+  const pagination = useActivityPagination(entries, windowResetKey);
+
   return (
     <div className={styles.ops}>
       <div className={styles.opsToolbar}>
@@ -99,21 +106,36 @@ const OperationsView: React.FC = () => {
           <span className={styles.emptyHint}>Missions appear here the moment they start.</span>
         </div>
       ) : (
-        GROUPS.map(({ group, label }) => {
-          const sectionEntries = entries.filter((entry) => entry.group === group);
-          if (sectionEntries.length === 0) return null;
-          return (
-            <div key={group} className={styles.section}>
-              <div className={styles.sectionHead}>
-                <span className={styles.sectionLabel}>{label}</span>
-                <span className={styles.sectionCount}>{groupCounts[group as keyof typeof groupCounts] ?? 0}</span>
-              </div>
-              {sectionEntries.map((entry) => (
-                <Row key={entry.id} entry={entry} />
-              ))}
-            </div>
-          );
-        })
+        <>
+          <div id="mission-control-activity-window">
+            {GROUPS.map(({ group, label }) => {
+              const sectionEntries = pagination.visibleItems.filter((entry) => entry.group === group);
+              if (sectionEntries.length === 0) return null;
+              return (
+                <div key={group} className={styles.section}>
+                  <div className={styles.sectionHead}>
+                    <span className={styles.sectionLabel}>{label}</span>
+                    <span className={styles.sectionCount}>{groupCounts[group as keyof typeof groupCounts] ?? 0}</span>
+                  </div>
+                  {sectionEntries.map((entry) => (
+                    <Row key={entry.id} entry={entry} />
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+          <PaginationControls
+            totalCount={pagination.totalCount}
+            remainingCount={pagination.remainingCount}
+            pageSize={pagination.pageSize}
+            firstVisibleIndex={pagination.firstVisibleIndex}
+            lastVisibleIndex={pagination.lastVisibleIndex}
+            hasPrevious={pagination.hasPrevious}
+            hasMore={pagination.hasMore}
+            onNextPage={pagination.nextPage}
+            onPreviousPage={pagination.previousPage}
+          />
+        </>
       )}
     </div>
   );

@@ -176,3 +176,22 @@
   padding: 24px 0;
   color: #94a3b8;
 }
+
+.pagination {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.paginationRange {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.paginationButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

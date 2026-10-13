@@ -10,7 +10,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T3 JSON-RPC stdio transport (request/response + notifications, timeout, crash detection) — SPEC S2 ✅ 2026-10-13 (jsonrpc.ts; 6 tests: correlate, error, timeout, non-JSON log, exit-reject-all, partial-line buffer)
 - [x] T4 VibesBridge: spawn vibes MCP server with env allowlist; plan + task lifecycle events — SPEC S2 ✅ 2026-10-13 (vibes-bridge.ts; buildChildEnv allowlist + [TASK_STATUS] parser tested; initialize handshake per dashboard)
 - [x] T5 LedgerStore: append-only JSONL in appData, snapshot + subscribe over IPC — SPEC S3 ✅ 2026-10-13 (store.ts; replay on load, idempotent upsert by title, classify() grouping, live push wired into handlers + renderer upsert. 7 store tests + 1 live-push test)
-- [ ] T6 Ledger view: port mission-control operations UI (status accents, grouping, pagination, "All quiet" empty state) — SPEC S1, S3
+- [x] T6 Ledger view: port mission-control operations UI (status accents, grouping, pagination, "All quiet" empty state) — SPEC S1, S3 ✅ 2026-10-13 (useActivityPagination + PaginationControls ported from fork's useCatalogPagination; window-first then per-group filter, true totals in headers. 5 hook tests: windowing, hide-controls, page nav, clamp, reset-key)
 
 ## P2 — Roles & Config
 - [ ] T7 Roles tab: per-role baseUrl/model/apiKey forms with encrypted key storage — SPEC S4
