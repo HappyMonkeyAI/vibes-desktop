@@ -2,6 +2,28 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-13 — P3 complete (T10–T12 voice input) — phase done
+
+**Done:** Built the full push-to-talk voice path: renderer mic capture → base64 over IPC → yapsnap CLI transcription → transcript text into the mission request field, plus a doctor that reports an actionable install hint instead of crashing when ffmpeg/yapsnap are missing.
+- `src/main/voice/doctor.ts` (T12) — bounded 5s `spawn` check for `ffmpeg -version` and `yapsnap --help`; absence is a *result* (`ready:false`) with `winget install ffmpeg` / `pip install yapsnap` hints, never an error.
+- `src/main/voice/transcribe.ts` (T11) — spawns `yapsnap <file> -o <out.txt> --lang auto`, reads the transcript from the **output file** (yapsnap prints the path on stdout, progress/errors on stderr), then deletes both the input audio and the transcript. Injectable `CliRunner` so tests never spawn a real process.
+- `src/renderer/VoiceInput.tsx` (T10) — push-to-talk: press-and-hold records via MediaRecorder (webm/opus), release base64-encodes the buffer and sends it to main; the returned text is appended into the mission request field via `onTranscript`. Doctor runs on mount so capture is blocked with a clear "voice not ready" tag when not ready.
+- `src/shared/channels.ts` — added `VoiceDoctorResult` / `VoiceTranscribeRequest` / `VoiceTranscribeResult` and the `voice:doctor` + `voice:transcribe` channels (now 9 total).
+- `src/main/ipc/handlers.ts` — wired both voice handlers; transcribe decodes base64 to a temp `.webm` before calling `transcribeFile`. Preload exposes `voice.doctor()` / `voice.transcribe(request)` fully typed.
+- `src/renderer/App.tsx` — Operations toolbar now has a mission request textarea + VoiceInput + "Start mission" button; transcribed text lands in the field.
+
+**Critical fix found by tests:** Arco's static `Message.error()`/`Modal.confirm()` route through `ReactDOM.render`, which React 19 removed — so *any* error path would crash the renderer. Root cause: Arco's internal react-dom util grabs `createRoot` from the `react-dom` **main** entry at import time, but React 19 moved it to `react-dom/client`. Arco ships `setCreateRoot` exactly for this. Added `src/renderer/arco-react19.ts` (imported first in main.tsx and test setup) that injects the client-entry `createRoot` into **both** Arco builds (`es/` for the Vite build, `lib/` for Vitest/node SSR — they resolve to different module instances). Without this, every error-path Message call is a hard crash.
+
+**Evidence (all run this session):**
+- `npm test` → **64/64 passed**. New: 6 transcribe tests (happy path + cleanup of both files, arg shape, non-zero error parse, missing-output-file, empty-text distinct error, runner-throws) + 4 doctor tests (ready, missing-ffmpeg hint, missing-yapsnap hint, non-zero exit) + 3 VoiceInput tests (not-ready tag on mount, record→transcribe→deliver with base64 payload not the data-URL prefix, transcription-error path delivers no text).
+- `npm run typecheck` → clean on both configs.
+- `npm run build` → main/preload/renderer all emit.
+- **Live boot:** launched the built app; toolbar rendered the mission input ("Describe the mission — type it or hold-to-talk"), "Hold to talk", and "Start mission" buttons with no error banner (doctor resolved cleanly on this machine). Screenshot verified by vision analysis. Test tree killed (zerogterm left untouched).
+
+**P3 is complete (T10–T12).** Voice input now flows end-to-end: hold-to-talk → transcribe → text in the mission field. The doctor gives an actionable hint rather than a crash when ffmpeg/yapsnap are absent.
+
+**Next:** P4/T13 — wire "Start mission" to the VibesBridge (plan + execute over the MCP child process), so the live ledger finally fills from real missions. Then T14 single-mission guard and T15 packaging.
+
 ## 2026-10-13 — P2 complete (T7–T9 roles & config) — phase done
 
 **Done:** Built the per-role endpoint store with encrypted keys, the test-connection probe, and the native `.vibes/config.json` writer, plus a working Roles tab replacing the stub.
@@ -22,7 +44,7 @@ Newest first. Each entry: date, what was done, evidence, what's next, open quest
 
 **P2 is complete (T7–T9).** Role endpoints now persist with encrypted keys and can be probed live; the native config writer is ready to feed a spawned child at mission start (T13).
 
-**Next:** P3/T10–T12 — voice input: mic capture (push-to-talk → wav), yapsnap transcriber child process, and yapsnap-doctor presence check with install hints.
+**Superseded:** T10–T12 (voice input) landed in the entry above — P3 is complete. Next phase: P4 lifecycle & packaging.
 
 ## 2026-10-13 — P1 complete (T6 ledger view) — phase done
 
@@ -105,4 +127,4 @@ Newest first. Each entry: date, what was done, evidence, what's next, open quest
 
 **Open questions:**
 - ~~Exact vibes MCP server method names~~ — resolved: `plan_mission`, `execute_mission`, `start_execution`, `resolve_intervention`, `query_status` (read from vibes 0.4.0 `src/mcp/server.ts`; recorded in PLAN.md).
-- Mic capture approach: renderer MediaRecorder vs main-process capture — decide in T10, leaning renderer (simpler, no extra native deps).
+- ~~Mic capture approach: renderer MediaRecorder vs main-process capture~~ — resolved in T10: **renderer MediaRecorder** (webm/opus → base64 over IPC). Simpler, no extra native deps; the doctor check gates it.

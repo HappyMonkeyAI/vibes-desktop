@@ -23,7 +23,20 @@ Lessons learned while building Vibes Desktop. Imperative rules with the why; one
 
 ## Voice
 
-- yapsnap needs ffmpeg on PATH and a one-time ~80MB model fetch per language; the doctor check must run before first capture, not after failure.
+- yapsnap needs ffmpeg on PATH and a one-time ~80MB model fetch per language; the doctor check must run before first capture, not after failure. Absence is a *result* (`ready:false` + install hint), never an error — a missing binary is expected on a fresh machine.
+- yapsnap's CLI writes the transcript to a **file** (`-o OUTPUT.txt`) and prints only the path on stdout; all progress/errors go to stderr. Read the output file, don't parse stdout for the text. Make the CLI runner injectable so tests never spawn a real process.
+- Push-to-talk capture is renderer-side (MediaRecorder → webm/opus → base64 over IPC). The doctor runs on mount and blocks capture with a "voice not ready" tag when ffmpeg/yapsnap are absent, so the user gets an actionable hint instead of a silent no-op or a crash.
+
+## React 19 + Arco (critical)
+
+- Arco's static `Message.error()` / `Modal.confirm()` / `Notification` route through `ReactDOM.render`, which **React 19 removed** — every error path is a hard crash unless fixed. Root cause: Arco's internal react-dom util grabs `createRoot` from the `react-dom` *main* entry at import time, but React 19 moved it to `react-dom/client`.
+- The fix is Arco's own `setCreateRoot(_createRoot)` escape hatch (its comment says exactly this). Import `createRoot` from `react-dom/client` and call `setCreateRoot` **before any Arco component renders** (first import in main.tsx and test setup).
+- Patch **both** Arco builds: the package has no `exports` map, so `main`→`lib/` (CJS) and `module`→`es/` are separate module instances. Vite's production build resolves to `es/`, but Vitest/node SSR resolves to `lib/`. Call `setCreateRoot` on each (`@arco-design/web-react/es/_util/react-dom` and `/lib/_util/react-dom`) or one of the two paths stays broken (you'll see it as an unhandled rejection in tests, not a test failure).
+- Mount `<Message />` once in the tree too — that's where the static API renders its container. Both are needed: `setCreateRoot` fixes *how* it mounts, `<Message />` provides *where*.
+
+## Vitest module mocking
+
+- `vi.mock('node:child_process', () => ({ spawn: spawnMock }))` is **hoisted above** the `const spawnMock = vi.fn()` declaration, so the factory hits a TDZ ReferenceError. Wrap the mock in `vi.hoisted(() => ({ spawnMock: vi.fn() }))` and destructure from it — the hoisted scope runs before imports.
 
 ## Tooling / environment (Windows + Hermes terminal)
 

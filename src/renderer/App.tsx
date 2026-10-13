@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { Button, Tabs } from '@arco-design/web-react';
+import { Button, Input, Message, Tabs } from '@arco-design/web-react';
 import type { LedgerEntry, LedgerSnapshot } from '@shared/channels';
 import { useActivityPagination } from './useActivityPagination';
 import { PaginationControls } from './PaginationControls';
 import RolesTab from './RolesTab';
+import VoiceInput from './VoiceInput';
 import styles from './MissionControl.module.css';
 
 /** Accent color per status — ported from the fork's mission-control page. */
@@ -45,6 +46,7 @@ const Row: React.FC<{ entry: LedgerEntry }> = ({ entry }) => (
 const OperationsView: React.FC = () => {
   const [snapshot, setSnapshot] = useState<LedgerSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [missionRequest, setMissionRequest] = useState('');
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -71,6 +73,15 @@ const OperationsView: React.FC = () => {
     return () => unsubscribe?.();
   }, []);
 
+  const handleStartMission = () => {
+    if (!missionRequest.trim()) {
+      Message.warning('Describe the mission first (type it or hold-to-talk).');
+      return;
+    }
+    // T13 wires this to the bridge; for now the field is ready and voice text lands here.
+    void window.vibesDesktop.mission.start({ request: missionRequest.trim(), workspaceRoot: '' });
+  };
+
   const entries = snapshot?.entries ?? [];
   const groupCounts = snapshot?.groupCounts ?? { 'needs-you': 0, running: 0, upcoming: 0, recent: 0 };
 
@@ -86,6 +97,17 @@ const OperationsView: React.FC = () => {
           <span className={styles.liveDot} />
           Live
         </span>
+        <Input.TextArea
+          placeholder="Describe the mission — type it or hold-to-talk."
+          value={missionRequest}
+          onChange={(v) => setMissionRequest(v)}
+          autoSize={{ minRows: 1, maxRows: 4 }}
+          style={{ flex: 1 }}
+        />
+        <VoiceInput onTranscript={(text) => setMissionRequest((prev) => (prev ? `${prev} ${text}` : text))} />
+        <Button type="primary" onClick={handleStartMission}>
+          Start mission
+        </Button>
         <Button size="small" loading={loading} onClick={() => window.location.reload()}>
           Refresh
         </Button>
@@ -144,6 +166,8 @@ const OperationsView: React.FC = () => {
 
 const App: React.FC = () => (
   <div className={styles.page}>
+    {/* Arco static Message API mounts here — required on React 18+ where ReactDOM.render is gone. */}
+    <Message />
     <header className={styles.header}>
       <h1>Mission Control</h1>
       <span className={styles.subtitle}>Vibes missions, live in one place.</span>

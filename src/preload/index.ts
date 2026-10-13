@@ -9,6 +9,9 @@ import {
   type RolesConfigView,
   type TestConnectionRequest,
   type TestConnectionResult,
+  type VoiceDoctorResult,
+  type VoiceTranscribeRequest,
+  type VoiceTranscribeResult,
 } from '@shared/channels';
 
 /**
@@ -29,6 +32,11 @@ const api = {
     save: (input: RolesConfigInput): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.rolesSave, input),
     testConnection: (target: TestConnectionRequest): Promise<TestConnectionResult> =>
       ipcRenderer.invoke(channels.rolesTestConnection, target),
+  },
+  voice: {
+    doctor: (): Promise<VoiceDoctorResult> => ipcRenderer.invoke(channels.voiceDoctor),
+    transcribe: (request: VoiceTranscribeRequest): Promise<VoiceTranscribeResult> =>
+      ipcRenderer.invoke(channels.voiceTranscribe, request),
   },
   mission: {
     start: (request: MissionStartRequest): Promise<MissionStartResult> =>

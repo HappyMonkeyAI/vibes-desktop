@@ -18,9 +18,9 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T9 `.vibes/config.json` writer in vibes' native format — SPEC S4 ✅ 2026-10-13 (vibes-config.ts pure mapper + config-writer.ts merge; default+executor collapse onto OLLAMA_*, per-role PLANNER/REVIEWER/TRIAGE keys, empties omitted so a save never blanks untouched keys. 7 tests: mapping, fallback, omitEmpty, create, merge, corrupt-fresh)
 
 ## P3 — Voice
-- [ ] T10 Mic capture: push-to-talk → wav on disk; delete after transcription — SPEC S5
-- [ ] T11 yapsnap transcriber: CLI child process, `--lang auto`, stdout parsing — SPEC S5
-- [ ] T12 yapsnap-doctor: ffmpeg + yapsnap presence check with install hints; graceful errors — SPEC S5
+- [x] T10 Mic capture: push-to-talk → webm buffer; base64 to main, deleted after transcription — SPEC S5 ✅ 2026-10-13 (VoiceInput.tsx MediaRecorder hold-to-talk; onTranscript appends to mission field. 3 tests: not-ready tag, record→transcribe→deliver with base64 payload, error path)
+- [x] T11 yapsnap transcriber: CLI child process, `--lang auto`, transcript read from output file — SPEC S5 ✅ 2026-10-13 (transcribe.ts injectable CliRunner; reads -o file, cleans up input+output. 6 tests: happy path + cleanup, arg shape, non-zero error, missing-file, empty-text, runner-throws)
+- [x] T12 yapsnap-doctor: ffmpeg + yapsnap presence check with install hints; graceful errors — SPEC S5 ✅ 2026-10-13 (doctor.ts bounded 5s spawn each; actionable winget/pip hints. 4 tests: ready, missing-ffmpeg hint, missing-yapsnap hint, non-zero exit)
 
 ## P4 — Lifecycle & Packaging
 - [ ] T13 Stop/cancel mission: clean child termination, in-flight tasks → blocked — SPEC S6

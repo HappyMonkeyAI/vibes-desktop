@@ -1,9 +1,14 @@
 import { ipcMain } from 'electron';
 import type { WebContents } from 'electron';
-import { channels, type ChannelName, type LedgerSnapshot, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest } from '@shared/channels';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { randomBytes } from 'node:crypto';
+import { channels, type ChannelName, type LedgerSnapshot, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult } from '@shared/channels';
 import type { LedgerStore } from '../ledger/store';
 import type { RolesStore } from '../roles/store';
 import { testConnection } from '../roles/test-connection';
+import { runVoiceDoctor } from '../voice/doctor';
+import { transcribeFile, voiceTempDir } from '../voice/transcribe';
 
 /**
  * Handler table: one entry per channel in the shared map. T5 wires the ledger
@@ -54,6 +59,24 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       return { ok };
     },
     [channels.rolesTestConnection]: async (_e, target) => testConnection(target as TestConnectionRequest),
+    // T12 — presence check before any capture attempt.
+    [channels.voiceDoctor]: async (): Promise<VoiceDoctorResult> => runVoiceDoctor(),
+    // T10/T11 — write the captured buffer to a temp file and transcribe it.
+    [channels.voiceTranscribe]: async (_e, req): Promise<VoiceTranscribeResult> => {
+      const request = req as VoiceTranscribeRequest;
+      if (!request?.audioBase64) return { ok: false, error: 'No audio received.' };
+      try {
+        const dir = voiceTempDir();
+        mkdirSync(dir, { recursive: true });
+        const id = randomBytes(8).toString('hex');
+        const inputPath = path.join(dir, `${id}.webm`);
+        const outPath = path.join(dir, `${id}.txt`);
+        writeFileSync(inputPath, Buffer.from(request.audioBase64, 'base64'));
+        return await transcribeFile(inputPath, outPath);
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    },
     [channels.missionStart]: async () => ({ started: false, alreadyRunning: false }),
     [channels.missionStop]: async () => ({ stopped: false }),
   };

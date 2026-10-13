@@ -81,6 +81,31 @@ export interface TestConnectionRequest {
   apiKey?: string;
 }
 
+/** T12 — yapsnap-doctor result: what's present, and how to install what isn't. */
+export interface VoiceDoctorResult {
+  ffmpegAvailable: boolean;
+  yapsnapAvailable: boolean;
+  /** True when both are present and transcription can proceed offline. */
+  ready: boolean;
+  /** Actionable hint for each missing piece (null when present). */
+  ffmpegHint: string | null;
+  yapsnapHint: string | null;
+}
+
+/** T10/T11 — a captured mic buffer, base64-encoded webm/opus from the renderer. */
+export interface VoiceTranscribeRequest {
+  /** Base64 of the recorded webm (MediaRecorder's native format). */
+  audioBase64: string;
+  mime: string;
+}
+
+/** T11 — transcription result: text on success, an actionable error otherwise. */
+export interface VoiceTranscribeResult {
+  ok: boolean;
+  text?: string;
+  error?: string;
+}
+
 export interface MissionStartRequest {
   request: string;
   workspaceRoot: string;
@@ -100,6 +125,8 @@ export const channels = {
   rolesGet: 'roles:get',
   rolesSave: 'roles:save',
   rolesTestConnection: 'roles:test-connection',
+  voiceDoctor: 'voice:doctor',
+  voiceTranscribe: 'voice:transcribe',
   missionStart: 'mission:start',
   missionStop: 'mission:stop',
 } as const;
