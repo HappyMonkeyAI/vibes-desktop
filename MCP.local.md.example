@@ -1,0 +1,9 @@
+# MCP.local.md — machine-local overlay (gitignored)
+# Fill in per machine; never put API keys here.
+
+vibes_path:            # local checkout, empty = use npx vibes-tui
+ollama_endpoints:      # base URLs known on this LAN
+  - http://127.0.0.1:11434/v1
+yapsnap:               # CLI location or "pip user" if on PATH
+ffmpeg_path:           # where ffmpeg lives, empty = on PATH
+model_cache_dir:       # yapsnap's model cache (default per-OS)

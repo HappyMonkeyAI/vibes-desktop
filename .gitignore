@@ -1,0 +1,11 @@
+node_modules/
+dist/
+out/
+release/
+*.log
+.env
+MCP.local.md
+.vibes/
+!/.vibes/config.example.json
+.DS_Store
+Thumbs.db
