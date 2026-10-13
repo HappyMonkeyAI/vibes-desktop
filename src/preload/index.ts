@@ -7,6 +7,7 @@ import {
   type MissionStartResult,
   type RolesConfigInput,
   type RolesConfigView,
+  type TestConnectionRequest,
   type TestConnectionResult,
 } from '@shared/channels';
 
@@ -26,7 +27,7 @@ const api = {
   roles: {
     get: (): Promise<RolesConfigView> => ipcRenderer.invoke(channels.rolesGet),
     save: (input: RolesConfigInput): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.rolesSave, input),
-    testConnection: (target: unknown): Promise<TestConnectionResult> =>
+    testConnection: (target: TestConnectionRequest): Promise<TestConnectionResult> =>
       ipcRenderer.invoke(channels.rolesTestConnection, target),
   },
   mission: {

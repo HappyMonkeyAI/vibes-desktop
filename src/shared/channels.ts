@@ -73,6 +73,14 @@ export interface TestConnectionResult {
   error?: string;
 }
 
+/** Target for `roles.test-connection`: a single endpoint to probe. */
+export interface TestConnectionRequest {
+  baseUrl: string;
+  model: string;
+  /** Optional key for the probe; omitted means "no auth" (local Ollama). */
+  apiKey?: string;
+}
+
 export interface MissionStartRequest {
   request: string;
   workspaceRoot: string;

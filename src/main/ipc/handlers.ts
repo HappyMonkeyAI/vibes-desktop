@@ -1,12 +1,14 @@
 import { ipcMain } from 'electron';
 import type { WebContents } from 'electron';
-import { channels, type ChannelName, type LedgerSnapshot, type RolesConfigView } from '@shared/channels';
+import { channels, type ChannelName, type LedgerSnapshot, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest } from '@shared/channels';
 import type { LedgerStore } from '../ledger/store';
+import type { RolesStore } from '../roles/store';
+import { testConnection } from '../roles/test-connection';
 
 /**
  * Handler table: one entry per channel in the shared map. T5 wires the ledger
- * store in; roles (T7/T8) and mission (T13) stubs stand in until their tasks land.
- * The parity test asserts this table covers every channel — V1 gate.
+ * store in; T7/T8 wire the roles store and probe; mission (T13) stubs stand in
+ * until that task lands. The parity test asserts this table covers every channel — V1 gate.
  */
 
 export type Handler = (...args: unknown[]) => Promise<unknown>;
@@ -35,17 +37,23 @@ export interface HandlerTableOptions {
   store?: LedgerStore;
   /** Where `ledger:new-entry` pushes go (the renderer's WebContents). */
   webContents?: WebContents;
+  /** The per-role endpoint store (T7). Absent in tests → empty view / no-op save. */
+  rolesStore?: RolesStore;
 }
 
 export function createHandlerTable(options: HandlerTableOptions = {}): Record<ChannelName, Handler> {
-  const { store } = options;
+  const { store, rolesStore } = options;
   return {
     [channels.ledgerGet]: async () => (store ? store.snapshot() : emptySnapshot()),
     // Push channel (main → renderer); bound as a no-op handler for parity.
     [channels.ledgerNewEntry]: async () => undefined,
-    [channels.rolesGet]: async () => emptyRolesView(),
-    [channels.rolesSave]: async () => ({ ok: true }),
-    [channels.rolesTestConnection]: async () => ({ ok: false, error: 'not implemented (T8)' }),
+    [channels.rolesGet]: async () => (rolesStore ? rolesStore.view() : emptyRolesView()),
+    [channels.rolesSave]: async (_e, input) => {
+      if (!rolesStore) return { ok: true }; // parity stub — nothing to persist in tests
+      const ok = rolesStore.save(input as RolesConfigInput);
+      return { ok };
+    },
+    [channels.rolesTestConnection]: async (_e, target) => testConnection(target as TestConnectionRequest),
     [channels.missionStart]: async () => ({ started: false, alreadyRunning: false }),
     [channels.missionStop]: async () => ({ stopped: false }),
   };

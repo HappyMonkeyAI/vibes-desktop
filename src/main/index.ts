@@ -2,6 +2,8 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import { registerIpcHandlers } from './ipc/handlers';
 import { LedgerStore } from './ledger/store';
+import { RolesStore } from './roles/store';
+import { makeSafeCipher } from './roles/safeCipher';
 
 const isDev = !app.isPackaged;
 
@@ -40,8 +42,10 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // The ledger lives in appData; it replays its JSONL on construction.
   ledger = new LedgerStore(app.getPath('userData'));
+  // Role endpoints persist alongside the ledger; keys encrypt via the OS safe store.
+  const rolesStore = new RolesStore(app.getPath('userData'), makeSafeCipher());
   createWindow();
-  registerIpcHandlers(ipcMain, { store: ledger, webContents: mainWindow?.webContents });
+  registerIpcHandlers(ipcMain, { store: ledger, webContents: mainWindow?.webContents, rolesStore });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

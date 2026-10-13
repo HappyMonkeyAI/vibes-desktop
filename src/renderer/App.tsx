@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { Button, Tabs, Tag } from '@arco-design/web-react';
+import { Button, Tabs } from '@arco-design/web-react';
 import type { LedgerEntry, LedgerSnapshot } from '@shared/channels';
 import { useActivityPagination } from './useActivityPagination';
 import { PaginationControls } from './PaginationControls';
+import RolesTab from './RolesTab';
 import styles from './MissionControl.module.css';
 
 /** Accent color per status — ported from the fork's mission-control page. */
@@ -141,13 +142,6 @@ const OperationsView: React.FC = () => {
   );
 };
 
-const RolesStub: React.FC = () => (
-  <div className={styles.rolesStub}>
-    <Tag color="arcoblue">Roles tab lands in P2 (T7–T9)</Tag>
-    <p>Per-role endpoints — default / planner / executor / reviewer / triage — will be configured here and written to the workspace's .vibes/config.json.</p>
-  </div>
-);
-
 const App: React.FC = () => (
   <div className={styles.page}>
     <header className={styles.header}>
@@ -159,7 +153,7 @@ const App: React.FC = () => (
         <OperationsView />
       </Tabs.TabPane>
       <Tabs.TabPane key="roles" title="Roles">
-        <RolesStub />
+        <RolesTab />
       </Tabs.TabPane>
     </Tabs>
   </div>

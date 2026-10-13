@@ -13,9 +13,9 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T6 Ledger view: port mission-control operations UI (status accents, grouping, pagination, "All quiet" empty state) — SPEC S1, S3 ✅ 2026-10-13 (useActivityPagination + PaginationControls ported from fork's useCatalogPagination; window-first then per-group filter, true totals in headers. 5 hook tests: windowing, hide-controls, page nav, clamp, reset-key)
 
 ## P2 — Roles & Config
-- [ ] T7 Roles tab: per-role baseUrl/model/apiKey forms with encrypted key storage — SPEC S4
-- [ ] T8 Test-connection probe (GET /models or 1-token completion) — SPEC S4
-- [ ] T9 `.vibes/config.json` writer in vibes' native format — SPEC S4
+- [x] T7 Roles tab: per-role baseUrl/model/apiKey forms with encrypted key storage — SPEC S4 ✅ 2026-10-13 (store.ts cipher-injected + safeCipher.ts; view reduces key to presence flag, empty-key-means-keep on save. 5 store tests incl. corrupt-file tolerance)
+- [x] T8 Test-connection probe (GET /models or 1-token completion) — SPEC S4 ✅ 2026-10-13 (test-connection.ts bounded fetch to /chat/completions, 10s abort, Authorization header only when key present. 6 tests: validation, ok, URL trim, auth-header, error parse, network failure)
+- [x] T9 `.vibes/config.json` writer in vibes' native format — SPEC S4 ✅ 2026-10-13 (vibes-config.ts pure mapper + config-writer.ts merge; default+executor collapse onto OLLAMA_*, per-role PLANNER/REVIEWER/TRIAGE keys, empties omitted so a save never blanks untouched keys. 7 tests: mapping, fallback, omitEmpty, create, merge, corrupt-fresh)
 
 ## P3 — Voice
 - [ ] T10 Mic capture: push-to-talk → wav on disk; delete after transcription — SPEC S5

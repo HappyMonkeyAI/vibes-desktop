@@ -2,6 +2,28 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-13 — P2 complete (T7–T9 roles & config) — phase done
+
+**Done:** Built the per-role endpoint store with encrypted keys, the test-connection probe, and the native `.vibes/config.json` writer, plus a working Roles tab replacing the stub.
+- `src/main/roles/store.ts` (T7) — cipher-injected persistent store mirroring the fork's rolesConfigStore: baseUrl/model plain text, apiKey encrypted with an injected `Cipher`. The view reduces a key to a presence flag (a decrypted key never crosses IPC); an empty submitted key means "keep what's stored". A missing/corrupt file resolves to the all-empty config rather than throwing.
+- `src/main/roles/safeCipher.ts` — the real cipher: Electron safeStorage (DPAPI on Windows). `encryptString` returns a Buffer, so it's base64-encoded for storage and decoded back before `decryptString`. Falls back to plaintext when no store is available.
+- `src/main/roles/test-connection.ts` (T8) — bounded `fetch` (global, Node 18+) against the OpenAI-compatible `/chat/completions` with a 10s AbortSignal; Authorization header only when a key is present. No client-library dependency.
+- `src/main/roles/vibes-config.ts` + `config-writer.ts` (T9) — pure mapper from our five-role config to vibes' native key names, then a merge-writer into `<workspace>/.vibes/config.json`. Read from vibes 0.4.0 `src/config.ts`: there is **no** EXECUTOR_* — the executor runs on the default OLLAMA_* endpoint, so `default` and `executor` collapse onto the same keys (executor wins when set). Planner/reviewer/triage get their own prefixed MODEL/BASE_URL/API_KEY. Empty fields are omitted so a save never blanks keys the user didn't touch.
+- `src/renderer/RolesTab.tsx` — five forms (default/planner/executor/reviewer/triage), each with base URL, model, and a key field that appears when a key is stored or being entered; per-role test-connection button with reachable/error feedback; save clears the local key fields (presence flag suffices).
+- `src/main/ipc/handlers.ts` — roles handlers wired: `roles:get` → store view, `roles:save` → store.save, `roles:test-connection` → probe. Absent store in tests → empty view / no-op save (parity test untouched).
+- `src/main/index.ts` — constructs `RolesStore(userData, makeSafeCipher())` at ready and passes it to handler registration.
+
+**Key mapping decision:** the fork runs its own native pipeline so it never writes `.vibes/config.json`; we spawn vibes, so T9 must. The env allowlist only carries OLLAMA_* into the child — per-role PLANNER/REVIEWER/TRIAGE keys must land in the workspace file for a spawned child to read them.
+
+**Evidence (all run this session):**
+- `npm test` → **51/51 passed**. New: 5 store tests (empty view, persist + no plaintext key on disk, round-trip getKey, empty-key-keeps-stored, corrupt-file tolerance) + 6 probe tests (validation, ok, URL trim to /chat/completions, auth-header presence, non-2xx error parse, network failure) + 7 config tests (executor-wins mapping, default fallback, per-role keys, omitEmpty, create file, merge preserves untouched keys, corrupt-fresh).
+- `npm run typecheck` → clean on both configs. (safeCipher Buffer↔string fixed.)
+- `npm run build` → main/preload/renderer all emit.
+
+**P2 is complete (T7–T9).** Role endpoints now persist with encrypted keys and can be probed live; the native config writer is ready to feed a spawned child at mission start (T13).
+
+**Next:** P3/T10–T12 — voice input: mic capture (push-to-talk → wav), yapsnap transcriber child process, and yapsnap-doctor presence check with install hints.
+
 ## 2026-10-13 — P1 complete (T6 ledger view) — phase done
 
 **Done:** Finished the operations-view port with windowed pagination, completing all of P1 (bridge + ledger).
@@ -16,7 +38,7 @@ Newest first. Each entry: date, what was done, evidence, what's next, open quest
 
 **P1 is complete (T3–T6).** The full data path now exists: bridge `[TASK_STATUS]` events → LedgerStore upsert → live IPC push → windowed, grouped renderer. UI stays "All quiet" until T13 wires a real mission start to the bridge.
 
-**Next:** P2/T7–T9 — Roles tab (per-role baseUrl/model/apiKey forms), encrypted key storage via safeStorage/electron-store, test-connection probe, and the `.vibes/config.json` writer. These feed `buildChildEnv`'s llmEnv so missions actually reach a configured endpoint.
+**Superseded:** T7–T9 (roles & config) landed in the entry above — P2 is complete. Next phase: P3 voice input.
 
 ## 2026-10-13 — P1 ledger store (T5)
 

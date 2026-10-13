@@ -13,6 +13,14 @@ Lessons learned while building Vibes Desktop. Imperative rules with the why; one
 - When main pushes a fresh entry object per append, the renderer must upsert by id, not append — otherwise one task going running → done shows two rows and the stat tiles drift from the list. Derive groupCounts from the entries array (single source of truth) instead of accumulating counts on each push.
 - An append-only JSONL store that upserts in memory keeps the file as true history (two lines for a task's lifecycle) while `snapshot()` reflects only current state — last line per id wins on replay.
 
+## Roles & config (T7–T9)
+
+- `safeStorage.encryptString` returns a **Buffer**, not a string — base64-encode it for storage and decode back before `decryptString`. The fork's naive pass-through typechecks only because its cipher is abstracted; ours is concrete.
+- vibes has **no EXECUTOR_*** keys: the executor runs on the default OLLAMA_* endpoint. Our five-role config collapses default+executor onto OLLAMA_* (executor wins when set); planner/reviewer/triage get their own prefixed MODEL/BASE_URL/API_KEY. Verified against vibes 0.4.0 `src/config.ts`.
+- The env allowlist only carries OLLAMA_* into a spawned child — per-role PLANNER/REVIEWER/TRIAGE keys must be written to `<workspace>/.vibes/config.json` (T9) or a spawned child never sees them. The fork runs its own native pipeline so it never needed this file; we spawn vibes, so we must write it.
+- Omit empty fields when writing the native config so a half-configured save never blanks keys the user set earlier — merge with the existing file, don't clobber.
+- A decrypted API key never crosses IPC: the view carries only a `hasKey` presence flag; an empty submitted key means "keep what's stored".
+
 ## Voice
 
 - yapsnap needs ffmpeg on PATH and a one-time ~80MB model fetch per language; the doctor check must run before first capture, not after failure.
