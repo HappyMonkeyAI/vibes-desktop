@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Button, Input, Message, Tabs } from '@arco-design/web-react';
+import { FolderOpen, RadarTwo } from '@icon-park/react';
 import type { LedgerEntry, LedgerSnapshot } from '@shared/channels';
 import { useActivityPagination } from './useActivityPagination';
 import { PaginationControls } from './PaginationControls';
@@ -48,13 +49,25 @@ const OperationsView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [missionRequest, setMissionRequest] = useState('');
   const [starting, setStarting] = useState(false);
+  // The mission's working directory. Empty means "the app's cwd" — the user can
+  // point it anywhere with the native folder picker.
+  const [workspaceRoot, setWorkspaceRoot] = useState('');
+
+  const handleSelectWorkspace = async () => {
+    try {
+      const res = await window.vibesDesktop.workspace.select();
+      if (res.path) setWorkspaceRoot(res.path);
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : String(error));
+    }
+  };
 
   const handleStart = async () => {
     const request = missionRequest.trim();
     if (!request || starting) return;
     setStarting(true);
     try {
-      const result = await window.vibesDesktop.mission.start({ request });
+      const result = await window.vibesDesktop.mission.start({ request, workspaceRoot: workspaceRoot || undefined });
       if (result.alreadyRunning) Message.warning('A mission is already running.');
       else if (!result.started && result.error) Message.error(result.error);
       // On success the live ledger begins filling on its own — no banner needed.
@@ -107,13 +120,16 @@ const OperationsView: React.FC = () => {
           <span className={styles.liveDot} />
           Live
         </span>
-        <Input.TextArea
-          placeholder="Describe the mission — type it or hold-to-talk."
-          value={missionRequest}
-          onChange={(v) => setMissionRequest(v)}
-          autoSize={{ minRows: 1, maxRows: 4 }}
-          style={{ flex: 1 }}
-        />
+      </div>
+      <div className={styles.composerRow}>
+        <div className={styles.missionInput}>
+          <Input.TextArea
+            placeholder="Describe the mission — type it or hold-to-talk."
+            value={missionRequest}
+            onChange={(v) => setMissionRequest(v)}
+            autoSize={{ minRows: 2, maxRows: 6 }}
+          />
+        </div>
         <VoiceInput onTranscript={(text) => setMissionRequest((prev) => (prev ? `${prev} ${text}` : text))} />
         <Button type="primary" loading={starting} disabled={!missionRequest.trim()} onClick={() => void handleStart()}>
           Start mission
@@ -127,19 +143,38 @@ const OperationsView: React.FC = () => {
           Refresh
         </Button>
       </div>
+      <div className={styles.workspaceRow}>
+        <FolderOpen size={14} className={styles.workspaceIcon} />
+        <span className={styles.workspaceLabel}>Working directory</span>
+        <span className={styles.workspacePath} title={workspaceRoot || undefined}>
+          {workspaceRoot || 'App default (mission root)'}
+        </span>
+        <Button size="mini" type="outline" onClick={() => void handleSelectWorkspace()}>
+          Choose…
+        </Button>
+        {workspaceRoot && (
+          <Button size="mini" type="text" onClick={() => setWorkspaceRoot('')}>
+            Clear
+          </Button>
+        )}
+      </div>
 
       <div className={styles.statRow}>
-        {GROUPS.map(({ group, label }) => (
-          <div key={group} className={styles.statTile} style={{ '--accent': STATUS_ACCENT[group === 'needs-you' ? 'failed' : group] ?? '#7a818c' } as AccentStyle}>
-            <span className={styles.statNum}>{groupCounts[group as keyof typeof groupCounts] ?? 0}</span>
-            <span className={styles.statLabel}>{label}</span>
-          </div>
-        ))}
+        {GROUPS.map(({ group, label }) => {
+          const count = groupCounts[group as keyof typeof groupCounts] ?? 0;
+          return (
+            <div key={group} className={`${styles.statTile} ${count === 0 ? styles.zero : ''}`} style={{ '--accent': STATUS_ACCENT[group === 'needs-you' ? 'failed' : group] ?? '#7a818c' } as AccentStyle}>
+              <span className={styles.statNum}>{count}</span>
+              <span className={styles.statLabel}>{label}</span>
+            </div>
+          );
+        })}
       </div>
 
       {entries.length === 0 ? (
         // ADR-0003: a single-source ledger renders "All quiet", never an error banner.
         <div className={styles.empty}>
+          <RadarTwo className={styles.emptyRadar} size={56} />
           <span className={styles.emptyTitle}>All quiet</span>
           <span className={styles.emptyHint}>Missions appear here the moment they start.</span>
         </div>
@@ -151,7 +186,8 @@ const OperationsView: React.FC = () => {
               if (sectionEntries.length === 0) return null;
               return (
                 <div key={group} className={styles.section}>
-                  <div className={styles.sectionHead}>
+                  <div className={styles.sectionHead} style={{ '--accent': STATUS_ACCENT[group === 'needs-you' ? 'failed' : group] ?? '#7a818c' } as AccentStyle}>
+                    <span className={styles.sectionDot} />
                     <span className={styles.sectionLabel}>{label}</span>
                     <span className={styles.sectionCount}>{groupCounts[group as keyof typeof groupCounts] ?? 0}</span>
                   </div>

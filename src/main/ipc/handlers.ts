@@ -3,7 +3,7 @@ import type { WebContents } from 'electron';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { channels, type ChannelName, type LedgerSnapshot, type MissionStartRequest, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult } from '@shared/channels';
+import { channels, type ChannelName, type LedgerSnapshot, type MissionStartRequest, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult, type WorkspaceSelectResult } from '@shared/channels';
 import type { LedgerStore } from '../ledger/store';
 import type { RolesStore } from '../roles/store';
 import type { MissionService } from '../mission/service';
@@ -47,10 +47,12 @@ export interface HandlerTableOptions {
   rolesStore?: RolesStore;
   /** The mission lifecycle service (T13/T14). Absent in tests → inert stubs. */
   missionService?: MissionService;
+  /** Native folder picker for the mission working directory. Absent in tests → cancel. */
+  selectWorkspace?: () => Promise<WorkspaceSelectResult>;
 }
 
 export function createHandlerTable(options: HandlerTableOptions = {}): Record<ChannelName, Handler> {
-  const { store, rolesStore, missionService } = options;
+  const { store, rolesStore, missionService, selectWorkspace } = options;
   return {
     [channels.ledgerGet]: async () => (store ? store.snapshot() : emptySnapshot()),
     // Push channel (main → renderer); bound as a no-op handler for parity.
@@ -88,6 +90,9 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       return missionService.startMission({ request: request.request, workspaceRoot: request.workspaceRoot || process.cwd() });
     },
     [channels.missionStop]: async () => (missionService ? missionService.stopMission() : { stopped: false }),
+    // Native folder picker for the mission working directory; cancel → null path.
+    [channels.workspaceSelect]: async (): Promise<WorkspaceSelectResult> =>
+      selectWorkspace ? selectWorkspace() : { path: null },
   };
 }
 

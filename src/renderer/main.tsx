@@ -2,6 +2,10 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 // Must precede App so Arco's static Message/Modal APIs use createRoot, not the removed ReactDOM.render.
 import './arco-react19';
+// Arco's full stylesheet — without it every component renders unstyled (the "basic HTML" look).
+import '@arco-design/web-react/dist/css/arco.css';
+// Design system: light tokens by default (dark kept for a future toggle) + brand-orange primary override.
+import './theme.css';
 import App from './App';
 import 'virtual:uno.css';
 

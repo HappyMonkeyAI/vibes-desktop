@@ -124,4 +124,20 @@ describe('LedgerStore (T5)', () => {
     expect(snap.entries[0].status).toBe('done');
     rmSync(dir, { recursive: true, force: true });
   });
+
+  it('concurrent task-status events for the same title upsert in place — one row, final status', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    // Fire both without awaiting — exactly what MissionService does with its
+    // fire-and-forget recordTaskStatus when a child streams rapid events.
+    const p1 = store.recordTaskStatus({ name: 'Write code', status: 'in-progress' });
+    const p2 = store.recordTaskStatus({ name: 'Write code', status: 'complete' });
+    await Promise.all([p1, p2]);
+
+    const snap = await store.snapshot();
+    const rows = snap.entries.filter((e) => e.title === 'Write code');
+    expect(rows).toHaveLength(1); // no duplicate row minted by the race
+    expect(rows[0].status).toBe('done'); // final status wins
+    rmSync(dir, { recursive: true, force: true });
+  });
 });

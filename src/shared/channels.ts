@@ -118,6 +118,12 @@ export interface MissionStartResult {
   error?: string;
 }
 
+/** Result of the native folder picker used to choose a mission's working directory. */
+export interface WorkspaceSelectResult {
+  /** The chosen absolute path, or null when the dialog was cancelled. */
+  path: string | null;
+}
+
 /** Wire shape for the `ledger:new-entry` push event (main → renderer). */
 export type LedgerNewEntryEvent = { entry: LedgerEntry };
 
@@ -132,6 +138,7 @@ export const channels = {
   voiceTranscribe: 'voice:transcribe',
   missionStart: 'mission:start',
   missionStop: 'mission:stop',
+  workspaceSelect: 'workspace:select',
 } as const;
 
 export type ChannelName = (typeof channels)[keyof typeof channels];

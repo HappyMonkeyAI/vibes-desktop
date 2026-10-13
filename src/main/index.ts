@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import path from 'node:path';
 import { registerIpcHandlers } from './ipc/handlers';
 import { LedgerStore } from './ledger/store';
@@ -59,7 +59,13 @@ app.whenReady().then(() => {
     },
   });
   createWindow();
-  registerIpcHandlers(ipcMain, { store: ledger, webContents: mainWindow?.webContents, rolesStore, missionService });
+  // Native folder picker for the mission working directory (parented to the focused window).
+  const selectWorkspace = async () => {
+    const parent = BrowserWindow.getFocusedWindow() ?? mainWindow;
+    const res = await dialog.showOpenDialog(parent!, { properties: ['openDirectory'] });
+    return { path: res.canceled ? null : (res.filePaths[0] ?? null) };
+  };
+  registerIpcHandlers(ipcMain, { store: ledger, webContents: mainWindow?.webContents, rolesStore, missionService, selectWorkspace });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

@@ -13,6 +13,9 @@ export default defineConfig({
   preload: {
     plugins: [externalizeDepsPlugin()],
     resolve: sharedAlias,
+    // A sandboxed preload runs in a CommonJS context; package.json "type":"module"
+    // would otherwise emit ESM (index.mjs) whose `import` throws at load time.
+    build: { rollupOptions: { output: { format: 'cjs', entryFileNames: '[name].js' } } },
   },
   renderer: {
     plugins: [react(), UnoCSS()],

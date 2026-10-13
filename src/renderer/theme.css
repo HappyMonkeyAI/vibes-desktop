@@ -1,0 +1,227 @@
+/* Vibes Desktop design tokens.
+ * Mode is selected by `data-theme` on <html> (zerogterm's pattern): the light
+ * palette below is the default; a future theme toggle flips the attribute and
+ * every rule that reads these variables re-paints. Arco follows via
+ * `arco-theme`, which main.tsx keeps in sync with data-theme.
+ * The --primary-N / --arcoblue-N RGB triples are the linchpin: Arco resolves
+ * rgb()/rgba() against them, so overriding re-tints every Arco component. */
+
+/* ---- Foundation tokens (mode-invariant) ---- */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 56px;
+
+  --radius-chip: 4px;
+  --radius-button: 8px;
+  --radius-card-inner: 10px;
+  --radius-card: 12px;
+  --radius-modal: 16px;
+  --radius-pill: 9999px;
+
+  --type-11: 11px;
+  --type-12: 12px;
+  --type-13: 13px;
+  --type-14: 14px;
+  --type-16: 16px;
+  --type-20: 20px;
+  --type-24: 24px;
+  --type-32: 32px;
+
+  --lh-tight: 1.2;
+  --lh-snug: 1.35;
+  --lh-normal: 1.5;
+  --lh-loose: 1.65;
+
+  --motion-fast: 120ms cubic-bezier(0.2, 0, 0, 1);
+  --motion-base: 200ms cubic-bezier(0.2, 0, 0, 1);
+
+  /* Brand — identical across modes by design. */
+  --brand: #ff6b35;
+  --brand-hover: #ff8255;
+  --brand-pressed: #cc5529;
+}
+
+/* ---- Light (default) ---- */
+:root[data-theme='light'],
+:root:not([data-theme]) {
+  color-scheme: light;
+
+  /* Arco primary — brand orange re-tints every component. */
+  --primary-1: 255, 240, 232;
+  --primary-2: 255, 219, 203;
+  --primary-3: 255, 196, 175;
+  --primary-4: 255, 164, 138;
+  --primary-5: 255, 107, 53;
+  --primary-6: #e85628;
+  --primary-7: #cc5529;
+  --primary-8: #a84522;
+  --primary-9: #7d341b;
+  --primary-10: 51, 19, 9;
+
+  --arcoblue-1: 255, 240, 232;
+  --arcoblue-2: 255, 219, 203;
+  --arcoblue-3: 255, 196, 175;
+  --arcoblue-4: 255, 164, 138;
+  --arcoblue-5: 255, 107, 53;
+  --arcoblue-6: #e85628;
+  --arcoblue-7: #cc5529;
+  --arcoblue-8: #a84522;
+  --arcoblue-9: #7d341b;
+  --arcoblue-10: 51, 19, 9;
+
+  /* Surfaces — white-first. */
+  --bg-base: #ffffff;
+  --bg-1: #f7f8fa;
+  --bg-2: #efeff3;
+  --bg-3: #e6e8ee;
+
+  /* Text — WCAG-tuned against the light ramp. */
+  --text-primary: #1d2129;
+  --text-secondary: #4e5969;
+  --text-disabled: #c9cdd4;
+  --text-muted: #86909c;
+  --text-dim: #a9b0ba;
+
+  /* Borders. */
+  --border-base: #e5e6eb;
+  --border-light: #f2f3f5;
+
+  /* Brand tints for light surfaces. */
+  --brand-soft-bg: rgba(255, 107, 53, 0.08);
+  --brand-soft-border: rgba(255, 107, 53, 0.28);
+
+  /* Semantic — light-mode variants (deeper fills read on white). */
+  --primary: #ff6b35;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+
+  /* Arco neutral ramp mapped onto the light scale so Tabs, Input and Modal
+     follow the theme instead of falling back to Arco defaults. */
+  --color-text-1: var(--text-primary);
+  --color-text-2: var(--text-secondary);
+  --color-text-3: var(--text-muted);
+  --color-text-4: var(--text-disabled);
+
+  --color-bg-1: #ffffff;
+  --color-bg-2: #f7f8fa;
+  --color-bg-3: #efeff3;
+  --color-bg-4: #e6e8ee;
+  --color-bg-5: #dcdfe6;
+
+  --color-fill-1: #f7f8fa;
+  --color-fill-2: #efeff3;
+  --color-fill-3: #e6e8ee;
+  --color-fill-4: #dcdfe6;
+
+  --color-border-1: #f2f3f5;
+  --color-border-2: #e5e6eb;
+  --color-border-3: #c9cdd4;
+  --color-border-4: #86909c;
+
+  /* Semantic surfaces — the module CSS reads these, never literal overlays. */
+  --surface-card: #ffffff;
+  --surface-card-grad-top: rgba(17, 24, 39, 0.02);
+  --surface-card-grad-bottom: rgba(17, 24, 39, 0.006);
+  --surface-row: #f7f8fa;
+  --surface-row-hover: #eef0f4;
+  --surface-chip: rgba(17, 24, 39, 0.05);
+  --shadow-1: 0 1px 2px rgba(17, 24, 39, 0.06);
+  --shadow-2: 0 4px 16px rgba(17, 24, 39, 0.08);
+  --shadow-3: 0 12px 36px rgba(17, 24, 39, 0.12);
+}
+
+/* ---- Dark (cinematic) — kept for the future toggle; not the default. ---- */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --primary-1: 77, 32, 16;
+  --primary-2: 153, 64, 30;
+  --primary-3: 204, 85, 41;
+  --primary-4: 232, 90, 40;
+  --primary-5: 255, 107, 53;
+  --primary-6: 255, 107, 53;
+  --primary-7: 255, 130, 85;
+  --primary-8: 255, 150, 112;
+  --primary-9: 255, 179, 153;
+  --primary-10: 255, 230, 219;
+
+  --arcoblue-1: 77, 32, 16;
+  --arcoblue-2: 153, 64, 30;
+  --arcoblue-3: 204, 85, 41;
+  --arcoblue-4: 232, 90, 40;
+  --arcoblue-5: 255, 107, 53;
+  --arcoblue-6: 255, 107, 53;
+  --arcoblue-7: 255, 130, 85;
+  --arcoblue-8: 255, 150, 112;
+  --arcoblue-9: 255, 179, 153;
+  --arcoblue-10: 255, 230, 219;
+
+  --bg-base: #0a0a0a;
+  --bg-1: #222222;
+  --bg-2: #2a2a2a;
+  --bg-3: #353535;
+
+  --text-primary: #f5f5f5;
+  --text-secondary: #c0c0c0;
+  --text-disabled: #555555;
+  --text-muted: #a0a0a0;
+  --text-dim: #6b6b6b;
+
+  --border-base: #4d4d4d;
+  --border-light: #353535;
+
+  --brand-soft-bg: rgba(255, 107, 53, 0.06);
+  --brand-soft-border: rgba(255, 107, 53, 0.22);
+
+  --primary: #ff6b35;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+
+  --color-text-1: var(--text-primary);
+  --color-text-2: var(--text-secondary);
+  --color-text-3: var(--text-muted);
+  --color-text-4: var(--text-disabled);
+
+  --color-bg-1: var(--bg-base);
+  --color-bg-2: #161616;
+  --color-bg-3: var(--bg-1);
+  --color-bg-4: var(--bg-2);
+  --color-bg-5: var(--bg-3);
+
+  --color-fill-1: #1a1a1a;
+  --color-fill-2: var(--bg-1);
+  --color-fill-3: var(--bg-2);
+  --color-fill-4: var(--bg-3);
+
+  --color-border-1: #2a2a2a;
+  --color-border-2: #383838;
+  --color-border-3: #4d4d4d;
+  --color-border-4: #777777;
+
+  --surface-card: #161616;
+  --surface-card-grad-top: rgba(255, 255, 255, 0.035);
+  --surface-card-grad-bottom: rgba(255, 255, 255, 0.008);
+  --surface-row: rgba(255, 255, 255, 0.022);
+  --surface-row-hover: rgba(255, 255, 255, 0.045);
+  --surface-chip: rgba(255, 255, 255, 0.06);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.42);
+  --shadow-3: 0 12px 36px rgba(0, 0, 0, 0.55);
+}
+
+/* ---- Base ---- */
+html,
+body {
+  margin: 0;
+  color: var(--text-primary);
+  background: var(--bg-base);
+}

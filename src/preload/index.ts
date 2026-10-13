@@ -12,6 +12,7 @@ import {
   type VoiceDoctorResult,
   type VoiceTranscribeRequest,
   type VoiceTranscribeResult,
+  type WorkspaceSelectResult,
 } from '@shared/channels';
 
 /**
@@ -42,6 +43,9 @@ const api = {
     start: (request: MissionStartRequest): Promise<MissionStartResult> =>
       ipcRenderer.invoke(channels.missionStart, request),
     stop: (): Promise<{ stopped: boolean }> => ipcRenderer.invoke(channels.missionStop),
+  },
+  workspace: {
+    select: (): Promise<WorkspaceSelectResult> => ipcRenderer.invoke(channels.workspaceSelect),
   },
 };
 
