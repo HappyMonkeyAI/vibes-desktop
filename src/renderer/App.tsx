@@ -50,9 +50,16 @@ const OperationsView: React.FC = () => {
         const snap = (await window.vibesDesktop.ledger.get()) as LedgerSnapshot;
         setSnapshot(snap);
         unsubscribe = window.vibesDesktop.ledger.onNewEntry(({ entry }) => {
-          setSnapshot((prev) =>
-            prev ? { ...prev, entries: [...prev.entries, entry] } : prev
-          );
+          setSnapshot((prev) => {
+            if (!prev) return prev;
+            // Upsert by id: a task updated in place (running → done) replaces its row,
+            // never duplicates it. Counts are derived from the entries, not accumulated.
+            const rest = prev.entries.filter((e) => e.id !== entry.id);
+            const entries = [...rest, entry];
+            const groupCounts: LedgerSnapshot['groupCounts'] = { 'needs-you': 0, running: 0, upcoming: 0, recent: 0 };
+            for (const e of entries) groupCounts[e.group] += 1;
+            return { entries, groupCounts };
+          });
         });
       } finally {
         setLoading(false);

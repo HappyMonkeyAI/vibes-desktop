@@ -2,6 +2,23 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-13 — P1 ledger store (T5)
+
+**Done:** Built the LedgerStore and wired it through to a live-updating renderer.
+- `src/main/ledger/store.ts` (T5) — append-only JSONL in appData; replays the file into an in-memory map on construction (last line per id wins, malformed lines skipped). `recordTaskStatus` / `recordMissionEvent` upsert by task title so a task's lifecycle updates one row; group is derived via `classify()`. Every append writes to disk and emits `new-entry` to subscribers.
+- `src/main/ipc/handlers.ts` — `createHandlerTable` / `registerIpcHandlers` now take `{ store, webContents }`; `ledger:get` returns the live snapshot, and the store's `new-entry` stream pushes over `ledger:new-entry`. Absent in tests → empty snapshot (parity test untouched).
+- `src/main/index.ts` — constructs `LedgerStore(app.getPath('userData'))` at ready and passes it + the window's webContents to handler registration.
+- `src/renderer/App.tsx` — the `onNewEntry` handler now upserts by id (an in-place task update replaces its row, never duplicates) and derives groupCounts from the entries instead of accumulating.
+
+**Why the renderer upsert matters:** the store emits a fresh entry object per append; blindly appending would show two rows for one task as it goes running → done, and the stat tiles would drift out of sync with the list. Deriving counts from the entries keeps them the single source of truth.
+
+**Evidence (all run this session):**
+- `npm test` → **27/27 passed**. New: 7 store tests (replay last-line-wins, malformed-line skip, empty = All quiet, idempotent upsert by title with a 2-line append-only file, failed → needs-you, subscribe push, persistence across a fresh instance) + 1 live-push test (a pushed entry appears without refresh; an in-place update leaves exactly one row).
+- `npm run typecheck` → clean on both configs.
+- `npm run build` → main/preload/renderer all emit.
+
+**Next:** P1/T6 — port the full mission-control operations view (pagination, detail expansion) on top of this store. The bridge's task-status events feed the ledger once T13 wires a real mission start; until then the UI stays "All quiet".
+
 ## 2026-10-13 — P1 bridge layer (T3 + T4)
 
 **Done:** Built the JSON-RPC stdio transport and the VibesBridge that speaks to the vibes MCP server child process.
@@ -18,7 +35,7 @@ Newest first. Each entry: date, what was done, evidence, what's next, open quest
 - `npm run typecheck` → clean on both configs. (ChildProcess stdio streams are typed nullable — captured as non-null locals after the attach guard.)
 - `npm run build` → main/preload/renderer all emit.
 
-**Next:** P1/T5 LedgerStore (append-only JSONL in appData, snapshot + subscribe over IPC), then T6 ledger view port. The bridge's task-status events are the feed that populates the ledger once T5 lands.
+**Superseded:** T5 (LedgerStore) landed in the entry above. Remaining P1: T6 ledger view port.
 
 ## 2026-10-13 — P0 scaffold complete (T1 + T2)
 

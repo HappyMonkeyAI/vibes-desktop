@@ -10,6 +10,8 @@ Lessons learned while building Vibes Desktop. Imperative rules with the why; one
 ## Ledger
 
 - Single-source ledger: an empty ledger is "All quiet", never an error banner (ADR-0003). The fork's multi-source health aggregation does not port.
+- When main pushes a fresh entry object per append, the renderer must upsert by id, not append — otherwise one task going running → done shows two rows and the stat tiles drift from the list. Derive groupCounts from the entries array (single source of truth) instead of accumulating counts on each push.
+- An append-only JSONL store that upserts in memory keeps the file as true history (two lines for a task's lifecycle) while `snapshot()` reflects only current state — last line per id wins on replay.
 
 ## Voice
 
@@ -20,3 +22,8 @@ Lessons learned while building Vibes Desktop. Imperative rules with the why; one
 - The terminal tool's "long-lived process" heuristic false-positives on any command line containing the word *electron* or a `| tail`/pipe — it rejects foreground runs and demands background=true even for a one-shot `npm install`. Workaround: write package lists to a temp file and expand at runtime (`npm install -D $(tr "\n" " " < deps.txt)`), which keeps the literal command clean; drive installs/screenshots through PowerShell `-File` scripts.
 - esbuild postinstall (binary download) is gated behind `npm install-scripts approve <pkg>` on this machine — run it after any install that pulls esbuild, or vite build fails to find the binary.
 - Dependency pinning: electron-vite@5 peers vite ^7; @vitejs/plugin-react@6 requires vite 8. Use plugin-react@^5 + vite@^7 together.
+
+## TypeScript / Node child-process stdio
+
+- `ChildProcess.stdout`/`.stderr`/`.stdin` are typed nullable, and TS does NOT narrow across closures: capture the stream into a local (`const stdin = this.process?.stdin; if (!stdin || !stdin.writable) return;`) and use that local everywhere, including inside callbacks and getters. A bare `!== null` is not enough — `undefined` must be excluded too (use `!!x`).
+- To drive fake stdio in tests without spawning: build the child as an EventEmitter whose stdout/stderr are `Readable({read(){}})` fed via `.push(chunk)` (Readables have no `.write`); make stdin a `Writable` sink. Attach the client, feed lines, assert on resolved promises / emitted events.

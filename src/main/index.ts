@@ -1,10 +1,12 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import { registerIpcHandlers } from './ipc/handlers';
+import { LedgerStore } from './ledger/store';
 
 const isDev = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
+let ledger: LedgerStore | null = null;
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -36,8 +38,10 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  registerIpcHandlers(ipcMain);
+  // The ledger lives in appData; it replays its JSONL on construction.
+  ledger = new LedgerStore(app.getPath('userData'));
   createWindow();
+  registerIpcHandlers(ipcMain, { store: ledger, webContents: mainWindow?.webContents });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
