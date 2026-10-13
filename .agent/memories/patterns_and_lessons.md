@@ -62,3 +62,23 @@ Lessons learned while building Vibes Desktop. Imperative rules with the why; one
 - electron-builder needs its postinstall scripts approved on this machine: `esbuild` (binary download) **and** `electron-winstaller` (downloads 7za for the win-installer target). Run `npm install-scripts approve <pkg>` for both after any install that pulls them, or the build fails to find the binary.
 - Build a Windows NSIS installer with a `dist` script (`electron-vite build && electron-builder --win`) and a `build` config in package.json (appId, productName, `win.target` = nsis/x64, `files: ["out/**/*", "package.json"]`). Output lands in `dist/` (already gitignored). The installer is a valid PE — verify the MZ header before claiming success.
 - Verify the **packaged** app, not just dev mode: launch `dist/win-unpacked/<Product>.exe` directly and capture via Win32 EnumWindows+CopyFromScreen. S1 ("All quiet", no error banner) must hold in production too — the Arco/React 19 shim and ADR-0003 are only proven when the bundled build boots clean.
+
+## Preload & child-process spawn (post-plan fixes)
+
+- A **sandboxed** Electron preload runs in a CommonJS context: with `"type": "module"` in package.json, electron-vite emits `index.mjs` whose `import` throws at load, leaving `window.vibesDesktop` undefined and crashing every tab on mount. Force CJS output for the preload build (rollupOptions `format: 'cjs'`, `entryFileNames: '[name].js'`) — this also restores the original `index.js` path. Preload scripts do not HMR-reload; a full app restart is required after any preload change.
+- Resolve the child interpreter deterministically: run the checkout's local tsx CLI (`node_modules/tsx/dist/cli.mjs`) through `process.execPath` with `ELECTRON_RUN_AS_NODE=1`. Never rely on PATH, and never spawn `.bin/tsx` directly — it is a cmd batch file on Windows that needs `shell:true`. Fail fast with an actionable "run `npm install` inside the checkout" error when neither the CLI nor a shim exists.
+- **Always attach an `error` listener to a child process.** An EventEmitter child `error` with no listener becomes an uncaught exception that kills Electron's main process — the user sees "A JavaScript error occurred in the main process". Swallow it in the bridge (pending requests are already rejected by the client and surface as a failed mission via the service catch path). This is S2: a crashed child is a ledger entry, never an app death.
+- `npm install` in the vibes checkout needs `--ignore-scripts`: `better-sqlite3`'s gyp build fails on Node 26 without VS Build Tools, and the MCP server never imports it.
+
+## Ledger store (race)
+
+- Concurrent read-modify-write mutations for the same title mint duplicate rows: each call does its "find existing by title" lookup after awaiting setup, so two concurrent calls both miss each other. Serialize all mutations through a `writeQueue` promise chain and make `snapshot()` drain it before reading. Add a regression test that fires concurrent events for one title and asserts exactly one row.
+
+## Theming (zerogterm pattern)
+
+- Palettes live under `:root[data-theme='light' | 'dark']`; light is the default, dark retained so a future toggle is an attribute flip. CSS custom properties carry every color; non-CSS data (theme list, labels, kind, terminal palettes) stays in a themes module with a `toggledTheme()` helper. Module CSS must reference semantic surface tokens (`--surface-card`, `--surface-row`, …), never hardcoded `rgba(255,255,255,…)` overlays — that is what makes both modes render correctly from one stylesheet.
+- Set `arco-theme` + `data-theme` on `documentElement` **synchronously in `<body>` before the module script** to prevent a theme flash. Setting the attribute on `body` from a `<head>` script silently no-ops (body doesn't exist yet).
+
+## Verification tooling (Windows)
+
+- Window-capture (`CopyFromScreen`) grabs the desktop wallpaper when the app isn't frontmost — it failed silently and returned the background image. Use CDP's `Page.captureScreenshot` instead: it captures the renderer directly with no z-order fight. Drive CDP from Node v26's global `WebSocket`; add `awaitPromise: true` to `Runtime.evaluate` for any expression that returns a Promise, or you get `{}` back.

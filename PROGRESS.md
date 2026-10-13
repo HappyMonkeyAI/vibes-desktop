@@ -2,6 +2,36 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-13 — Mission crash fix (post-plan) — `spawn tsx ENOENT` no longer kills the app
+
+**Done:** The user started a mission ("update the web page in the `test` directory") and the whole app died with Electron's "A JavaScript error occurred in the main process" dialog: `Uncaught Exception: Error: spawn tsx ENOENT`. Two root causes, both fixed.
+- **tsx unresolvable.** The vibes checkout had no `node_modules` and `tsx` is not on PATH. `vibes-bridge.ts` now runs the checkout's local tsx CLI (`node_modules/tsx/dist/cli.mjs`) through the bundled runtime — `process.execPath` with `ELECTRON_RUN_AS_NODE=1` — so there is no PATH dependency at all. A bare `.bin/tsx` shim is a cmd batch file on Windows and can't be spawned without `shell:true`, which is why the old "prefer local tsx" check (which pointed at the shim) was wrong on this platform anyway. If neither the CLI nor a shim exists, `start()` throws an actionable "run `npm install` inside the vibes checkout" error before any spawn attempt.
+- **Uncaught child `error` event.** An EventEmitter child-process `error` with no listener becomes an uncaught exception that kills Electron's main process — a direct S2 violation (a crashed/failed child must surface as a failed mission, never crash the app). The bridge constructor now attaches a swallow handler on `client.on('error')`; pending requests are already rejected by the client and flow into the ledger as `Mission failed` via the existing MissionService catch path. `jsonrpc.ts` also reports a friendly ENOENT message naming the missing interpreter instead of the raw node error.
+- Installed the vibes checkout's dependencies (`npm install --ignore-scripts`) so a real mission can spawn. `--ignore-scripts` is required: `better-sqlite3`'s gyp build fails on Node 26 without VS Build Tools, and the MCP server never imports it.
+
+**Evidence (all run this session):**
+- Probe scripts confirmed tsx boots the Vibes MCP server under **both** plain node and electron-as-node, returning a valid `initialize` response (`serverInfo: Vibes 1.0.0`) over JSON-RPC stdio.
+- **Live reproduction of the user's exact scenario via CDP:** started a mission with `workspaceRoot` = the `test` directory. The tsx child spawned (visible in the process tree as a child of the main app), the app window stayed alive, and the ledger recorded the full lifecycle: `Planning… blocked`, `Executing mission blocked`, `Modify index.html title failed`, `Mission failed` — all under "Needs you" (4). A CDP `Page.captureScreenshot` (window-capture kept grabbing the desktop wallpaper behind the app) showed the UI rendered normally in the light theme with those status pills and no crash dialog. Before this fix, the same action killed the whole app.
+- The mission itself still can't *complete* — no reachable LLM endpoint on this machine (known infra blocker). It now degrades to a graceful ledger failure instead of a process death.
+- `npm test` → **75/75 passed** (3 new regression tests: spawn error never reaches the process handler, in-flight request rejects when the child dies mid-call, missing tsx fails fast with the actionable message). Typecheck clean on both configs. Committed as `7274aa8`.
+
+**Next:** nothing outstanding from this fix. A live end-to-end mission completion still needs a reachable LLM endpoint (infra, not code).
+
+## 2026-10-13 — UI polish (post-plan) — light theme, working-directory picker, Roles-tab crash root cause
+
+**Done:** Three user-reported UI problems fixed in one pass.
+- **Roles tab "error" — root-caused to the preload.** The preload was built as ESM (`index.mjs`) because `package.json` has `"type": "module"`; a *sandboxed* Electron preload runs in a CommonJS context, so its `import` threw at load, leaving `window.vibesDesktop` undefined and crashing every tab on mount (Roles just happened to be the one opened). Fixed by forcing the preload build to CJS output (`electron.vite.config.ts`: rollupOptions `format: 'cjs'`, `entryFileNames: '[name].js'`) — which also restores the original `index.js` path. Roles now renders all five endpoint boxes (Default/Planner/Executor/Reviewer/Triage) with inputs, Test-connection buttons, and Save — verified via CDP DOM inspection and screenshot, zero errors.
+- **Light theme by default, theming seam for later.** Restructured `theme.css` on the zerogterm pattern: palettes live under `:root[data-theme='light' | 'dark']`, light is the default, dark is retained so a future toggle is an attribute flip. Hardcoded white-overlay colors in `MissionControl.module.css` replaced with semantic surface tokens (`--surface-card`, `--surface-row`, etc.) defined per theme. `index.html` sets `arco-theme="light"` + `data-theme="light"` on `documentElement` synchronously before first paint (the earlier attempt set the attribute on `body` from a `<head>` script, which silently no-oped).
+- **Working directory picker.** New `workspaceSelect` IPC channel: main-side native folder dialog (`dialog.showOpenDialog`, parented to the focused window), preload exposes `workspace.select()`, and the Operations composer shows a "Working directory" row (path or "App default") whose value is passed as `workspaceRoot` into `mission.start`.
+- Also fixed a latent LedgerStore race found by the test suite: concurrent `recordTaskStatus` calls for the same title minted duplicate rows because read-modify-write wasn't serialized. Added a `writeQueue` promise chain; all mutations go through `enqueue()`, and `snapshot()` drains it before reading. Regression test added.
+
+**Evidence (all run this session):**
+- CDP DOM inspection: preload loaded (`hasApi: true`), light theme active, workspace row present; Roles tab shows five role boxes, 10 inputs, 5 test buttons, Save button, zero page errors. The only console message is Arco's harmless React-19 `element.ref` deprecation warning.
+- Screenshots (CDP `Page.captureScreenshot`) confirmed both tabs render in the light theme with proper spacing — no squashing, multi-line mission textarea intact.
+- `npm test` → **72/72 passed** at that point (the ipc-parity test enforces the new channel end-to-end); typecheck clean on both configs; build emits. Committed as `5ec2756`.
+
+**Next:** Superseded — the mission crash fix landed in the entry above. Only a live LLM endpoint remains for a full mission completion.
+
 ## 2026-10-13 — P4 packaging (T15) — Windows installer + live S1 pass on the packaged build
 
 **Done:** Configured electron-builder to produce a Windows NSIS installer and verified the **packaged** app boots cleanly — not just dev mode. This is the last task in the plan; the app is now shippable.
@@ -15,7 +45,7 @@ Newest first. Each entry: date, what was done, evidence, what's next, open quest
 
 **T15 is complete.** The Windows installer builds and the packaged app passes S1 live. **One outstanding item (noted in TASKS.md):** a true clean-machine pass of S2/S3 e2e — starting a real mission against a live LLM endpoint from the installed build — which needs a machine with only vibes + yapsnap installed. That's a release/QA step, not a code gap.
 
-**Next:** nothing in-plan remains. The app is functionally and packaging-complete end-to-end (voice → mission → live ledger → clean stop → Windows installer).
+**Next:** Superseded — two post-plan fixes landed in the entries above (UI polish `5ec2756`, mission crash fix `7274aa8`). Only a release/QA clean-machine LLM e2e pass remains outstanding.
 
 ## 2026-10-13 — P4 lifecycle (T13 + T14) — mission start/stop wired to the bridge
 
