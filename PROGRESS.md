@@ -2,6 +2,25 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-13 — P4 lifecycle (T13 + T14) — mission start/stop wired to the bridge
+
+**Done:** Built `MissionService` so "Start mission" actually drives a vibes MCP child process end-to-end, with clean stop/cancel and a hard single-mission guard. The live ledger now fills from real missions instead of staying "All quiet".
+- `src/main/mission/service.ts` (T13/T14) — one VibesBridge per mission. `startMission` checks the single-mission guard synchronously (`state==='running'`, before any await) so two rapid starts can't both pass; it then spawns a bridge, records "Planning"/"Executing" events, and awaits plan→execute while `[TASK_STATUS]` events stream straight into the ledger. Every exit path (complete, fail, stop) terminates the child cleanly. `stopMission` ends the child via `endBridge()` then calls `store.markInFlightBlocked()` so in-flight tasks become `blocked`. A minimal structural `MissionBridge` interface (`on`, `start`, `planMission`, `executePlanned`, `stop`) keeps the service testable with a fake.
+- `src/main/ledger/store.ts` — added `markInFlightBlocked()`: rewrites every `vibes-mission` entry in `running`/`verifying` to `blocked` in place (same id, new status) and returns how many it blocked.
+- `src/main/index.ts` — constructs the service with a bridge factory that writes `.vibes/config.json` from `rolesStore.input()` **before** each spawn, so a spawned child reads the per-role endpoints correctly. `VIBES_PATH` falls back to the known checkout when unset (dev convenience).
+- `src/main/roles/store.ts` — added `input(): RolesConfigInput` returning the decrypted config for all five roles.
+- `src/main/ipc/handlers.ts` + `src/preload/index.ts` — wired `missionStart`/`missionStop` to the live service; `MissionStartResult` gains `error?`; `workspaceRoot` is now optional (falls back to cwd).
+- `src/renderer/App.tsx` — `handleStart` calls `mission.start`, handles `alreadyRunning`/`error`/success with a loading state; a conditional "Stop mission" button appears only while a mission runs (`hasRunning`).
+
+**Evidence (all run this session):**
+- `npm test` → **71/71 passed**. New: 6 mission-service tests (happy path, plan error, exec error, already-running guard, stop no-child, stop with-child) + 1 markInFlightBlocked test.
+- `npm run typecheck` → clean on both configs. `npm run build` → all three processes emit.
+- **Live boot:** launched the app; vision analysis confirmed "Start mission" is disabled (empty request), **no Stop button** (correctly hidden while nothing runs), no error banner, "All quiet" empty state. The conditional Stop control and loading/disabled states behave correctly. Test tree killed cleanly (27912 + 3 children); zerogterm left untouched.
+
+**P4 lifecycle is complete (T13–T14).** Start/stop now drive a real vibes child process with clean termination, in-flight→blocked on stop, and a hard single-mission guard. The ledger fills from live missions.
+
+**Next:** T15 — electron-builder Windows installer + a clean-machine pass of S1–S3. Remaining packaging concern only; the app itself is functionally complete.
+
 ## 2026-10-13 — P3 complete (T10–T12 voice input) — phase done
 
 **Done:** Built the full push-to-talk voice path: renderer mic capture → base64 over IPC → yapsnap CLI transcription → transcript text into the mission request field, plus a doctor that reports an actionable install hint instead of crashing when ffmpeg/yapsnap are missing.
@@ -22,7 +41,7 @@ Newest first. Each entry: date, what was done, evidence, what's next, open quest
 
 **P3 is complete (T10–T12).** Voice input now flows end-to-end: hold-to-talk → transcribe → text in the mission field. The doctor gives an actionable hint rather than a crash when ffmpeg/yapsnap are absent.
 
-**Next:** P4/T13 — wire "Start mission" to the VibesBridge (plan + execute over the MCP child process), so the live ledger finally fills from real missions. Then T14 single-mission guard and T15 packaging.
+**Next:** Superseded — T13+T14 (mission lifecycle) landed in the entry above. Remaining: T15 packaging (installer + clean-machine pass).
 
 ## 2026-10-13 — P2 complete (T7–T9 roles & config) — phase done
 

@@ -48,3 +48,11 @@ Lessons learned while building Vibes Desktop. Imperative rules with the why; one
 
 - `ChildProcess.stdout`/`.stderr`/`.stdin` are typed nullable, and TS does NOT narrow across closures: capture the stream into a local (`const stdin = this.process?.stdin; if (!stdin || !stdin.writable) return;`) and use that local everywhere, including inside callbacks and getters. A bare `!== null` is not enough — `undefined` must be excluded too (use `!!x`).
 - To drive fake stdio in tests without spawning: build the child as an EventEmitter whose stdout/stderr are `Readable({read(){}})` fed via `.push(chunk)` (Readables have no `.write`); make stdin a `Writable` sink. Attach the client, feed lines, assert on resolved promises / emitted events.
+
+## Mission lifecycle (T13–T14)
+
+- One child per mission, terminated on **every** exit path (complete, fail, stop). A crashed child is surfaced in the ledger as `failed`, never crashes the app — that's S2/S6. Structure it as a synchronous `startMission` flow (`spawn → plan → execute`) so task-status events stream to the ledger in real time and the invoke resolves when the mission ends (the UI can show loading + surface errors).
+- The single-mission guard must check state **synchronously, before any await** — two rapid starts both pass an `await`-gated check. Return `{started:false, alreadyRunning:true}`; never throw for a benign "already running".
+- On stop/cancel, rewrite in-flight tasks (`running`/`verifying`, source `vibes-mission`) to `blocked` **in place** (same id) so the renderer's upsert replaces the row instead of duplicating it. Return the blocked count.
+- Depend on a minimal structural bridge interface (`on`, `start`, `planMission`, `executePlanned`, `stop`) rather than the full class — tests inject a fake without implementing `client`/`queryStatus`. The real bridge satisfies it structurally.
+- Write `.vibes/config.json` from the roles store **before each spawn** (the child reads its per-role endpoints from that file, not env). Fall back to a known checkout path when VIBES_PATH is unset — dev convenience only; packaging sets it explicitly.

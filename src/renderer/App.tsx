@@ -47,6 +47,28 @@ const OperationsView: React.FC = () => {
   const [snapshot, setSnapshot] = useState<LedgerSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [missionRequest, setMissionRequest] = useState('');
+  const [starting, setStarting] = useState(false);
+
+  const handleStart = async () => {
+    const request = missionRequest.trim();
+    if (!request || starting) return;
+    setStarting(true);
+    try {
+      const result = await window.vibesDesktop.mission.start({ request });
+      if (result.alreadyRunning) Message.warning('A mission is already running.');
+      else if (!result.started && result.error) Message.error(result.error);
+      // On success the live ledger begins filling on its own — no banner needed.
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const entries = snapshot?.entries ?? [];
+  const groupCounts = snapshot?.groupCounts ?? { 'needs-you': 0, running: 0, upcoming: 0, recent: 0 };
+  // T13/T14 — a Stop control appears while any task is in flight.
+  const hasRunning = entries.some((e) => e.status === 'running' || e.status === 'verifying');
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -73,18 +95,6 @@ const OperationsView: React.FC = () => {
     return () => unsubscribe?.();
   }, []);
 
-  const handleStartMission = () => {
-    if (!missionRequest.trim()) {
-      Message.warning('Describe the mission first (type it or hold-to-talk).');
-      return;
-    }
-    // T13 wires this to the bridge; for now the field is ready and voice text lands here.
-    void window.vibesDesktop.mission.start({ request: missionRequest.trim(), workspaceRoot: '' });
-  };
-
-  const entries = snapshot?.entries ?? [];
-  const groupCounts = snapshot?.groupCounts ?? { 'needs-you': 0, running: 0, upcoming: 0, recent: 0 };
-
   // Windowed rendering (T6): only a page of rows mounts at a time. The reset key
   // is the entry-id list — any change to the set returns the window to page 0.
   const windowResetKey = useMemo(() => entries.map((entry) => entry.id).join('|'), [entries]);
@@ -105,9 +115,14 @@ const OperationsView: React.FC = () => {
           style={{ flex: 1 }}
         />
         <VoiceInput onTranscript={(text) => setMissionRequest((prev) => (prev ? `${prev} ${text}` : text))} />
-        <Button type="primary" onClick={handleStartMission}>
+        <Button type="primary" loading={starting} disabled={!missionRequest.trim()} onClick={() => void handleStart()}>
           Start mission
         </Button>
+        {hasRunning && (
+          <Button status="warning" onClick={() => void window.vibesDesktop.mission.stop()}>
+            Stop mission
+          </Button>
+        )}
         <Button size="small" loading={loading} onClick={() => window.location.reload()}>
           Refresh
         </Button>

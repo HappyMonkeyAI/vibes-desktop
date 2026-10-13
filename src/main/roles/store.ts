@@ -160,4 +160,17 @@ export class RolesStore {
   getKey(role: keyof RolesConfigView): string {
     return this.load()[role].apiKey;
   }
+
+  /** Full decrypted config as the input shape — feeds the native config writer (T13). */
+  input(): RolesConfigInput {
+    const config = this.load();
+    const toInput = (e: StoredEndpoint): RoleEndpointInput => ({ baseUrl: e.baseUrl, model: e.model, apiKey: e.apiKey });
+    return {
+      default: toInput(config.default),
+      planner: toInput(config.planner),
+      executor: toInput(config.executor),
+      reviewer: toInput(config.reviewer),
+      triage: toInput(config.triage),
+    };
+  }
 }

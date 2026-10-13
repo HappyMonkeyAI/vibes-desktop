@@ -108,11 +108,14 @@ export interface VoiceTranscribeResult {
 
 export interface MissionStartRequest {
   request: string;
-  workspaceRoot: string;
+  /** Optional explicit mission root; falls back to the app's cwd when empty. */
+  workspaceRoot?: string;
 }
 export interface MissionStartResult {
   started: boolean;
   alreadyRunning: boolean;
+  /** Present when the start was rejected or failed for a reason the user can act on. */
+  error?: string;
 }
 
 /** Wire shape for the `ledger:new-entry` push event (main → renderer). */

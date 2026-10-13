@@ -111,4 +111,28 @@ export class LedgerStore extends EventEmitter {
     this.emit('new-entry', entry);
     return entry;
   }
+
+  /**
+   * T13 — when a mission is stopped/cancelled, every in-flight task (running or
+   * verifying) becomes blocked. Rewrites each such entry in place (same id, new
+   * status) so the renderer's upsert replaces its row rather than duplicating it.
+   * Returns how many tasks were blocked.
+   */
+  async markInFlightBlocked(): Promise<number> {
+    await this.ready;
+    let count = 0;
+    for (const entry of [...this.entries.values()]) {
+      if (entry.source !== 'vibes-mission') continue;
+      if (entry.status !== 'running' && entry.status !== 'verifying') continue;
+      const blocked: LedgerEntry = {
+        ...entry,
+        status: 'blocked',
+        group: classify({ status: 'blocked', needsHuman: false }),
+        updatedAt: Date.now(),
+      };
+      await this.append(blocked);
+      count += 1;
+    }
+    return count;
+  }
 }

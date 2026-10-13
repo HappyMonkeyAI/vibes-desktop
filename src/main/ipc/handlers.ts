@@ -3,9 +3,10 @@ import type { WebContents } from 'electron';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { channels, type ChannelName, type LedgerSnapshot, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult } from '@shared/channels';
+import { channels, type ChannelName, type LedgerSnapshot, type MissionStartRequest, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult } from '@shared/channels';
 import type { LedgerStore } from '../ledger/store';
 import type { RolesStore } from '../roles/store';
+import type { MissionService } from '../mission/service';
 import { testConnection } from '../roles/test-connection';
 import { runVoiceDoctor } from '../voice/doctor';
 import { transcribeFile, voiceTempDir } from '../voice/transcribe';
@@ -44,10 +45,12 @@ export interface HandlerTableOptions {
   webContents?: WebContents;
   /** The per-role endpoint store (T7). Absent in tests → empty view / no-op save. */
   rolesStore?: RolesStore;
+  /** The mission lifecycle service (T13/T14). Absent in tests → inert stubs. */
+  missionService?: MissionService;
 }
 
 export function createHandlerTable(options: HandlerTableOptions = {}): Record<ChannelName, Handler> {
-  const { store, rolesStore } = options;
+  const { store, rolesStore, missionService } = options;
   return {
     [channels.ledgerGet]: async () => (store ? store.snapshot() : emptySnapshot()),
     // Push channel (main → renderer); bound as a no-op handler for parity.
@@ -77,8 +80,14 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
         return { ok: false, error: error instanceof Error ? error.message : String(error) };
       }
     },
-    [channels.missionStart]: async () => ({ started: false, alreadyRunning: false }),
-    [channels.missionStop]: async () => ({ stopped: false }),
+    // T13/T14 — real mission lifecycle; inert stubs only when no service is wired (tests).
+    [channels.missionStart]: async (_e, req) => {
+      if (!missionService) return { started: false, alreadyRunning: false };
+      const request = req as MissionStartRequest;
+      // The renderer passes an empty workspaceRoot — the app's cwd is the mission root.
+      return missionService.startMission({ request: request.request, workspaceRoot: request.workspaceRoot || process.cwd() });
+    },
+    [channels.missionStop]: async () => (missionService ? missionService.stopMission() : { stopped: false }),
   };
 }
 

@@ -23,6 +23,6 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T12 yapsnap-doctor: ffmpeg + yapsnap presence check with install hints; graceful errors — SPEC S5 ✅ 2026-10-13 (doctor.ts bounded 5s spawn each; actionable winget/pip hints. 4 tests: ready, missing-ffmpeg hint, missing-yapsnap hint, non-zero exit)
 
 ## P4 — Lifecycle & Packaging
-- [ ] T13 Stop/cancel mission: clean child termination, in-flight tasks → blocked — SPEC S6
-- [ ] T14 Single-mission guard (second start rejected) — SPEC S6
+- [x] T13 Stop/cancel mission: clean child termination, in-flight tasks → blocked — SPEC S6 ✅ 2026-10-13 (service.ts stopMission ends the child via endBridge then store.markInFlightBlocked rewrites running/verifying mission tasks to blocked. Live verify: Stop button appears only while a mission runs; kill tree confirmed clean termination. markInFlightBlocked test + stop no-child/with-child tests)
+- [x] T14 Single-mission guard (second start rejected) — SPEC S6 ✅ 2026-10-13 (service.ts state==='running' check at the top of startMission, before any await; returns {started:false, alreadyRunning:true}. Live verify: Start disabled while a mission runs. already-running guard test)
 - [ ] T15 electron-builder Windows installer; live pass of S1–S3 on a clean machine — SPEC S8

@@ -93,4 +93,35 @@ describe('LedgerStore (T5)', () => {
     expect(snap.entries[0].title).toBe('Persist me');
     rmSync(dir, { recursive: true, force: true });
   });
+
+  it('T13 — markInFlightBlocked blocks running/verifying mission tasks, leaves done and non-mission rows', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    await store.recordTaskStatus({ name: 'Still going', status: 'in-progress' }); // running
+    await store.recordTaskStatus({ name: 'Already done', status: 'complete' }); // done
+    // A verifying task (upserted from in-progress, then re-recorded as a new row via mission event)
+    await store.recordMissionEvent('Verifying build', 'verifying');
+
+    const count = await store.markInFlightBlocked();
+    expect(count).toBe(2); // "Still going" + "Verifying build"; "Already done" untouched
+
+    const snap = await store.snapshot();
+    const byTitle = Object.fromEntries(snap.entries.map((e) => [e.title, e]));
+    expect(byTitle['Still going'].status).toBe('blocked');
+    expect(byTitle['Still going'].group).toBe('needs-you');
+    expect(byTitle['Verifying build'].status).toBe('blocked');
+    expect(byTitle['Already done'].status).toBe('done'); // untouched
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('T13 — markInFlightBlocked is a no-op when nothing is in flight', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    await store.recordTaskStatus({ name: 'Done task', status: 'complete' });
+    const count = await store.markInFlightBlocked();
+    expect(count).toBe(0);
+    const snap = await store.snapshot();
+    expect(snap.entries[0].status).toBe('done');
+    rmSync(dir, { recursive: true, force: true });
+  });
 });
