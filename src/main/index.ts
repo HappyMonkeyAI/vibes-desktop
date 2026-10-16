@@ -7,6 +7,7 @@ import { makeSafeCipher } from './roles/safeCipher';
 import { writeVibesConfig } from './roles/config-writer';
 import { createMissionService } from './mission/service';
 import { VibesBridge } from './bridge/vibes-bridge';
+import { WorkspaceHistoryStore } from './workspace/history';
 
 const isDev = !app.isPackaged;
 
@@ -47,6 +48,8 @@ app.whenReady().then(() => {
   ledger = new LedgerStore(app.getPath('userData'));
   // Role endpoints persist alongside the ledger; keys encrypt via the OS safe store.
   const rolesStore = new RolesStore(app.getPath('userData'), makeSafeCipher());
+  // Workspace history store
+  const workspaceHistoryStore = new WorkspaceHistoryStore(app.getPath('userData'));
   // T13/T14 — mission lifecycle. The bridge factory writes the native config before
   // each spawn so a child always reads the per-role endpoints we just saved.
   const missionService = createMissionService({
@@ -65,7 +68,7 @@ app.whenReady().then(() => {
     const res = await dialog.showOpenDialog(parent!, { properties: ['openDirectory'] });
     return { path: res.canceled ? null : (res.filePaths[0] ?? null) };
   };
-  registerIpcHandlers(ipcMain, { store: ledger, webContents: mainWindow?.webContents, rolesStore, missionService, selectWorkspace });
+  registerIpcHandlers(ipcMain, { store: ledger, webContents: mainWindow?.webContents, rolesStore, missionService, selectWorkspace, workspaceHistoryStore });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

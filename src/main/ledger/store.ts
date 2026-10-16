@@ -3,7 +3,7 @@ import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { classify } from '@shared/classify';
-import type { ActivityGroup, LedgerEntry, LedgerSnapshot } from '@shared/channels';
+import type { ActivityGroup, LedgerEntry, LedgerSnapshot, LedgerStatus } from '@shared/channels';
 
 /**
  * T5 — LedgerStore. The single source of activity truth (ADR-0003).
@@ -84,7 +84,7 @@ export class LedgerStore extends EventEmitter {
   }
 
   /** Record a vibes task lifecycle event as a ledger entry (idempotent upsert). Serialized so two events for the same title cannot both miss each other and mint duplicate rows. */
-  async recordTaskStatus(input: TaskStatusInput): Promise<LedgerEntry> {
+  async recordTaskStatus(input: TaskStatusInput, workspaceRoot?: string): Promise<LedgerEntry> {
     const status = STATUS_MAP[input.status];
     return this.enqueue(async () => {
       await this.ready;
@@ -95,6 +95,7 @@ export class LedgerStore extends EventEmitter {
         status,
         source: 'vibes-mission',
         title: input.name,
+        workspaceRoot: workspaceRoot || existing?.workspaceRoot,
         updatedAt: Date.now(),
       };
       return this.append(entry);
@@ -102,7 +103,7 @@ export class LedgerStore extends EventEmitter {
   }
 
   /** Record a mission-level event (start / finish) as a ledger entry. */
-  async recordMissionEvent(title: string, status: LedgerEntry['status']): Promise<LedgerEntry> {
+  async recordMissionEvent(title: string, status: LedgerEntry['status'], workspaceRoot?: string): Promise<LedgerEntry> {
     return this.enqueue(async () => {
       await this.ready;
       const existing = [...this.entries.values()].find((e) => e.source === 'vibes-mission' && e.title === title);
@@ -111,7 +112,9 @@ export class LedgerStore extends EventEmitter {
         group: classify({ status, needsHuman: false }),
         status,
         source: 'vibes-mission',
+        kind: 'mission',
         title,
+        workspaceRoot: workspaceRoot || existing?.workspaceRoot,
         updatedAt: Date.now(),
       };
       return this.append(entry);
@@ -150,6 +153,62 @@ export class LedgerStore extends EventEmitter {
         count += 1;
       }
       return count;
+    });
+  }
+
+  /**
+   * Search ledger entries by filter. Returns a filtered snapshot.
+   */
+  search(filter: {
+    query?: string;
+    status?: LedgerStatus;
+    group?: ActivityGroup;
+  }): LedgerSnapshot {
+    let entries = [...this.entries.values()];
+
+    if (filter.query) {
+      const q = filter.query.toLowerCase();
+      entries = entries.filter(
+        (e) =>
+          e.title.toLowerCase().includes(q) ||
+          (e.detail && e.detail.toLowerCase().includes(q))
+      );
+    }
+
+    if (filter.status) {
+      entries = entries.filter((e) => e.status === filter.status);
+    }
+
+    if (filter.group) {
+      entries = entries.filter((e) => e.group === filter.group);
+    }
+
+    const counts: Record<ActivityGroup, number> = { 'needs-you': 0, running: 0, upcoming: 0, recent: 0 };
+    for (const entry of entries) counts[entry.group] += 1;
+
+    return { entries, groupCounts: counts };
+  }
+
+  /**
+   * Archive ledger entries by id. Rewrites each with 'archived' status.
+   * Returns the archived entries (empty if none were found).
+   */
+  async archiveEntries(entryIds: string[]): Promise<LedgerEntry[]> {
+    return this.enqueue(async () => {
+      await this.ready;
+      const archived: LedgerEntry[] = [];
+      for (const entryId of entryIds) {
+        const entry = this.entries.get(entryId);
+        if (!entry || entry.status === 'archived') continue;
+        const next: LedgerEntry = {
+          ...entry,
+          status: 'archived',
+          group: classify({ status: 'archived', needsHuman: false }),
+          updatedAt: Date.now(),
+        };
+        archived.push(await this.append(next));
+      }
+      return archived;
     });
   }
 }

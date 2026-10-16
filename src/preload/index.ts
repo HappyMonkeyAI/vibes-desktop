@@ -2,7 +2,10 @@ import { contextBridge, ipcRenderer } from 'electron';
 import {
   channels,
   type LedgerNewEntryEvent,
+  type LedgerSearchFilter,
   type LedgerSnapshot,
+  type MissionPlanRequest,
+  type MissionPlanResponse,
   type MissionStartRequest,
   type MissionStartResult,
   type RolesConfigInput,
@@ -12,6 +15,7 @@ import {
   type VoiceDoctorResult,
   type VoiceTranscribeRequest,
   type VoiceTranscribeResult,
+  type WorkspaceHistoryEntry,
   type WorkspaceSelectResult,
 } from '@shared/channels';
 
@@ -27,6 +31,11 @@ const api = {
       ipcRenderer.on(channels.ledgerNewEntry, listener);
       return () => ipcRenderer.removeListener(channels.ledgerNewEntry, listener);
     },
+    search: (filter: LedgerSearchFilter): Promise<LedgerSnapshot> =>
+      ipcRenderer.invoke(channels.ledgerSearch, filter),
+    /** Archive one entry or a batch (a mission card plus its task rows). */
+    archive: (entryIds: string | string[]): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke(channels.ledgerArchive, entryIds),
   },
   roles: {
     get: (): Promise<RolesConfigView> => ipcRenderer.invoke(channels.rolesGet),
@@ -43,9 +52,16 @@ const api = {
     start: (request: MissionStartRequest): Promise<MissionStartResult> =>
       ipcRenderer.invoke(channels.missionStart, request),
     stop: (): Promise<{ stopped: boolean }> => ipcRenderer.invoke(channels.missionStop),
+    plan: (request: MissionPlanRequest): Promise<MissionPlanResponse> =>
+      ipcRenderer.invoke(channels.missionPlan, request),
   },
   workspace: {
     select: (): Promise<WorkspaceSelectResult> => ipcRenderer.invoke(channels.workspaceSelect),
+    history: {
+      save: (path: string): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.workspaceHistorySave, path),
+      get: (): Promise<WorkspaceHistoryEntry[]> => ipcRenderer.invoke(channels.workspaceHistoryGet),
+      clear: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.workspaceHistoryClear),
+    },
   },
 };
 

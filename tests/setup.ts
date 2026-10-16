@@ -14,6 +14,8 @@ window.vibesDesktop = {
   ledger: {
     get: vi.fn().mockResolvedValue(emptySnapshot),
     onNewEntry: vi.fn(() => () => undefined),
+    search: vi.fn().mockResolvedValue(emptySnapshot),
+    archive: vi.fn().mockResolvedValue({ ok: true, count: 0 }),
   },
   roles: {
     get: vi.fn().mockResolvedValue({}),
@@ -27,5 +29,14 @@ window.vibesDesktop = {
   mission: {
     start: vi.fn().mockResolvedValue({ started: false, alreadyRunning: false }),
     stop: vi.fn().mockResolvedValue({ stopped: false }),
+    plan: vi.fn().mockResolvedValue({ tasks: [] as string[] }),
+  },
+  workspace: {
+    select: vi.fn().mockResolvedValue({ path: null }),
+    history: {
+      save: vi.fn().mockResolvedValue({ ok: true }),
+      get: vi.fn().mockResolvedValue([]),
+      clear: vi.fn().mockResolvedValue({ ok: true }),
+    },
   },
 };

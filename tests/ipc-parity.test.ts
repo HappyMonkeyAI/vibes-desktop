@@ -30,20 +30,30 @@ describe('IPC channel parity (V1 gate)', () => {
   it('preload exposes every declared channel through invoke/on', async () => {
     const mod = await import('../src/preload/index');
     void mod; // module side effect: exposeInMainWorld
-    const api = (contextBridge.exposeInMainWorld as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1] as Record<string, Record<string, (...args: unknown[]) => unknown>>;
+    const api = (contextBridge.exposeInMainWorld as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1] as any;
 
     const seen = new Set<string>();
-    for (const ns of Object.values(api)) {
-      for (const fn of Object.values(ns)) {
-        if (typeof fn !== 'function') continue;
-        try {
-          const ret = (fn as (...a: unknown[]) => unknown)({});
-          if (ret && typeof (ret as Promise<unknown>).then === 'function') await (ret as Promise<unknown>);
-        } catch {
-          // functions without args still record their channel via invoke/on
+    
+    // Recursively collect all functions from the API object
+    const collectFunctions = (obj: any) => {
+      for (const key of Object.keys(obj)) {
+        const value = obj[key];
+        if (typeof value === 'function') {
+          try {
+            const ret = value({});
+            if (ret && typeof (ret as Promise<unknown>).then === 'function') {
+              // For invoke calls, they'll be recorded in the mock.calls
+            }
+          } catch {
+            // functions without args still record their channel via invoke/on
+          }
+        } else if (value && typeof value === 'object') {
+          collectFunctions(value);
         }
       }
-    }
+    };
+    
+    collectFunctions(api);
 
     for (const call of (ipcRenderer.invoke as unknown as ReturnType<typeof vi.fn>).mock.calls) {
       seen.add(call[0] as string);

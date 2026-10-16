@@ -19,6 +19,14 @@ const ROLE_LABELS: Record<RoleKey, string> = {
 
 const ROLE_KEYS: RoleKey[] = ['default', 'planner', 'executor', 'reviewer', 'triage'];
 
+const ROLE_COLORS: Record<RoleKey, string> = {
+  default: '#5b8def',
+  planner: '#7a818c',
+  executor: '#2ec27e',
+  reviewer: '#b07bff',
+  triage: '#ff9f43',
+};
+
 type Draft = Record<RoleKey, { baseUrl: string; model: string; apiKey: string; hasKey: boolean }>;
 
 function toDraft(view: RolesConfigView): Draft {
@@ -107,52 +115,64 @@ const RolesTab: React.FC = () => {
   if (loading || !draft) return <div className="roles-loading">Loading role configuration…</div>;
 
   return (
-    <div>
-      {ROLE_KEYS.map((role) => {
-        const d = draft[role];
-        const test = testResult[role];
-        return (
-          <div key={role} style={{ marginBottom: 'var(--wd-spacing-2xl, 24px)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <strong>{ROLE_LABELS[role]}</strong>
-              {d.hasKey && <Tag color="green" size="small">key stored</Tag>}
-              {!d.hasKey && d.apiKey.length > 0 && <Tag color="orange" size="small">new key</Tag>}
+    <div style={{ maxWidth: '800px' }}>
+      <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 700 }}>Role Endpoints</h2>
+        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '13px' }}>
+          Configure the base URL, model, and API key for each role. The executor runs on the default endpoint.
+        </p>
+      </div>
+
+      <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
+        {ROLE_KEYS.map((role) => {
+          const d = draft[role];
+          const test = testResult[role];
+          return (
+            <div
+              key={role}
+              style={{
+                padding: '20px',
+                borderRadius: '12px',
+                background: 'var(--surface-card)',
+                border: '1px solid var(--color-border-2)',
+                boxShadow: 'var(--shadow-1)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: ROLE_COLORS[role] }} />
+                <strong style={{ fontSize: '16px' }}>{ROLE_LABELS[role]}</strong>
+                {d.hasKey && <Tag color="green" size="small">key stored</Tag>}
+                {!d.hasKey && d.apiKey.length > 0 && <Tag color="orange" size="small">new key</Tag>}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-dim)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Base URL</label>
+                  <Input placeholder="http://host:11434/v1" value={d.baseUrl} onChange={(v) => updateField(role, 'baseUrl', v)} size="small" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-dim)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Model</label>
+                  <Input placeholder="llama3.2" value={d.model} onChange={(v) => updateField(role, 'model', v)} size="small" />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-dim)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>API Key <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 'normal', color: 'var(--text-muted)' }}>(optional)</span></label>
+                <Input.Password placeholder="Enter API key if required" value={d.apiKey} onChange={(v) => updateField(role, 'apiKey', v)} size="small" />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Button size="small" loading={testingRole === role} onClick={() => void handleTest(role)} type={test?.ok ? 'primary' : 'primary'}>
+                  {test?.ok ? '✓ Reachable' : 'Test connection'}
+                </Button>
+                {test && !test.ok && test.error && <span style={{ fontSize: '12px', color: 'rgb(var(--red-6))' }}>{test.error}</span>}
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'end' }}>
-              <Input
-                placeholder="Base URL (e.g. http://host:11434/v1)"
-                value={d.baseUrl}
-                onChange={(v) => updateField(role, 'baseUrl', v)}
-              />
-              <Input
-                placeholder="Model name"
-                value={d.model}
-                onChange={(v) => updateField(role, 'model', v)}
-              />
-              {d.hasKey || d.apiKey.length > 0 ? (
-                <Input.Password
-                  placeholder="API key"
-                  value={d.apiKey}
-                  onChange={(v) => updateField(role, 'apiKey', v)}
-                  style={{ width: '200px' }}
-                />
-              ) : null}
-            </div>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
-              <Button size="small" loading={testingRole === role} onClick={() => void handleTest(role)}>
-                Test connection
-              </Button>
-              {test?.ok && <Tag color="green">reachable</Tag>}
-              {test && !test.ok && test.error && (
-                <span style={{ color: 'rgb(var(--red-6))', fontSize: '12px' }}>{test.error}</span>
-              )}
-            </div>
-          </div>
-        );
-      })}
-      <Button type="primary" loading={saving} onClick={() => void handleSave()}>
-        Save configuration
-      </Button>
+          );
+        })}
+      </div>
+
+      <Button type="primary" loading={saving} onClick={() => void handleSave()} size="large">Save Configuration</Button>
     </div>
   );
 };

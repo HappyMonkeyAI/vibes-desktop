@@ -1,0 +1,572 @@
+/* OperationsView — Card-based mission control canvas with modal workflow.
+ * Uses CSS custom properties from theme.css for light/dark mode support. */
+
+.ops {
+  padding: 12px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  background: var(--bg-base);
+}
+
+/* ---- Summary Bar ---- */
+.summaryBar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .summaryBar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metricCard {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px 14px;
+  border-radius: var(--radius-card);
+  background: linear-gradient(180deg, var(--surface-card-grad-top), var(--surface-card-grad-bottom)), var(--surface-card);
+  border: 1px solid var(--color-border-2);
+  transition: transform 0.18s ease, box-shadow 0.22s ease;
+}
+
+.metricCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+
+.metricCard::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 14px var(--accent);
+}
+
+.metricValue {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.metricLabel {
+  font-size: var(--type-11);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.metricActive::before { --accent: var(--brand); }
+.metricCompleted::before { --accent: var(--success); }
+.metricTasks::before { --accent: var(--primary-5); }
+
+/* ---- Card Grid ---- */
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* Launch New Agent Card */
+.launchCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 20px;
+  border: 2px dashed var(--color-border-3);
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.launchCard:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft-bg);
+}
+
+.launchIcon {
+  color: inherit;
+  opacity: 0.6;
+}
+
+.launchLabel {
+  font-size: var(--type-14);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* Mission Status Card */
+.missionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  border: 1px solid var(--color-border-2);
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.missionCard:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  box-shadow: var(--shadow-2);
+}
+
+/* Pulsing border for running/verifying missions */
+.missionCard.runningMission {
+  border-color: var(--brand);
+  animation: pulseBorder 2s ease-in-out infinite;
+}
+
+@keyframes pulseBorder {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 15%, transparent);
+  }
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cardTitle {
+  font-size: var(--type-14);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeBtn:hover {
+  color: var(--text-primary);
+  background: var(--surface-chip);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--type-10);
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  width: fit-content;
+}
+
+.workingDir {
+  font-size: var(--type-12);
+  color: var(--text-secondary);
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progressTracker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.progressBar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-chip);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  font-size: var(--type-11);
+  color: var(--text-dim);
+  text-align: right;
+}
+
+.missionDate {
+  font-size: var(--type-10);
+  color: var(--text-dim);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* ---- Toolbar (Live indicator) ---- */
+.opsToolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--type-11);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--success);
+}
+
+.liveDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.voiceNotReady {
+  font-size: var(--type-11);
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ---- Composer Row (mission input + voice + start) ---- */
+.composerRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.missionInput {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- Modal Forms ---- */
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formLabel {
+  font-size: var(--type-11);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.dirInputRow {
+  display: flex;
+  gap: 8px;
+}
+
+.dirInputRow :global(.arco-input) {
+  flex: 1;
+}
+
+.missionTextareaRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.missionTextareaRow :global(.arco-textarea-wrapper) {
+  flex: 1;
+}
+
+/* ---- Review Modal ---- */
+.reviewModalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.reviewPrompt {
+  padding: 12px;
+  background: var(--surface-row);
+  border-radius: var(--radius-card-inner);
+  border: 1px solid var(--color-border-2);
+}
+
+.reviewPrompt strong {
+  display: block;
+  font-size: var(--type-12);
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.reviewPrompt p {
+  margin: 0;
+  font-size: var(--type-14);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.taskItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-row);
+  border-radius: var(--radius-card-inner);
+  border: 1px solid var(--color-border-2);
+}
+
+.taskNumber {
+  font-weight: 700;
+  color: var(--brand);
+  min-width: 24px;
+}
+
+.taskTitle {
+  font-size: var(--type-14);
+  color: var(--text-primary);
+}
+
+/* ---- Detail Modal ---- */
+.detailModal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.backBtn:hover {
+  color: var(--text-primary);
+  background: var(--surface-chip);
+}
+
+.detailTitle {
+  flex: 1;
+  margin: 0;
+  font-size: var(--type-16);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.statsStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.statBox {
+  padding: 12px;
+  background: var(--surface-row);
+  border-radius: var(--radius-card-inner);
+  border: 1px solid var(--color-border-2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statBoxLabel {
+  font-size: var(--type-10);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.statBoxValue {
+  font-size: var(--type-14);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.goalBox {
+  padding: 12px;
+  background: var(--surface-row);
+  border-radius: var(--radius-card-inner);
+  border: 1px solid var(--color-border-2);
+}
+
+.goalBoxLabel {
+  font-size: var(--type-11);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.goalBoxContent {
+  font-size: var(--type-14);
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.taskChecklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.taskChecklistLabel {
+  font-size: var(--type-11);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.taskChecklistItems {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checklistItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface-row);
+  border-radius: var(--radius-card-inner);
+  border: 1px solid var(--color-border-2);
+}
+
+.checklistIcon {
+  font-size: 16px;
+  width: 24px;
+  text-align: center;
+}
+
+.checklistTitle {
+  flex: 1;
+  font-size: var(--type-13);
+  color: var(--text-primary);
+}
+
+.checklistStatus {
+  font-size: var(--type-10);
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+/* ---- Empty State ---- */
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 0;
+  font-size: var(--type-15);
+  color: var(--text-dim);
+}
+
+.emptyStateText {
+  font-weight: 500;
+}
+
+/* ---- Workspace Picker Row ---- */
+.workspacePickerRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface-row);
+  border-radius: var(--radius-card-inner);
+  border: 1px solid var(--color-border-2);
+}
+
+.workspacePickerLabel {
+  font-size: var(--type-12);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  min-width: 140px;
+}
+
+.workspacePickerInput {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.workspacePickerInput :global(.arco-input) {
+  flex: 1;
+}

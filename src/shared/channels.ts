@@ -16,6 +16,7 @@ export const LEDGER_STATUSES = [
   'pending',
   'done',
   'idle',
+  'archived',
 ] as const;
 export type LedgerStatus = (typeof LEDGER_STATUSES)[number];
 
@@ -34,6 +35,10 @@ export interface LedgerEntry {
   title: string;
   detail?: string;
   context?: string;
+  /** The workspace root this mission was executed in. */
+  workspaceRoot?: string;
+  /** 'mission' marks a mission-level event row (Planning/Executing/complete); absent on task rows. */
+  kind?: 'mission';
   needsHuman?: boolean;
   retriesUsed?: number;
   retryBudget?: number;
@@ -118,10 +123,36 @@ export interface MissionStartResult {
   error?: string;
 }
 
+/** Mission plan response from the planner API. */
+export interface MissionPlanResponse {
+  tasks: string[];
+  /** Present when planning failed (no reachable LLM, no workspace, child crash). */
+  error?: string;
+}
+
+export interface MissionPlanRequest {
+  request: string;
+  /** Optional explicit mission root; falls back to the app's cwd when empty. */
+  workspaceRoot?: string;
+}
+
 /** Result of the native folder picker used to choose a mission's working directory. */
 export interface WorkspaceSelectResult {
   /** The chosen absolute path, or null when the dialog was cancelled. */
   path: string | null;
+}
+
+/** Workspace history entry. */
+export interface WorkspaceHistoryEntry {
+  path: string;
+  lastUsed: number;
+}
+
+/** Ledger search filter. */
+export interface LedgerSearchFilter {
+  query?: string;
+  status?: LedgerStatus;
+  group?: ActivityGroup;
 }
 
 /** Wire shape for the `ledger:new-entry` push event (main → renderer). */
@@ -138,7 +169,13 @@ export const channels = {
   voiceTranscribe: 'voice:transcribe',
   missionStart: 'mission:start',
   missionStop: 'mission:stop',
+  missionPlan: 'mission:plan',
   workspaceSelect: 'workspace:select',
+  workspaceHistorySave: 'workspace:history:save',
+  workspaceHistoryGet: 'workspace:history:get',
+  workspaceHistoryClear: 'workspace:history:clear',
+  ledgerSearch: 'ledger:search',
+  ledgerArchive: 'ledger:archive',
 } as const;
 
 export type ChannelName = (typeof channels)[keyof typeof channels];

@@ -62,10 +62,13 @@ function installMediaMock() {
 }
 
 describe('VoiceInput (T10)', () => {
-  it('runs the doctor on mount and shows a not-ready tag when voice is unavailable', async () => {
+  it('runs the doctor on mount and shows the button when voice is unavailable', async () => {
+    vi.mocked(window.vibesDesktop.voice.doctor).mockResolvedValue({
+      ffmpegAvailable: false, yapsnapAvailable: false, ready: false, ffmpegHint: 'install ffmpeg', yapsnapHint: 'pip install yapsnap',
+    });
     renderWithMessages(<VoiceInput onTranscript={() => undefined} />);
     await waitFor(() => expect(window.vibesDesktop.voice.doctor).toHaveBeenCalled());
-    expect(screen.getByText('voice not ready')).toBeTruthy();
+    expect(screen.getByText('Hold to talk')).toBeTruthy();
   });
 
   it('records on hold, transcribes on release, and delivers the text', async () => {

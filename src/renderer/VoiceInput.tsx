@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Message, Tag } from '@arco-design/web-react';
+import { Button, Message } from '@arco-design/web-react';
 import type { VoiceDoctorResult } from '@shared/channels';
 
 /**
@@ -74,20 +74,17 @@ const VoiceInput: React.FC<{ onTranscript: (text: string) => void }> = ({ onTran
 
   const notReady = doctor && !doctor.ready;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-      <Button
-        long={false}
-        type={state === 'recording' ? 'primary' : 'default'}
-        status={notReady ? 'warning' : undefined}
-        loading={state === 'transcribing'}
-        onMouseDown={() => void startRecording()}
-        onMouseUp={() => void stopRecording()}
-        onMouseLeave={() => { if (state === 'recording') void stopRecording(); }}
-      >
-        {state === 'recording' ? 'Recording… release to send' : state === 'transcribing' ? 'Transcribing…' : 'Hold to talk'}
-      </Button>
-      {notReady && <Tag color="orangered">voice not ready</Tag>}
-    </span>
+    <Button
+      long={false}
+      type={state === 'recording' ? 'primary' : 'default'}
+      status={notReady ? 'warning' : undefined}
+      loading={state === 'transcribing'}
+      onMouseDown={() => void startRecording()}
+      onMouseUp={() => void stopRecording()}
+      onMouseLeave={() => { if (state === 'recording') void stopRecording(); }}
+    >
+      {state === 'recording' ? 'Recording… release to send' : state === 'transcribing' ? 'Transcribing…' : 'Hold to talk'}
+    </Button>
   );
 };
 

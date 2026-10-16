@@ -17,14 +17,17 @@ describe('first-launch empty state (S1)', () => {
   it('renders grouped entries when the ledger has activity', async () => {
     vi.mocked(window.vibesDesktop.ledger.get).mockResolvedValueOnce({
       entries: [
-        { id: 'm1', group: 'running', status: 'running', source: 'vibes-mission', title: 'Refactor auth module', updatedAt: Date.now() },
-        { id: 'm2', group: 'needs-you', status: 'blocked', source: 'vibes-mission', title: 'Waiting on API key', needsHuman: true, updatedAt: Date.now() },
+        { id: 'm1', kind: 'mission', group: 'running', status: 'running', source: 'vibes-mission', title: 'Refactor auth module', workspaceRoot: '/w/one', updatedAt: Date.now() },
+        { id: 't1', group: 'running', status: 'running', source: 'vibes-mission', title: 'Update index.html title', workspaceRoot: '/w/one', updatedAt: Date.now() },
+        { id: 'm2', kind: 'mission', group: 'needs-you', status: 'blocked', source: 'vibes-mission', title: 'Waiting on API key', needsHuman: true, workspaceRoot: '/w/two', updatedAt: Date.now() },
       ],
-      groupCounts: { 'needs-you': 1, running: 1, upcoming: 0, recent: 0 },
+      groupCounts: { 'needs-you': 1, running: 2, upcoming: 0, recent: 0 },
     });
     render(<App />);
     expect(await screen.findByText('Refactor auth module')).toBeTruthy();
     expect(screen.getByText('Waiting on API key')).toBeTruthy();
+    // Task rows are grouped under their mission card, not shown as separate cards.
+    expect(screen.queryByText('Update index.html title')).toBeNull();
     expect(document.body.textContent).not.toContain('All quiet');
   });
 });
@@ -42,14 +45,14 @@ describe('live ledger push (T5)', () => {
     render(<App />);
     expect(await screen.findByText('All quiet')).toBeTruthy();
 
-    // A task starts running — pushed live.
-    handlers[0]({ entry: { id: 't1', group: 'running', status: 'running', source: 'vibes-mission', title: 'Build widget', updatedAt: 1 } });
+    // A mission starts — its event row is pushed live and becomes a card.
+    handlers[0]({ entry: { id: 'm1', kind: 'mission', group: 'running', status: 'running', source: 'vibes-mission', title: 'Planning: Build widget', workspaceRoot: '/w/widget', updatedAt: 1 } });
     expect(await screen.findByText('Build widget')).toBeTruthy();
     expect(document.body.textContent).not.toContain('All quiet');
 
-    // The same task completes in place — must replace, not duplicate.
-    handlers[0]({ entry: { id: 't1', group: 'recent', status: 'done', source: 'vibes-mission', title: 'Build widget', updatedAt: 2 } });
-    await screen.findByText('Build widget');
-    expect(screen.getAllByText('Build widget')).toHaveLength(1);
+    // The mission completes in place — must replace, not duplicate.
+    handlers[0]({ entry: { id: 'm1', kind: 'mission', group: 'recent', status: 'done', source: 'vibes-mission', title: 'Mission complete', workspaceRoot: '/w/widget', updatedAt: 2 } });
+    await screen.findByText('Mission complete');
+    expect(screen.getAllByText('Mission complete')).toHaveLength(1);
   });
 });

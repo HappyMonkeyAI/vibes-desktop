@@ -2,6 +2,57 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-16 — Card-view bug-fix pass: real data, honest errors, working CSS
+
+**Done:** The uncommitted OperationsView card refactor (from 2026-10-15) was left half-wired with fake data and several latent bugs. This session finished the render rework and fixed every defect found in the diff.
+- **Test-connection probe double `/v1`.** `test-connection.ts` probed `${baseUrl}/v1/chat/completions`, but role base URLs already end in `/v1` (e.g. `http://localhost:11434/v1`) — every compliant endpoint 404'd on `/v1/v1/…`. Now appends only `/chat/completions`; timeout message corrected to "30s" to match `TIMEOUT_MS = 30_000`. This was the one failing test.
+- **Plan parsing.** The vibes MCP server's `plan_mission` returns a JSON array of `{id, name, status}` objects (verified against the checkout's `src/mcp/server.ts`). `parseTasksFromPlan` now JSON-parses that primary shape and extracts `.name`, with a numbered/bulleted line-match fallback for degraded responses.
+- **Planning no longer steals the live mission.** `spawnBridge` gained an `adopt` flag; `planMission` spawns a throwaway bridge (`adopt=false`) that never touches the shared single-mission slot, stopped in a `finally`. A plan-only call can no longer clobber a running mission's connection.
+- **No silent empty plans.** Planning failures (no LLM, no workspace, child crash) now return `{ tasks: [], error }`; both UI call sites surface the message via `Message.error` instead of opening an empty review modal. `MissionPlanResponse.error?` added to channels.
+- **Explicit workspace required.** `startMission` dropped the `process.cwd()` fallback (which would point the agent at the app's own source tree) and returns "Choose a working directory before starting a mission." The Start button is disabled until a directory is picked.
+- **Real card view.** OperationsView now groups ledger rows into one card per `kind === 'mission'` event row, attaching that mission's task rows (same workspace root). Task progress on cards and in the detail modal comes from real ledger rows; fake placeholder tasks and the fabricated log stream are gone, replaced by honest empty states. Detail modal driven by a `selectedCard` object (title, status, dir, updated time, task checklist with state icons); duplicate Retry/Terminate buttons removed (kept in the footer only).
+- **Batch archive.** Archiving a card archives the mission row plus all its task rows: `ledger.archive` accepts `string | string[]`, store exposes `archiveEntries(ids)`, handler validates and returns `{ ok, count }`.
+- **CSS module fixes.** Arco renders lowercase DOM elements; selectors like `.dirInputRow Input` never matched. Converted to the project's `:global(.arco-input)` convention. Added missing keys the JSX referenced (`opsToolbar`, `live`, `liveDot`, `voiceNotReady`, `composerRow`, `missionInput`, `taskChecklistItems`) and deleted dead ones (`.detailActions`, the logs-stream block). Verified programmatically that every `styles.X` in the component resolves to a real CSS key.
+- **Ledger tagging.** Bridge passes `workspaceRoot` into `recordTaskStatus` so new task rows carry their workspace; mission-level event rows are tagged `kind: 'mission'` (new optional field on `LedgerEntry`) which is what the card grouping keys off.
+- Deleted a stray `nul` file (Windows reserved-name junk) from the project root.
+
+**Evidence (all run this session):** `npm test` → 78/78 passed across 16 files (the all-quiet and live-push tests were rewritten to the card/grouping model: mission event rows become cards, task rows are grouped under their card rather than rendered standalone). `npm run typecheck` clean on both node and web configs. `npm run build` exit 0. No `selectedEntry` references or fake task titles remain in the renderer (grep-verified).
+
+**What's next:** V3 live verification still owed — launch the packaged app, configure an endpoint against the local Ollama instance, start a real mission and watch the ledger/cards populate end-to-end. Nothing else outstanding from this pass.
+
+**Open questions:** None currently.
+
+## 2026-10-15 — Operations view card-based refactor, modal workflow, workspace root fix
+
+**Done:**
+- **OperationsView component created** with card-based grid layout replacing the flat ledger list. Summary bar shows ACTIVE/COMPLETED/TASKS DONE metrics.
+- **Launch New Agent card** with dashed border, + icon, opens Launch Modal.
+- **Mission Status Cards** with truncated title, status badge pill (EXECUTING/COMPLETE/FAILED/BLOCKED), working directory, progress bar with task counter.
+- **Modal 1: Launch New Agent** — working directory input + mission textarea with integrated voice input, Generate Tasks button.
+- **Modal 2: Review Proposed Tasks** — editable mission prompt, numbered task list, Decline/Regenerate Plan/Accept & Launch buttons.
+- **Modal 3: Work-In-Progress Details** — back navigation, mission title, Retry/Terminate actions, stats strip (STATUS/PROGRESS/WORKING DIR), goal box, live task checklist with state icons, live terminal/logs stream.
+- **Fixed workspace root bug** — handlers.ts and service.ts no longer fall back to `process.cwd()` when `workspaceRoot` is empty; respects the directory selected from recent history dropdown.
+- **Theme compliance** — all new CSS uses existing custom properties (`var(--bg-base)`, `var(--text-primary)`, `var(--surface-card)`, etc.) for automatic light/dark mode support.
+
+**Evidence:** `npm run build` exit 0. App launches with new Operations view rendering.
+
+**What's next:** Connect "Generate Tasks" to the actual LLM planner API, wire up live log stream from mission service to detail modal.
+
+**Open questions:** None currently.
+
+
+**Done:**
+- **Theme toggle feature completed.** Fixed import mismatch (`ThemeToggle` named vs default import), wrapped test click in `act()`, removed unused CSS import. All 78 tests pass, typecheck clean.
+- **Dark theme refined.** Shifted from pure black (`#0a0a0a`) to warmer blue-tinted neutrals (`#111114` background, `#e8e8eb` text, `#3a3a45` borders) for reduced eye strain.
+- **Composer row button sizing uniformized.** Added `height: 40px` to all buttons and `align-items: center` to `.composerRow` for consistent alignment.
+- **Voice not ready indicator moved** from `VoiceInput.tsx` to `opsToolbar` in `App.tsx` with right-aligned styling.
+- **RolesTab redesigned** with card-based layout, role color-coded indicators, labeled inputs, and improved visual hierarchy.
+- **Settings tab added** with context/memory file path inputs and preferences (auto-save, verbose logging) toggle switches.
+
+**Evidence:** `npm test` exit 0 (78/78), `npm run typecheck` clean, `npm run build` exit 0. App launched and verified.
+
+**What's next:** Continue with remaining P2-P4 tasks from TASKS.md.
+
 ## 2026-10-13 — Mission crash fix (post-plan) — `spawn tsx ENOENT` no longer kills the app
 
 **Done:** The user started a mission ("update the web page in the `test` directory") and the whole app died with Electron's "A JavaScript error occurred in the main process" dialog: `Uncaught Exception: Error: spawn tsx ENOENT`. Two root causes, both fixed.
