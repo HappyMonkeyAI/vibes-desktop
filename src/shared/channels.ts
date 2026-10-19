@@ -37,8 +37,11 @@ export interface LedgerEntry {
   context?: string;
   /** The workspace root this mission was executed in. */
   workspaceRoot?: string;
-  /** 'mission' marks a mission-level event row (Planning/Executing/complete); absent on task rows. */
+  /** 'mission' marks a mission-level event row; absent on task rows. */
   kind?: 'mission';
+  /** Scopes a row to one mission: task and mission rows upsert by (missionId, title)
+   *  so two missions never collide on identical titles. Minted per startMission. */
+  missionId?: string;
   needsHuman?: boolean;
   retriesUsed?: number;
   retryBudget?: number;
@@ -84,6 +87,8 @@ export interface TestConnectionRequest {
   model: string;
   /** Optional key for the probe; omitted means "no auth" (local Ollama). */
   apiKey?: string;
+  /** When present and apiKey is omitted, the main process probes with the stored key for this role. */
+  role?: RoleKey;
 }
 
 /** T12 — yapsnap-doctor result: what's present, and how to install what isn't. */
@@ -113,8 +118,11 @@ export interface VoiceTranscribeResult {
 
 export interface MissionStartRequest {
   request: string;
-  /** Optional explicit mission root; falls back to the app's cwd when empty. */
+  /** Required working directory for the mission (no cwd fallback). */
   workspaceRoot?: string;
+  /** When true, execute the plan already reviewed by the user (kept alive by mission:plan)
+   *  instead of planning again. Falls back to a fresh plan when no pending plan matches. */
+  acceptPlan?: boolean;
 }
 export interface MissionStartResult {
   started: boolean;
@@ -132,7 +140,7 @@ export interface MissionPlanResponse {
 
 export interface MissionPlanRequest {
   request: string;
-  /** Optional explicit mission root; falls back to the app's cwd when empty. */
+  /** Required working directory for planning (no cwd fallback). */
   workspaceRoot?: string;
 }
 
@@ -148,11 +156,14 @@ export interface WorkspaceHistoryEntry {
   lastUsed: number;
 }
 
-/** Ledger search filter. */
-export interface LedgerSearchFilter {
-  query?: string;
-  status?: LedgerStatus;
-  group?: ActivityGroup;
+/** App settings persisted in userData (Settings tab). */
+export interface AppSettings {
+  /** Absolute path to a vibes checkout (contains src/mcp/server.ts). */
+  vibesPath: string;
+  contextPath: string;
+  memoryPath: string;
+  autoSave: boolean;
+  verboseLogging: boolean;
 }
 
 /** Wire shape for the `ledger:new-entry` push event (main → renderer). */
@@ -170,12 +181,14 @@ export const channels = {
   missionStart: 'mission:start',
   missionStop: 'mission:stop',
   missionPlan: 'mission:plan',
+  missionCancelPlan: 'mission:cancel-plan',
   workspaceSelect: 'workspace:select',
   workspaceHistorySave: 'workspace:history:save',
   workspaceHistoryGet: 'workspace:history:get',
   workspaceHistoryClear: 'workspace:history:clear',
-  ledgerSearch: 'ledger:search',
   ledgerArchive: 'ledger:archive',
+  settingsGet: 'settings:get',
+  settingsSave: 'settings:save',
 } as const;
 
 export type ChannelName = (typeof channels)[keyof typeof channels];

@@ -23,6 +23,15 @@ describe('testConnection (T8)', () => {
     expect(body.model).toBe('m');
   });
 
+  it('normalizes a bare origin to /v1 before probing (matches what the child will call)', async () => {
+    // The false-done bug started here: the probe hit /chat/completions (404)
+    // while the SDK needed /v1/chat/completions — probe and child must agree.
+    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await testConnection({ baseUrl: 'http://192.168.5.232:11434', model: 'm' });
+    expect(fetchMock.mock.calls[0][0]).toBe('http://192.168.5.232:11434/v1/chat/completions');
+  });
+
   it('sends an Authorization header only when a key is present', async () => {
     const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);

@@ -74,7 +74,10 @@ const RolesTab: React.FC = () => {
       const result = await window.vibesDesktop.roles.testConnection({
         baseUrl: d.baseUrl.trim(),
         model: d.model.trim(),
+        // Typed key wins; when the field is empty the main process probes with
+        // the stored key for this role (a saved key never crosses IPC).
         apiKey: d.apiKey || undefined,
+        role,
       });
       setTestResult((prev) => ({ ...prev, [role]: result }));
     } catch (error) {
@@ -96,12 +99,21 @@ const RolesTab: React.FC = () => {
       if (res.ok) {
         Message.success('Role configuration saved.');
         // Clear the key fields locally — they're now stored; presence flag is enough.
+        // Also refresh the view so the "key stored" tag reappears when a new key
+        // was just persisted.
         setDraft((prev) => {
           if (!prev) return prev;
           const cleared = {} as Draft;
           for (const role of ROLE_KEYS) cleared[role] = { ...prev[role], apiKey: '' };
           return cleared;
         });
+        // Refresh from store so hasKey reflects the actual persisted state.
+        try {
+          const view = await window.vibesDesktop.roles.get();
+          setDraft(toDraft(view));
+        } catch {
+          // Ignore — local cleared state is still a reasonable UX.
+        }
       } else {
         Message.error('Failed to save role configuration.');
       }
@@ -162,7 +174,7 @@ const RolesTab: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Button size="small" loading={testingRole === role} onClick={() => void handleTest(role)} type={test?.ok ? 'primary' : 'primary'}>
+                <Button size="small" loading={testingRole === role} onClick={() => void handleTest(role)} type="primary">
                   {test?.ok ? '✓ Reachable' : 'Test connection'}
                 </Button>
                 {test && !test.ok && test.error && <span style={{ fontSize: '12px', color: 'rgb(var(--red-6))' }}>{test.error}</span>}

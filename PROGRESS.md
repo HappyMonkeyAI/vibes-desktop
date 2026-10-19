@@ -2,6 +2,52 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-19 (later) — False-done mission bug: root-caused across both processes, fixed + V3 verified against real LLMs
+
+**Symptom:** a live mission ("Update index.html to have a bootstrap enabled via CDN") reported **done in ~36 ms** with zero tasks executed and the target file untouched.
+
+**Root cause — four independent bugs, all layers:**
+1. **URL.** The Roles config held a bare origin (`http://192.168.5.232:11434`, no `/v1`). It was written verbatim to the workspace `.vibes/config.json` as `OLLAMA_BASE_URL`, so the child's OpenAI SDK posted to `/chat/completions` → **404** (verified live; `/v1/chat/completions` → 200). The SDK does not retry 404 → planner failed in ~35 ms.
+2. **Child swallowed errors.** `local-ai-planner/src/mcp/server.ts` caught planner/executor errors and **returned** them as normal tool text (`"Mission planning failed: …"`, `"Mission failed: …"`, `"No mission has been planned."`) — never throwing, never `isError`.
+3. **Wire shape.** FastMCP ^4.0.1 wraps string returns as `{ content: [{ type: 'text', text }], isError? }` (not a string). The desktop's `callTool` cast `response.result` to `string` — so failures resolved as **success**.
+4. **Trust-on-resolve.** `service.ts` discarded the plan result and recorded `done` whenever `executePlanned()` **resolved**, never inspecting its text.
+
+**Fix (desktop):**
+- `vibes-bridge.ts`: new exported `unwrapToolResult(result, toolName)` — tolerates bare strings, extracts joined `content[].text`, **throws** on `isError: true` or an unexpected shape. `callTool` now returns `unwrapToolResult(...)`; the erroneous `as string` casts are gone.
+- `mission/service.ts`: new exported `missionOutcomeFrom(result)` honesty gate — records **done only** for `Mission completed. Completed N/N tasks.` with `N > 0`; every other shape (failed/partial/empty/"No mission has been planned.") → **failed** with the child's raw text in `detail`. `startMission` now validates the plan (empty task list or a planning-failure string → start fails and records `failed`, never dispatches a no-op). Review-flow `planMission` surfaces the failure text as `error` instead of a silent empty list.
+- `ledger/store.ts`: `recordMissionEvent` accepts an optional `detail`.
+- `roles/vibes-config.ts`: `normalizeOpenAiBaseUrl` appends `/v1` only when the URL has no path (full URLs like `…/v1`, `/api/v1` untouched); applied in `toVibesConfig` for all four roles. Also emits `ENABLE_REVIEWER` / `ENABLE_ADVERSARIAL_AUDIT` (`false` when no reviewer role is configured — otherwise vibes defaults to a nonexistent `gemma2:27b` on the executor's server and fails every reviewed task).
+- `roles/test-connection.ts`: probe uses the same normalizer, so probe and child agree on the URL.
+
+**Fix (child, surgical):** the three mission tools (`execute_mission`, `plan_mission`, `start_execution`) now **rethrow** instead of returning error strings, and `start_execution` throws on no-plan — FastMCP turns these into `isError` results. Only catch blocks touched (user has uncommitted provider-catalog work in the same file).
+
+**Evidence (all run 2026-10-19):**
+- **V0 desktop:** `npm test` → **99/99 passed** (16 files; +21 new tests: unwrap shapes, outcome classifier, plan-failure text, failed/partial/empty execution, URL normalization, reviewer gates, probe `/v1`). `npm run typecheck` clean. `npm run build` exit 0.
+- **V0 child:** `npm run build` clean; `npm test` → 137/140, the 3 failures **pre-existing and unrelated** (2× `worktree-manager` assert POSIX paths on Windows; `scheduler-retry` fails 1/1 with my edits **stashed**).
+- **V3 live (real child + real LLMs, `VIBES_LIVE=1`) — 3/3 pass:** (a) bare origin `http://192.168.5.232:11434` + Qwen3-4B → normalizes to `/v1`, plans, executes, `hello.txt` contains `bonjour`, mission row **done**; (b) nonexistent model → start **fails** (`started:false` + `failed` row), no file; (c) executor `5.232` + reviewer `google/gemma-4-e2b` on `5.229:1234` → mission **done** through the reviewer path (`ENABLE_REVIEWER=true`).
+- **Independent raw JSON-RPC** (bypassing the desktop entirely): `plan_mission` → `{content:[{type:'text',text:'[{"id":1,…}]'}]}` (4.6 s); `start_execution` → `{content:[{type:'text',text:'Mission completed. Completed 1/1 tasks.'}]}` (5.1 s); `hello.txt` == `bonjour` on disk.
+
+**What's next:** commit when the user asks (both repos have uncommitted work). Optional UX: surface `LedgerEntry.detail` in the mission card detail modal so a failed mission shows the child's reason inline.
+
+**Open questions:** the 3 pre-existing child test failures (Windows path assertions, scheduler-retry) are out of scope here — worth a separate ticket.
+
+## 2026-10-19 — MVP stabilization: ~15 bug fixes, vibesPath resolution, full V0+V3 green
+
+**Done:** Full audit pass (~20 bugs found) plus targeted fixes across data path, mission UX, roles/settings/theme, and main-process safety; finished by reconciling tests with the corrected semantics and running the whole verification ladder.
+- **Ledger row identity.** `LedgerEntry` gained `missionId`; mission/task rows upsert by `(missionId, title)` so a second mission never mutates the first's rows and mission cards stop collapsing on global titles ("Executing mission"/"Mission complete"). `markInFlightBlocked` scoped by missionId.
+- **Mission service semantics.** `startMission` now returns at dispatch (toast/spinner at start, not end); execution streams live `task-status` into the ledger in the background. Pending-plan adoption keeps the planning child alive so **Accept & Launch executes the reviewed plan** instead of re-planning. Generation counter prevents an old mission's chain from tearing down a newer bridge; `stopRequested` avoids a spurious "failed" on terminate. Explicit workspace required everywhere (no `process.cwd()` fallback).
+- **Voice input.** `VoiceInput` awaits the final `dataavailable`/`stop` before building the blob (real MediaRecorder delivers the last chunk async); mock-compatible for both callback and addEventListener recorder styles.
+- **One card per mission.** OperationsView groups by `missionId`; Launch New Agent card always visible (including the first-launch empty state, which also restores ADR-0003's "All quiet" copy); Generate Tasks guarded + loading state; workspace picker wired to recent-history dropdown (get/save/clear); Retry re-sends the original request; Terminate only while running.
+- **Roles/settings/theme/safety.** Test-connection probes with the stored key (role id + optional override); `SettingsStore` persists real settings via IPC (Settings tab no longer fakes a save); Arco `--primary-6..10`/`--arcoblue-6..10` converted to RGB triples in both themes; dialog parent guarded; MCP `notifications/initialized` sent post-handshake; jsonrpc clears per-request timers on settle; config-writer refuses non-absolute workspace roots.
+- **vibesPath resolution (the "checkout not found" bug).** `main/index.ts` no longer hardcodes the broken `%TEMP%\vibes` checkout. Resolution order: `VIBES_PATH` env → `settings.vibesPath` (new Settings tab field, persisted) → `DEFAULT_VIBES_PATH` (`local-ai-planner`), each validated for `src/mcp/server.ts` before use.
+- **Dead surface cleanup.** Removed `ledger:search` channel + store method, dead pagination code; archive returns `{ ok, count }`.
+
+**Evidence (all run 2026-10-19):** `npm test` → **78/78 passed** across 16 files (mission-service and all-quiet tests rewritten to the new semantics: mission card titled by the original request, start resolves at dispatch, exec failure surfaces via ledger). `npm run typecheck` clean on both configs. `npm run build` exit 0 (main/preload/renderer emitted). **V3 live boot:** launched the built app (`electron .`), window titled "Vibes Desktop" confirmed alive with renderer loaded after 15s, no crash dialog; killed by exact process-tree only.
+
+**What's next:** End-to-end mission against a local LLM (configure endpoint, run a real mission, watch cards populate) — the remaining V3 depth beyond boot.
+
+**Open questions:** None.
+
 ## 2026-10-16 — Card-view bug-fix pass: real data, honest errors, working CSS
 
 **Done:** The uncommitted OperationsView card refactor (from 2026-10-15) was left half-wired with fake data and several latent bugs. This session finished the render rework and fixed every defect found in the diff.

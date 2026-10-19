@@ -3,7 +3,7 @@ import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { classify } from '@shared/classify';
-import type { ActivityGroup, LedgerEntry, LedgerSnapshot, LedgerStatus } from '@shared/channels';
+import type { ActivityGroup, LedgerEntry, LedgerSnapshot } from '@shared/channels';
 
 /**
  * T5 — LedgerStore. The single source of activity truth (ADR-0003).
@@ -83,18 +83,23 @@ export class LedgerStore extends EventEmitter {
     return () => this.off('new-entry', onNew);
   }
 
-  /** Record a vibes task lifecycle event as a ledger entry (idempotent upsert). Serialized so two events for the same title cannot both miss each other and mint duplicate rows. */
-  async recordTaskStatus(input: TaskStatusInput, workspaceRoot?: string): Promise<LedgerEntry> {
+  /** Record a vibes task lifecycle event as a ledger entry (idempotent upsert).
+   *  Scoped by missionId so two missions with same-named tasks never share a row.
+   *  Serialized so two events for the same (missionId, title) cannot both miss each other. */
+  async recordTaskStatus(input: TaskStatusInput, workspaceRoot?: string, missionId?: string): Promise<LedgerEntry> {
     const status = STATUS_MAP[input.status];
     return this.enqueue(async () => {
       await this.ready;
-      const existing = [...this.entries.values()].find((e) => e.source === 'vibes-mission' && e.title === input.name);
+      const existing = [...this.entries.values()].find(
+        (e) => e.source === 'vibes-mission' && e.title === input.name && e.missionId === missionId,
+      );
       const entry: LedgerEntry = {
         id: existing?.id ?? crypto.randomUUID(),
         group: classify({ status, needsHuman: false }),
         status,
         source: 'vibes-mission',
         title: input.name,
+        missionId,
         workspaceRoot: workspaceRoot || existing?.workspaceRoot,
         updatedAt: Date.now(),
       };
@@ -102,11 +107,20 @@ export class LedgerStore extends EventEmitter {
     });
   }
 
-  /** Record a mission-level event (start / finish) as a ledger entry. */
-  async recordMissionEvent(title: string, status: LedgerEntry['status'], workspaceRoot?: string): Promise<LedgerEntry> {
+  /** Record a mission-level event as a ledger entry. One mission = one row:
+   *  upserts by (missionId, title) so the mission's lifecycle updates in place. */
+  async recordMissionEvent(
+    title: string,
+    status: LedgerEntry['status'],
+    workspaceRoot?: string,
+    missionId?: string,
+    detail?: string,
+  ): Promise<LedgerEntry> {
     return this.enqueue(async () => {
       await this.ready;
-      const existing = [...this.entries.values()].find((e) => e.source === 'vibes-mission' && e.title === title);
+      const existing = [...this.entries.values()].find(
+        (e) => e.source === 'vibes-mission' && e.title === title && e.missionId === missionId,
+      );
       const entry: LedgerEntry = {
         id: existing?.id ?? crypto.randomUUID(),
         group: classify({ status, needsHuman: false }),
@@ -114,6 +128,8 @@ export class LedgerStore extends EventEmitter {
         source: 'vibes-mission',
         kind: 'mission',
         title,
+        detail: detail ?? existing?.detail,
+        missionId,
         workspaceRoot: workspaceRoot || existing?.workspaceRoot,
         updatedAt: Date.now(),
       };
@@ -134,14 +150,16 @@ export class LedgerStore extends EventEmitter {
    * T13 — when a mission is stopped/cancelled, every in-flight task (running or
    * verifying) becomes blocked. Rewrites each such entry in place (same id, new
    * status) so the renderer's upsert replaces its row rather than duplicating it.
+   * Scoped to one mission when missionId is given; without it, blocks all in-flight rows.
    * Returns how many tasks were blocked.
    */
-  async markInFlightBlocked(): Promise<number> {
+  async markInFlightBlocked(missionId?: string): Promise<number> {
     return this.enqueue(async () => {
       await this.ready;
       let count = 0;
       for (const entry of [...this.entries.values()]) {
         if (entry.source !== 'vibes-mission') continue;
+        if (missionId !== undefined && entry.missionId !== missionId) continue;
         if (entry.status !== 'running' && entry.status !== 'verifying') continue;
         const blocked: LedgerEntry = {
           ...entry,
@@ -154,39 +172,6 @@ export class LedgerStore extends EventEmitter {
       }
       return count;
     });
-  }
-
-  /**
-   * Search ledger entries by filter. Returns a filtered snapshot.
-   */
-  search(filter: {
-    query?: string;
-    status?: LedgerStatus;
-    group?: ActivityGroup;
-  }): LedgerSnapshot {
-    let entries = [...this.entries.values()];
-
-    if (filter.query) {
-      const q = filter.query.toLowerCase();
-      entries = entries.filter(
-        (e) =>
-          e.title.toLowerCase().includes(q) ||
-          (e.detail && e.detail.toLowerCase().includes(q))
-      );
-    }
-
-    if (filter.status) {
-      entries = entries.filter((e) => e.status === filter.status);
-    }
-
-    if (filter.group) {
-      entries = entries.filter((e) => e.group === filter.group);
-    }
-
-    const counts: Record<ActivityGroup, number> = { 'needs-you': 0, running: 0, upcoming: 0, recent: 0 };
-    for (const entry of entries) counts[entry.group] += 1;
-
-    return { entries, groupCounts: counts };
   }
 
   /**

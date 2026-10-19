@@ -49,6 +49,35 @@ export interface TaskStatusEvent {
 
 export type InterventionAction = 'retry' | 'skip' | 'fail' | 'reply';
 
+/**
+ * Unwrap an MCP tools/call result into its text payload. FastMCP returns
+ * `{ content: [{ type: 'text', text }], isError? }` — never a bare string — so
+ * casting the raw result to string produced "[object Object]" and silently
+ * swallowed every tool failure. Throws when the tool reports isError or carries
+ * no text content, so a failed call rejects instead of resolving as success.
+ */
+export function unwrapToolResult(result: unknown, toolName: string): string {
+  if (typeof result === 'string') return result; // tolerate non-FastMCP servers
+  if (result && typeof result === 'object') {
+    const mcp = result as { content?: unknown; isError?: boolean };
+    const text = Array.isArray(mcp.content)
+      ? mcp.content
+          .filter(
+            (part): part is { type: 'text'; text: string } =>
+              !!part &&
+              typeof part === 'object' &&
+              (part as { type?: unknown }).type === 'text' &&
+              typeof (part as { text?: unknown }).text === 'string',
+          )
+          .map((part) => part.text)
+          .join('\n')
+      : '';
+    if (mcp.isError) throw new Error(text || `Tool '${toolName}' failed`);
+    if (text) return text;
+  }
+  throw new Error(`Tool '${toolName}' returned an unexpected result shape`);
+}
+
 export interface VibesBridgeOptions {
   /** Absolute path to a vibes checkout (must contain src/mcp/server.ts). */
   vibesPath: string;
@@ -147,6 +176,9 @@ export class VibesBridge extends EventEmitter {
         capabilities: {},
         clientInfo: { name: 'vibes-desktop', version: '0.0.1' },
       });
+      // MCP spec: the client signals readiness with an initialized notification;
+      // spec-compliant servers reject tools/call until it arrives.
+      this.client.sendNotification('notifications/initialized', {});
       this.initialized = true;
     } catch (err) {
       await this.stop();
@@ -156,28 +188,29 @@ export class VibesBridge extends EventEmitter {
 
   /** Plan a mission without executing. Returns the tool's text result. */
   async planMission(description: string): Promise<string> {
-    return (await this.callTool('plan_mission', {
+    return this.callTool('plan_mission', {
       description,
       workspace_root: this.options.workspaceRoot,
-    }, PLAN_TIMEOUT_MS)) as string;
+    }, PLAN_TIMEOUT_MS);
   }
 
   /** Execute the previously planned mission. Returns the tool's text result. */
   async executePlanned(): Promise<string> {
-    return (await this.callTool('start_execution', {}, EXECUTE_TIMEOUT_MS)) as string;
+    return this.callTool('start_execution', {}, EXECUTE_TIMEOUT_MS);
   }
 
   async queryStatus(): Promise<string> {
-    return (await this.callTool('query_status', {})) as string;
+    return this.callTool('query_status', {});
   }
 
   async resolveIntervention(action: InterventionAction, message?: string, retryFromTaskId?: string): Promise<string> {
-    return (await this.callTool('resolve_intervention', { action, message, retryFromTaskId })) as string;
+    return this.callTool('resolve_intervention', { action, message, retryFromTaskId });
   }
 
-  private async callTool(name: string, args: Record<string, unknown>, timeoutMs = 30_000): Promise<unknown> {
+  private async callTool(name: string, args: Record<string, unknown>, timeoutMs = 30_000): Promise<string> {
     if (!this.initialized) throw new Error('bridge not initialized');
-    return this.client.sendRequest('tools/call', { name, arguments: args }, timeoutMs);
+    const result = await this.client.sendRequest('tools/call', { name, arguments: args }, timeoutMs);
+    return unwrapToolResult(result, name);
   }
 
   /** End the child process and reject any in-flight requests. */

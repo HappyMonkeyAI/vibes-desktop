@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import {
   channels,
+  type AppSettings,
   type LedgerNewEntryEvent,
-  type LedgerSearchFilter,
   type LedgerSnapshot,
   type MissionPlanRequest,
   type MissionPlanResponse,
@@ -31,10 +31,8 @@ const api = {
       ipcRenderer.on(channels.ledgerNewEntry, listener);
       return () => ipcRenderer.removeListener(channels.ledgerNewEntry, listener);
     },
-    search: (filter: LedgerSearchFilter): Promise<LedgerSnapshot> =>
-      ipcRenderer.invoke(channels.ledgerSearch, filter),
     /** Archive one entry or a batch (a mission card plus its task rows). */
-    archive: (entryIds: string | string[]): Promise<{ ok: boolean; error?: string }> =>
+    archive: (entryIds: string | string[]): Promise<{ ok: boolean; count?: number; error?: string }> =>
       ipcRenderer.invoke(channels.ledgerArchive, entryIds),
   },
   roles: {
@@ -54,6 +52,8 @@ const api = {
     stop: (): Promise<{ stopped: boolean }> => ipcRenderer.invoke(channels.missionStop),
     plan: (request: MissionPlanRequest): Promise<MissionPlanResponse> =>
       ipcRenderer.invoke(channels.missionPlan, request),
+    /** Discard a reviewed-but-unlaunched plan (Decline / modal close). */
+    cancelPlan: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.missionCancelPlan),
   },
   workspace: {
     select: (): Promise<WorkspaceSelectResult> => ipcRenderer.invoke(channels.workspaceSelect),
@@ -62,6 +62,10 @@ const api = {
       get: (): Promise<WorkspaceHistoryEntry[]> => ipcRenderer.invoke(channels.workspaceHistoryGet),
       clear: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.workspaceHistoryClear),
     },
+  },
+  settings: {
+    get: (): Promise<AppSettings> => ipcRenderer.invoke(channels.settingsGet),
+    save: (input: Partial<AppSettings>): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.settingsSave, input),
   },
 };
 

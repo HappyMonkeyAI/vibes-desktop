@@ -45,14 +45,15 @@ describe('live ledger push (T5)', () => {
     render(<App />);
     expect(await screen.findByText('All quiet')).toBeTruthy();
 
-    // A mission starts — its event row is pushed live and becomes a card.
-    handlers[0]({ entry: { id: 'm1', kind: 'mission', group: 'running', status: 'running', source: 'vibes-mission', title: 'Planning: Build widget', workspaceRoot: '/w/widget', updatedAt: 1 } });
+    // A mission starts — its mission row is pushed live and becomes a card
+    // titled by the original request.
+    handlers[0]({ entry: { id: 'm1', kind: 'mission', missionId: 'm1', group: 'running', status: 'running', source: 'vibes-mission', title: 'Build widget', workspaceRoot: '/w/widget', updatedAt: 1 } });
     expect(await screen.findByText('Build widget')).toBeTruthy();
     expect(document.body.textContent).not.toContain('All quiet');
 
-    // The mission completes in place — must replace, not duplicate.
-    handlers[0]({ entry: { id: 'm1', kind: 'mission', group: 'recent', status: 'done', source: 'vibes-mission', title: 'Mission complete', workspaceRoot: '/w/widget', updatedAt: 2 } });
-    await screen.findByText('Mission complete');
-    expect(screen.getAllByText('Mission complete')).toHaveLength(1);
+    // The mission completes in place — same id/title upsert, no duplicate card.
+    handlers[0]({ entry: { id: 'm1', kind: 'mission', missionId: 'm1', group: 'recent', status: 'done', source: 'vibes-mission', title: 'Build widget', workspaceRoot: '/w/widget', updatedAt: 2 } });
+    await screen.findByText('Build widget');
+    expect(screen.getAllByText('Build widget')).toHaveLength(1);
   });
 });

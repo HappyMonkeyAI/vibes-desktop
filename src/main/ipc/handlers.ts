@@ -3,7 +3,7 @@ import type { WebContents } from 'electron';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { channels, type ChannelName, type LedgerSnapshot, type MissionPlanRequest, type MissionStartRequest, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult, type WorkspaceSelectResult } from '@shared/channels';
+import { channels, type AppSettings, type ChannelName, type LedgerSnapshot, type MissionPlanRequest, type MissionStartRequest, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult, type WorkspaceSelectResult } from '@shared/channels';
 import type { LedgerStore } from '../ledger/store';
 import type { RolesStore } from '../roles/store';
 import type { MissionService } from '../mission/service';
@@ -11,6 +11,7 @@ import { testConnection } from '../roles/test-connection';
 import { runVoiceDoctor } from '../voice/doctor';
 import { transcribeFile, voiceTempDir } from '../voice/transcribe';
 import type { WorkspaceHistoryStore } from '../workspace/history';
+import type { SettingsStore } from '../settings/store';
 
 /**
  * Handler table: one entry per channel in the shared map. T5 wires the ledger
@@ -52,10 +53,12 @@ export interface HandlerTableOptions {
   selectWorkspace?: () => Promise<WorkspaceSelectResult>;
   /** Workspace history store. Absent in tests → empty history. */
   workspaceHistoryStore?: WorkspaceHistoryStore;
+  /** App settings store. Absent in tests → defaults / no-op save. */
+  settingsStore?: SettingsStore;
 }
 
 export function createHandlerTable(options: HandlerTableOptions = {}): Record<ChannelName, Handler> {
-  const { store, rolesStore, missionService, selectWorkspace, workspaceHistoryStore } = options;
+  const { store, rolesStore, missionService, selectWorkspace, workspaceHistoryStore, settingsStore } = options;
   return {
     [channels.ledgerGet]: async () => (store ? store.snapshot() : emptySnapshot()),
     // Push channel (main → renderer); bound as a no-op handler for parity.
@@ -66,7 +69,16 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       const ok = rolesStore.save(input as RolesConfigInput);
       return { ok };
     },
-    [channels.rolesTestConnection]: async (_e, target) => testConnection(target as TestConnectionRequest),
+    // Probe with the typed key, or — when the field is empty and the role is
+    // named — with the key already stored for that role (never sent over IPC).
+    [channels.rolesTestConnection]: async (_e, targetArg) => {
+      const target = targetArg as TestConnectionRequest;
+      let apiKey = target.apiKey;
+      if (!apiKey && target.role && rolesStore) {
+        apiKey = rolesStore.getKey(target.role) || undefined;
+      }
+      return testConnection({ baseUrl: target.baseUrl, model: target.model, apiKey });
+    },
     // T12 — presence check before any capture attempt.
     [channels.voiceDoctor]: async (): Promise<VoiceDoctorResult> => runVoiceDoctor(),
     // T10/T11 — write the captured buffer to a temp file and transcribe it.
@@ -89,9 +101,8 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
     [channels.missionStart]: async (_e, req) => {
       if (!missionService) return { started: false, alreadyRunning: false };
       const request = req as MissionStartRequest;
-      // workspaceRoot is optional; if omitted, the vibes MCP server uses its own cwd.
-      // We do NOT fall back to process.cwd() — that would silently use the app's project root.
-      return missionService.startMission({ request: request.request, workspaceRoot: request.workspaceRoot });
+      // No cwd fallback — an empty workspaceRoot is rejected by the service.
+      return missionService.startMission({ request: request.request, workspaceRoot: request.workspaceRoot, acceptPlan: request.acceptPlan });
     },
     [channels.missionStop]: async () => (missionService ? missionService.stopMission() : { stopped: false }),
     // Mission plan via VibesBridge: call planMission and return extracted tasks.
@@ -100,6 +111,11 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       if (!missionService) return { tasks: [] as string[], error: 'Mission service not available' };
       const request = req as MissionPlanRequest;
       return missionService.planMission({ request: request.request, workspaceRoot: request.workspaceRoot });
+    },
+    // Discard a reviewed-but-unlaunched plan (Decline / modal close).
+    [channels.missionCancelPlan]: async () => {
+      if (missionService) await missionService.cancelPlan();
+      return { ok: true };
     },
     // Native folder picker for the mission working directory; cancel → null path.
     [channels.workspaceSelect]: async (): Promise<WorkspaceSelectResult> =>
@@ -120,20 +136,6 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       await workspaceHistoryStore.clear();
       return { ok: true };
     },
-    // Ledger search.
-    [channels.ledgerSearch]: async (_e, filterArg: unknown) => {
-      if (!store) return emptySnapshot();
-      const filter = filterArg as {
-        query?: string;
-        status?: string;
-        group?: string;
-      };
-      return store.search({
-        query: filter.query,
-        status: filter.status as any,
-        group: filter.group as any,
-      });
-    },
     // Ledger archive — one id or a batch (a mission card plus its task rows).
     [channels.ledgerArchive]: async (_e, idsArg: unknown) => {
       if (!store) return { ok: false, error: 'Ledger store not available' };
@@ -145,6 +147,14 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       } catch (error) {
         return { ok: false, error: error instanceof Error ? error.message : String(error) };
       }
+    },
+    // App settings persistence (Settings tab).
+    [channels.settingsGet]: async (): Promise<AppSettings> =>
+      settingsStore ? settingsStore.get() : { vibesPath: '', contextPath: '', memoryPath: '', autoSave: true, verboseLogging: false },
+    [channels.settingsSave]: async (_e, input) => {
+      if (!settingsStore) return { ok: true }; // parity stub — nothing to persist in tests
+      const ok = settingsStore.save(input as Partial<AppSettings>);
+      return { ok };
     },
   };
 }

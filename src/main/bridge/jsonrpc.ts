@@ -22,7 +22,7 @@ export interface JsonRpcResponse {
   error?: JsonRpcErrorObject;
 }
 
-type Pending = { resolve: (value: unknown) => void; reject: (err: Error) => void };
+type Pending = { resolve: (value: unknown) => void; reject: (err: Error) => void; timer: ReturnType<typeof setTimeout> };
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -83,18 +83,27 @@ export class JsonRpcClient extends EventEmitter {
       }
 
       const id = ++this.requestId;
-      this.pending.set(id, { resolve, reject });
-
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         if (this.pending.delete(id)) {
           reject(new Error(`request ${method} timed out after ${Math.round(timeoutMs / 1000)}s`));
         }
       }, timeoutMs);
+      this.pending.set(id, { resolve, reject, timer });
 
       stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`, (err) => {
-        if (err && this.pending.delete(id)) reject(err);
+        if (err && this.pending.delete(id)) {
+          clearTimeout(timer);
+          reject(err);
+        }
       });
     });
+  }
+
+  /** Fire-and-forget JSON-RPC notification (no id, no response expected). */
+  sendNotification(method: string, params: unknown): void {
+    const stdin = this.process?.stdin;
+    if (!stdin || !stdin.writable) return;
+    stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method, params })}\n`);
   }
 
   /** Handle one stdout line: correlated response or non-JSON log. */
@@ -109,6 +118,7 @@ export class JsonRpcClient extends EventEmitter {
     if (typeof response.id !== 'number' || !this.pending.has(response.id)) return;
     const pending = this.pending.get(response.id)!;
     this.pending.delete(response.id);
+    clearTimeout(pending.timer);
     if (response.error) {
       pending.reject(new Error(response.error.message || `JSON-RPC error ${response.error.code}`));
     } else {
@@ -118,7 +128,10 @@ export class JsonRpcClient extends EventEmitter {
 
   /** Reject everything outstanding (shutdown / crash). */
   rejectAll(err: Error): void {
-    for (const pending of this.pending.values()) pending.reject(err);
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timer);
+      pending.reject(err);
+    }
     this.pending.clear();
   }
 

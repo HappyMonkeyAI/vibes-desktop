@@ -59,22 +59,22 @@
   --primary-3: 255, 196, 175;
   --primary-4: 255, 164, 138;
   --primary-5: 255, 107, 53;
-  --primary-6: #e85628;
-  --primary-7: #cc5529;
-  --primary-8: #a84522;
-  --primary-9: #7d341b;
-  --primary-10: 51, 19, 9;
+  --primary-6: rgb(232, 86, 40);
+  --primary-7: rgb(204, 85, 41);
+  --primary-8: rgb(168, 69, 34);
+  --primary-9: rgb(125, 52, 27);
+  --primary-10: rgb(51, 19, 9);
 
   --arcoblue-1: 255, 240, 232;
   --arcoblue-2: 255, 219, 203;
   --arcoblue-3: 255, 196, 175;
   --arcoblue-4: 255, 164, 138;
   --arcoblue-5: 255, 107, 53;
-  --arcoblue-6: #e85628;
-  --arcoblue-7: #cc5529;
-  --arcoblue-8: #a84522;
-  --arcoblue-9: #7d341b;
-  --arcoblue-10: 51, 19, 9;
+  --arcoblue-6: rgb(232, 86, 40);
+  --arcoblue-7: rgb(204, 85, 41);
+  --arcoblue-8: rgb(168, 69, 34);
+  --arcoblue-9: rgb(125, 52, 27);
+  --arcoblue-10: rgb(51, 19, 9);
 
   /* Surfaces — white-first. */
   --bg-base: #ffffff;
@@ -151,7 +151,7 @@
   --primary-7: 255, 130, 85;
   --primary-8: 255, 150, 112;
   --primary-9: 255, 179, 153;
-  --primary-10: 255, 230, 219;
+  --primary-10: rgb(255, 230, 219);
 
   --arcoblue-1: 85, 42, 24;
   --arcoblue-2: 170, 84, 48;
@@ -162,7 +162,7 @@
   --arcoblue-7: 255, 130, 85;
   --arcoblue-8: 255, 150, 112;
   --arcoblue-9: 255, 179, 153;
-  --arcoblue-10: 255, 230, 219;
+  --arcoblue-10: rgb(255, 230, 219);
 
   --bg-base: #111114;
   --bg-1: #1a1a1f;

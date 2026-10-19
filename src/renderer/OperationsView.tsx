@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import type { LedgerEntry, LedgerSnapshot } from '@shared/channels';
-import { Button, Input, Modal, Message } from '@arco-design/web-react';
+import type { LedgerEntry, LedgerSnapshot, WorkspaceHistoryEntry } from '@shared/channels';
+import { Button, Input, Modal, Message, Select } from '@arco-design/web-react';
 import { Plus, Close } from '@icon-park/react';
 import VoiceInput from './VoiceInput';
 import styles from './OperationsView.module.css';
@@ -43,17 +43,11 @@ const TASK_ICONS: Record<string, string> = {
   idle: '·',
 };
 
-/** Task rows belonging to a mission card — same workspace root, excluding the
- *  mission-level event rows (Planning/Executing/complete/failed) so progress
- *  reflects real tasks only. */
-const tasksFor = (entry: LedgerEntry, all: LedgerEntry[]): LedgerEntry[] =>
-  all.filter(
-    (e) => e.kind !== 'mission' && e.workspaceRoot === entry.workspaceRoot,
-  );
-
-/** A mission card: one per mission event row, carrying that mission's task rows. */
+/** A mission card: one per mission row, carrying that mission's task rows
+ *  (matched by missionId, never by a global title or workspace collision). */
 type MissionCard = {
   id: string;
+  missionId?: string;
   title: string;
   status: LedgerEntry['status'];
   workspaceRoot?: string;
@@ -64,23 +58,25 @@ type MissionCard = {
 /** Format timestamp to readable date string */
 const formatDate = (timestamp: number): string => {
   const date = new Date(timestamp);
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric', 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 };
 
 /**
- * OperationsView — the new card-based Operations canvas with modal workflow.
- * Replaces the flat ledger list with a responsive card grid.
+ * OperationsView — the card-based Operations canvas with modal workflow.
+ * One card per mission (mission-level ledger row); task rows group under their
+ * own mission via missionId.
  */
 const OperationsView: React.FC = () => {
   const [snapshot, setSnapshot] = useState<LedgerSnapshot | null>(null);
   const [missionRequest, setMissionRequest] = useState('');
   const [starting, setStarting] = useState(false);
   const [workspaceRoot, setWorkspaceRoot] = useState('');
+  const [workspaceHistory, setWorkspaceHistory] = useState<WorkspaceHistoryEntry[]>([]);
   const [voiceReady, setVoiceReady] = useState<boolean | null>(null);
 
   // Modal state
@@ -90,17 +86,46 @@ const OperationsView: React.FC = () => {
   const [selectedCard, setSelectedCard] = useState<MissionCard | null>(null);
   const [missionPrompt, setMissionPrompt] = useState('');
   const [proposedTasks, setProposedTasks] = useState<string[]>([]);
+  const [planning, setPlanning] = useState(false);
 
-  // Handle workspace selection
+  // Recent working directories for the picker.
+  const refreshHistory = async () => {
+    try {
+      setWorkspaceHistory(await window.vibesDesktop.workspace.history.get());
+    } catch {
+      // History failing is non-fatal — the picker still offers Choose…
+    }
+  };
+
+  useEffect(() => {
+    void refreshHistory();
+  }, []);
+
+  // Handle workspace selection via the native dialog.
   const handleSelectWorkspace = async () => {
     try {
       const res = await window.vibesDesktop.workspace.select();
       if (res.path) {
         setWorkspaceRoot(res.path);
-        void window.vibesDesktop.workspace.history.save(res.path).catch(() => {});
+        void window.vibesDesktop.workspace.history.save(res.path).then(refreshHistory).catch(() => {});
       }
     } catch (error) {
       Message.error(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  // Handle workspace selection from the recent-directories dropdown.
+  const handlePickRecent = (path: string) => {
+    setWorkspaceRoot(path);
+    void window.vibesDesktop.workspace.history.save(path).then(refreshHistory).catch(() => {});
+  };
+
+  const handleClearHistory = async () => {
+    try {
+      await window.vibesDesktop.workspace.history.clear();
+      setWorkspaceHistory([]);
+    } catch {
+      // non-fatal
     }
   };
 
@@ -121,13 +146,19 @@ const OperationsView: React.FC = () => {
   const handleStartMission = async () => {
     const request = missionRequest.trim();
     if (!request || starting) return;
+    if (!workspaceRoot) {
+      Message.warning('Choose a working directory before starting a mission.');
+      return;
+    }
     setStarting(true);
     try {
-      const result = await window.vibesDesktop.mission.start({ request, workspaceRoot: workspaceRoot || undefined });
+      const result = await window.vibesDesktop.mission.start({ request, workspaceRoot });
       if (result.alreadyRunning) Message.warning('A mission is already running.');
       else if (!result.started && result.error) Message.error(result.error);
       else if (result.started) {
-        Message.success('Mission started successfully');
+        // The service resolves as soon as the mission is dispatched — the
+        // ledger streams live task updates from here on.
+        Message.success('Mission started');
         setMissionRequest('');
       }
     } catch (error) {
@@ -140,35 +171,75 @@ const OperationsView: React.FC = () => {
   // Launch New Agent Modal handlers
   const handleLaunchModalOpen = () => setLaunchModalVisible(true);
   const handleLaunchModalClose = () => setLaunchModalVisible(false);
+
   const handleGenerateTasks = async () => {
+    const request = missionRequest.trim();
+    if (planning) return;
+    if (!request) {
+      Message.warning('Describe the mission before generating tasks.');
+      return;
+    }
+    if (!workspaceRoot) {
+      Message.warning('Choose a working directory before planning a mission.');
+      return;
+    }
+    setPlanning(true);
     try {
-      const planResponse = await window.vibesDesktop.mission.plan({ request: missionRequest.trim(), workspaceRoot: workspaceRoot || undefined });
+      const planResponse = await window.vibesDesktop.mission.plan({ request, workspaceRoot });
       if (planResponse.error) {
         Message.error(planResponse.error);
         return;
       }
       setProposedTasks(planResponse.tasks || []);
-      setMissionPrompt(missionRequest.trim());
+      setMissionPrompt(request);
       setLaunchModalVisible(false);
       setReviewModalVisible(true);
     } catch (error) {
       Message.error(error instanceof Error ? error.message : 'Failed to generate tasks');
+    } finally {
+      setPlanning(false);
     }
   };
 
-  // Review Modal handlers
-  const handleReviewAccept = () => {
-    setReviewModalVisible(false);
-    // Launch the mission — the planner has already run, so this starts execution.
-    void handleStartMission();
+  // Review Modal handlers — Accept launches the SAME plan the user reviewed
+  // (the planning child is kept alive by the service until accept or decline).
+  const handleReviewAccept = async () => {
+    if (starting) return;
+    setStarting(true);
+    try {
+      const result = await window.vibesDesktop.mission.start({
+        request: missionPrompt,
+        workspaceRoot,
+        acceptPlan: true,
+      });
+      if (result.alreadyRunning) Message.warning('A mission is already running.');
+      else if (!result.started && result.error) Message.error(result.error);
+      else if (result.started) {
+        Message.success('Mission started');
+        setReviewModalVisible(false);
+        setProposedTasks([]);
+        setMissionPrompt('');
+        setMissionRequest('');
+      }
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setStarting(false);
+    }
   };
+
   const handleReviewDecline = () => {
     setReviewModalVisible(false);
     setProposedTasks([]);
+    // Discard the reviewed plan so its child doesn't linger.
+    void window.vibesDesktop.mission.cancelPlan().catch(() => {});
   };
+
   const handleRegeneratePlan = async () => {
+    if (planning) return;
+    setPlanning(true);
     try {
-      const planResponse = await window.vibesDesktop.mission.plan({ request: missionPrompt, workspaceRoot: workspaceRoot || undefined });
+      const planResponse = await window.vibesDesktop.mission.plan({ request: missionPrompt, workspaceRoot });
       if (planResponse.error) {
         Message.error(planResponse.error);
         return;
@@ -176,6 +247,8 @@ const OperationsView: React.FC = () => {
       setProposedTasks(planResponse.tasks || []);
     } catch (error) {
       Message.error(error instanceof Error ? error.message : 'Failed to regenerate tasks');
+    } finally {
+      setPlanning(false);
     }
   };
 
@@ -206,13 +279,16 @@ const OperationsView: React.FC = () => {
     }
   };
 
-  // Retry mission handler — restarts with the original request text.
+  // Retry mission handler — the card title IS the original request, so a retry
+  // re-runs exactly what the user asked for.
   const handleRetryMission = async () => {
-    if (!selectedCard) return;
-    const retryRequest = selectedCard.title.replace(/^Planning: /, '');
+    if (!selectedCard || starting) return;
     setStarting(true);
     try {
-      const result = await window.vibesDesktop.mission.start({ request: retryRequest, workspaceRoot: selectedCard.workspaceRoot || workspaceRoot || undefined });
+      const result = await window.vibesDesktop.mission.start({
+        request: selectedCard.title,
+        workspaceRoot: selectedCard.workspaceRoot || workspaceRoot || undefined,
+      });
       if (result.alreadyRunning) Message.warning('A mission is already running.');
       else if (!result.started && result.error) Message.error(result.error);
       else if (result.started) {
@@ -226,10 +302,10 @@ const OperationsView: React.FC = () => {
     }
   };
 
-  // Terminate mission handler
+  // Terminate mission handler — only meaningful while a mission runs; the
+  // service records the stop itself (blocked rows), one toast here, no more.
   const handleTerminateMission = async () => {
     if (!selectedCard) return;
-    // Check if this is a running/verifying mission
     if (selectedCard.status === 'running' || selectedCard.status === 'verifying') {
       try {
         await window.vibesDesktop.mission.stop();
@@ -243,40 +319,48 @@ const OperationsView: React.FC = () => {
     }
   };
 
-  // Ledger data with filters
+  // Live stop from the toolbar.
+  const handleStopMission = async () => {
+    try {
+      await window.vibesDesktop.mission.stop();
+      Message.success('Mission terminated');
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Failed to terminate mission');
+    }
+  };
+
+  // Ledger data filtered to non-archived entries.
   const [filteredSnapshot, setFilteredSnapshot] = useState<LedgerSnapshot | null>(null);
 
   useEffect(() => {
-    const applyFilters = async () => {
-      if (!snapshot) {
-        setFilteredSnapshot(null);
-        return;
-      }
-      // Filter out archived entries from the main view — and, with them, any
-      // task rows that belong to an archived mission.
-      const activeEntries = snapshot.entries.filter((e) => e.status !== 'archived');
-      setFilteredSnapshot({
-        ...snapshot,
-        entries: activeEntries,
-      });
-    };
-    applyFilters();
+    if (!snapshot) {
+      setFilteredSnapshot(null);
+      return;
+    }
+    const activeEntries = snapshot.entries.filter((e) => e.status !== 'archived');
+    setFilteredSnapshot({
+      ...snapshot,
+      entries: activeEntries,
+    });
   }, [snapshot]);
 
   const entries = filteredSnapshot?.entries ?? snapshot?.entries ?? [];
 
-  /** Group ledger rows into mission cards: one card per mission event row
-   *  (Planning/Executing/complete/failed), carrying that mission's task rows. */
+  /** Group ledger rows into mission cards: one card per mission-level row,
+   *  carrying that mission's task rows (matched by missionId). */
   const cards: MissionCard[] = [];
   for (const entry of entries) {
     if (entry.kind !== 'mission') continue;
     cards.push({
       id: entry.id,
-      title: entry.title.replace(/^Planning: /, ''),
+      missionId: entry.missionId,
+      title: entry.title,
       status: entry.status,
       workspaceRoot: entry.workspaceRoot,
       updatedAt: entry.updatedAt,
-      tasks: tasksFor(entry, entries),
+      tasks: entry.missionId
+        ? entries.filter((e) => e.kind !== 'mission' && e.missionId === entry.missionId)
+        : [],
     });
   }
 
@@ -288,7 +372,7 @@ const OperationsView: React.FC = () => {
     return { done, total: tasks.length };
   };
 
-  // Ledger subscription
+  // Ledger subscription.
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     void (async () => {
@@ -303,8 +387,8 @@ const OperationsView: React.FC = () => {
             return { entries, groupCounts: prev.groupCounts };
           });
         });
-      } finally {
-        // setLoading(false); // removed loading state
+      } catch (error) {
+        Message.error(error instanceof Error ? error.message : 'Failed to load the activity ledger.');
       }
     })();
     return () => unsubscribe?.();
@@ -333,11 +417,22 @@ const OperationsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Launch New Agent Card + Mission Cards Grid */}
+      {/* Launch New Agent Card + Mission Cards Grid — the Launch card is always
+          reachable, including the first-launch empty state. */}
       {cards.length === 0 ? (
-        <div className={styles.emptyState}>
-          <span className={styles.emptyStateText}>All quiet</span>
-        </div>
+        <>
+          {/* ADR-0003: first launch is clean — "All quiet", never an error banner. */}
+          <div className={styles.empty}>
+            <span className={styles.emptyTitle}>All quiet</span>
+            <span className={styles.emptyHint}>No missions yet. Launch a new agent to get started.</span>
+          </div>
+          <div className={styles.cardGrid}>
+            <button className={styles.launchCard} onClick={handleLaunchModalOpen}>
+              <Plus size={32} className={styles.launchIcon} />
+              <span className={styles.launchLabel}>Launch New Agent</span>
+            </button>
+          </div>
+        </>
       ) : (
         <div className={styles.cardGrid}>
           {/* Launch New Agent Card */}
@@ -399,8 +494,21 @@ const OperationsView: React.FC = () => {
       <div className={styles.workspacePickerRow}>
         <span className={styles.workspacePickerLabel}>WORKING DIRECTORY</span>
         <div className={styles.workspacePickerInput}>
-          <Input value={workspaceRoot || 'App default'} readOnly placeholder="Select a directory..." />
+          <Select
+            placeholder="Select a directory..."
+            value={workspaceRoot || undefined}
+            onChange={(v) => handlePickRecent(String(v))}
+            allowClear
+            triggerProps={{ autoAlignPopupWidth: true }}
+          >
+            {workspaceHistory.map((h) => (
+              <Select.Option key={h.path} value={h.path}>{h.path}</Select.Option>
+            ))}
+          </Select>
           <Button size="small" type="outline" onClick={handleSelectWorkspace}>Choose…</Button>
+          {workspaceHistory.length > 0 && (
+            <Button size="small" type="text" onClick={() => void handleClearHistory()}>Clear</Button>
+          )}
         </div>
       </div>
 
@@ -424,7 +532,7 @@ const OperationsView: React.FC = () => {
           Start mission
         </Button>
         {hasRunning && (
-          <Button status="warning" onClick={() => void window.vibesDesktop.mission.stop()}>
+          <Button status="warning" onClick={() => void handleStopMission()}>
             Stop mission
           </Button>
         )}
@@ -437,7 +545,7 @@ const OperationsView: React.FC = () => {
         title="Launch New Agent"
         footer={[
           <Button key="cancel" onClick={handleLaunchModalClose}>Cancel</Button>,
-          <Button key="generate" type="primary" onClick={handleGenerateTasks}>Generate Tasks</Button>,
+          <Button key="generate" type="primary" loading={planning} onClick={() => void handleGenerateTasks()}>Generate Tasks</Button>,
         ]}
         style={{ top: 60 }}
       >
@@ -471,8 +579,8 @@ const OperationsView: React.FC = () => {
         title="Review Proposed Tasks"
         footer={[
           <Button key="decline" onClick={handleReviewDecline}>Decline</Button>,
-          <Button key="regenerate" onClick={handleRegeneratePlan}>Regenerate Plan</Button>,
-          <Button key="accept" type="primary" onClick={handleReviewAccept}>Accept & Launch</Button>,
+          <Button key="regenerate" loading={planning} onClick={() => void handleRegeneratePlan()}>Regenerate Plan</Button>,
+          <Button key="accept" type="primary" loading={starting} onClick={() => void handleReviewAccept()}>Accept & Launch</Button>,
         ]}
         style={{ top: 60 }}
       >
@@ -504,8 +612,10 @@ const OperationsView: React.FC = () => {
         onCancel={handleCloseDetailModal}
         footer={[
           <Button key="close" onClick={handleCloseDetailModal}>Close</Button>,
-          <Button key="retry" onClick={handleRetryMission}>Retry Mission</Button>,
-          <Button key="terminate" status="warning" onClick={handleTerminateMission}>Terminate</Button>,
+          <Button key="retry" loading={starting} onClick={() => void handleRetryMission()}>Retry Mission</Button>,
+          ...(selectedCard && (selectedCard.status === 'running' || selectedCard.status === 'verifying')
+            ? [<Button key="terminate" status="warning" onClick={() => void handleTerminateMission()}>Terminate</Button>]
+            : []),
         ]}
         style={{ top: 40, width: 700 }}
       >
@@ -548,7 +658,7 @@ const OperationsView: React.FC = () => {
             {/* Goal Box */}
             <div className={styles.goalBox}>
               <div className={styles.goalBoxLabel}>GOAL</div>
-              <div className={styles.goalBoxContent}>{selectedCard.title.replace(/^Planning: /, '')}</div>
+              <div className={styles.goalBoxContent}>{selectedCard.title}</div>
             </div>
 
             {/* Live Task Checklist — real task rows from the ledger */}

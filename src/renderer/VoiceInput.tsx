@@ -56,11 +56,44 @@ const VoiceInput: React.FC<{ onTranscript: (text: string) => void }> = ({ onTran
   const stopRecording = useCallback(async () => {
     const recorder = recorderRef.current;
     if (!recorder || recorder.state === 'inactive') return;
-    recorder.stop();
     recorderRef.current = null;
     setState('transcribing');
+    // Per the MediaRecorder spec, a recorder started WITHOUT a timeslice delivers
+    // its (only) chunk in a final dataavailable that fires asynchronously AFTER
+    // stop() returns. Support both callback-style (tests) and addEventListener
+    // style (real browsers).
+    const finalChunk = new Promise<void>((resolve) => {
+      let resolved = false;
+      const resolveOnce = () => {
+        if (resolved) return;
+        resolved = true;
+        resolve();
+      };
+      if (typeof (recorder as any).addEventListener === 'function') {
+        (recorder as any).addEventListener('dataavailable', resolveOnce, { once: true });
+        (recorder as any).addEventListener('stop', resolveOnce, { once: true });
+      } else {
+        // callback form (test mocks)
+        const origData = (recorder as any).ondataavailable;
+        (recorder as any).ondataavailable = (e: any) => {
+          try { origData?.(e); } catch {}
+          resolveOnce();
+        };
+        const origStop = (recorder as any).onstop;
+        (recorder as any).onstop = () => {
+          try { origStop?.(); } catch {}
+          resolveOnce();
+        };
+      }
+    });
+    recorder.stop();
+    await finalChunk;
     try {
       const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+      if (blob.size === 0) {
+        Message.error('Recording captured no audio — held too briefly?');
+        return;
+      }
       const audioBase64 = await blobToBase64(blob);
       const result = await window.vibesDesktop.voice.transcribe({ audioBase64, mime: blob.type });
       if (result.ok && result.text) onTranscript(result.text);

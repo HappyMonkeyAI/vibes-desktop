@@ -4,14 +4,19 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { LedgerStore } from '../src/main/ledger/store';
-import { createMissionService } from '../src/main/mission/service';
+import { createMissionService, missionOutcomeFrom } from '../src/main/mission/service';
 
 function tempDir() {
   return mkdtempSync(path.join(os.tmpdir(), 'vibes-mission-'));
 }
 
+/** Mirror the child's real plan_mission output: a JSON task array. */
+const PLAN_OK = JSON.stringify([{ id: 1, name: 'Write code', status: 'pending' }]);
+/** Mirror the child's real start_execution success text. */
+const EXEC_OK = 'Mission completed. Completed 1/1 tasks.';
+
 /** A fake bridge that streams task-status events and resolves execution on demand. */
-function makeFakeBridge(opts: { planError?: Error; execError?: Error; stream?: Array<{ name: string; status: 'in-progress' | 'complete' | 'failed' }> } = {}) {
+function makeFakeBridge(opts: { planError?: Error; execError?: Error; planResponse?: string; execResponse?: string; stream?: Array<{ name: string; status: 'in-progress' | 'complete' | 'failed' }> } = {}) {
   const ee = new EventEmitter();
   let started = false;
   let stopped = false;
@@ -25,14 +30,14 @@ function makeFakeBridge(opts: { planError?: Error; execError?: Error; stream?: A
     },
     planMission: async (_desc: string) => {
       if (opts.planError) throw opts.planError;
-      return 'plan ok';
+      return opts.planResponse ?? PLAN_OK;
     },
     executePlanned: async () => {
       // Stream any configured task events before resolving.
       for (const ev of opts.stream ?? []) ee.emit('task-status', ev);
       await Promise.resolve();
       if (opts.execError) throw opts.execError;
-      return 'exec ok';
+      return opts.execResponse ?? EXEC_OK;
     },
     stop: async () => {
       stopped = true;
@@ -57,16 +62,21 @@ describe('MissionService (T13/T14)', () => {
     const result = await service.startMission({ request: 'Build a thing', workspaceRoot: dir });
     expect(result.started).toBe(true);
     expect(result.alreadyRunning).toBe(false);
-    // The child was terminated cleanly after the mission.
+    // With the MVP UX, the mission's card title is the original request and we
+    // upsert its mission row in place (scoped by missionId). The child is
+    // terminated cleanly after execution completes.
+    await new Promise((r) => setTimeout(r, 30)); // allow background execution to finish
     expect(bridge._state().stopped).toBe(true);
 
     const snap = await store.snapshot();
-    // Planning + executing + complete event, plus the upserted task row (in-progress then complete → one row).
     const titles = snap.entries.map((e) => e.title);
     expect(titles).toContain('Write code');
-    expect(titles).toContain('Mission complete');
+    expect(titles).toContain('Build a thing'); // mission row title = original request
     const task = snap.entries.find((e) => e.title === 'Write code')!;
     expect(task.status).toBe('done'); // upserted in place to done
+    const missionRow = snap.entries.find((e) => e.title === 'Build a thing')!;
+    expect(missionRow.status).toBe('done'); // child reported Mission completed. Completed 1/1
+    expect(missionRow.detail).toContain('Mission completed');
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -93,8 +103,9 @@ describe('MissionService (T13/T14)', () => {
     expect(second.started).toBe(false);
     expect(second.alreadyRunning).toBe(true);
 
-    resolveExec('done');
+    resolveExec(EXEC_OK);
     await first;
+    await new Promise((r) => setTimeout(r, 30)); // allow background chain to finish
     expect(bridge._state().stopped).toBe(true);
     rmSync(dir, { recursive: true, force: true });
   });
@@ -117,7 +128,7 @@ describe('MissionService (T13/T14)', () => {
     expect(bridge._state().stopped).toBe(true); // child torn down on failure
 
     const snap = await store.snapshot();
-    expect(snap.entries.some((e) => e.title === 'Mission failed' && e.status === 'failed')).toBe(true);
+    expect(snap.entries.some((e) => e.title === 'Will fail' && e.status === 'failed')).toBe(true);
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -140,10 +151,11 @@ describe('MissionService (T13/T14)', () => {
     // Now with a live child — start hangs in executePlanned, then stop ends it and reports stopped:true.
     const execGate = new Promise<string>(() => undefined); // never resolves
     bridge.executePlanned = () => execGate;
-    void service.startMission({ request: 'Hang', workspaceRoot: dir });
-    await new Promise((r) => setTimeout(r, 20));
+    const first = service.startMission({ request: 'Hang', workspaceRoot: dir });
+    await new Promise((r) => setTimeout(r, 30));
     const withChild = await service.stopMission();
     expect(withChild.stopped).toBe(true);
+    await new Promise((r) => setTimeout(r, 30)); // allow background chain to settle
     expect(bridge._state().stopped).toBe(true);
     rmSync(dir, { recursive: true, force: true });
   });
@@ -161,12 +173,127 @@ describe('MissionService (T13/T14)', () => {
     });
 
     const result = await service.startMission({ request: 'Crash', workspaceRoot: dir });
-    expect(result.started).toBe(false);
-    expect(result.error).toBe('child exited 1');
+    // Start resolves at dispatch; the child crash surfaces via the ledger, not
+    // the start promise (P2-2: toast/spinner at start, not end).
+    expect(result.started).toBe(true);
+    expect(result.error).toBeUndefined();
+    await new Promise((r) => setTimeout(r, 30)); // allow background chain to settle
     expect(bridge._state().stopped).toBe(true);
 
     const snap = await store.snapshot();
-    expect(snap.entries.some((e) => e.title === 'Mission failed' && e.status === 'failed')).toBe(true);
+    expect(snap.entries.some((e) => e.title === 'Crash' && e.status === 'failed')).toBe(true);
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('fails the start when planning returns failure TEXT (resolved, not thrown)', async () => {
+    // The old child caught errors and returned them as normal strings — a
+    // resolved planMission carried "Mission planning failed: …". That must not
+    // reach dispatch, or start_execution would "succeed" with nothing to run.
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    let bridge;
+    const service = createMissionService({
+      store,
+      createBridge: () => {
+        bridge = makeFakeBridge({ planResponse: 'Mission planning failed: 404 Not Found' });
+        return bridge;
+      },
+    });
+
+    const result = await service.startMission({ request: 'Bad endpoint', workspaceRoot: dir });
+    expect(result.started).toBe(false);
+    expect(result.error).toContain('Mission planning failed');
+    expect(bridge._state().stopped).toBe(true);
+
+    const snap = await store.snapshot();
+    const failed = snap.entries.find((e) => e.title === 'Bad endpoint' && e.status === 'failed')!;
+    expect(failed).toBeTruthy();
+    expect(failed.detail).toContain('Mission planning failed');
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('fails the start when planning returns an empty task list', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const service = createMissionService({
+      store,
+      createBridge: () => makeFakeBridge({ planResponse: '[]' }),
+    });
+
+    const result = await service.startMission({ request: 'Empty plan', workspaceRoot: dir });
+    expect(result.started).toBe(false);
+    expect(result.error).toBeTruthy();
+    const snap = await store.snapshot();
+    expect(snap.entries.some((e) => e.title === 'Empty plan' && e.status === 'failed')).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('records FAILED (not done) when execution resolves with a failed mission text', async () => {
+    // Regression: the false-done bug. A resolved executePlanned carrying
+    // "Mission failed. Completed 0/2 tasks." must never be recorded as done.
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    let bridge;
+    const service = createMissionService({
+      store,
+      createBridge: () => {
+        bridge = makeFakeBridge({ execResponse: 'Mission failed. Completed 0/2 tasks.' });
+        return bridge;
+      },
+    });
+
+    const result = await service.startMission({ request: 'Will fail', workspaceRoot: dir });
+    expect(result.started).toBe(true); // start resolves at dispatch by design
+    await new Promise((r) => setTimeout(r, 30));
+    expect(bridge._state().stopped).toBe(true);
+
+    const snap = await store.snapshot();
+    const row = snap.entries.find((e) => e.title === 'Will fail')!;
+    expect(row.status).toBe('failed');
+    expect(row.detail).toContain('Mission failed. Completed 0/2');
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("records FAILED when execution resolves with 'No mission has been planned.'", async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const service = createMissionService({
+      store,
+      createBridge: () => makeFakeBridge({ execResponse: 'No mission has been planned.' }),
+    });
+
+    await service.startMission({ request: 'Lost plan', workspaceRoot: dir });
+    await new Promise((r) => setTimeout(r, 30));
+
+    const snap = await store.snapshot();
+    const row = snap.entries.find((e) => e.title === 'Lost plan')!;
+    expect(row.status).toBe('failed');
+    expect(row.detail).toContain('No mission has been planned');
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe('missionOutcomeFrom (honesty gate)', () => {
+  it('marks done only for an explicit completed mission with all work done', () => {
+    expect(missionOutcomeFrom('Mission completed. Completed 3/3 tasks.')).toEqual({
+      status: 'done',
+      detail: 'Mission completed. Completed 3/3 tasks.',
+    });
+  });
+
+  it('fails a completed mission with zero tasks (nothing executed)', () => {
+    expect(missionOutcomeFrom('Mission completed. Completed 0/0 tasks.').status).toBe('failed');
+  });
+
+  it('fails a partially completed mission', () => {
+    expect(missionOutcomeFrom('Mission failed. Completed 1/3 tasks.').status).toBe('failed');
+  });
+
+  it('fails unrecognized shapes rather than trusting the resolve', () => {
+    expect(missionOutcomeFrom('No mission has been planned.').status).toBe('failed');
+    expect(missionOutcomeFrom('').status).toBe('failed');
+    expect(missionOutcomeFrom('').detail).toBe('The mission child returned no result.');
+    expect(missionOutcomeFrom('Mission planning failed: 404').status).toBe('failed');
+    expect(missionOutcomeFrom(undefined as unknown as string).status).toBe('failed');
   });
 });

@@ -1,4 +1,5 @@
 import type { TestConnectionRequest, TestConnectionResult } from '@shared/channels';
+import { normalizeOpenAiBaseUrl } from './vibes-config';
 
 /**
  * T8 — probe a single endpoint with a 1-token chat completion. Uses the global
@@ -10,7 +11,11 @@ import type { TestConnectionRequest, TestConnectionResult } from '@shared/channe
 const TIMEOUT_MS = 30_000;
 
 export async function testConnection(req: TestConnectionRequest): Promise<TestConnectionResult> {
-  const baseUrl = (req.baseUrl ?? '').trim().replace(/\/+$/, '');
+  // Probe the SAME URL the child will call: normalize a bare origin to its
+  // /v1 root before appending /chat/completions, so a probe of
+  // `http://host:11434` matches the child's OpenAI client instead of 404ing
+  // on /chat/completions while the child works (or vice versa).
+  const baseUrl = normalizeOpenAiBaseUrl(req.baseUrl ?? '');
   const model = (req.model ?? '').trim();
   if (!baseUrl || !model) return { ok: false, error: 'Both a base URL and a model are required.' };
 
