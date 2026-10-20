@@ -153,8 +153,10 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
     // Workspace history management.
     [channels.workspaceHistorySave]: async (_e, pathArg: unknown) => {
       if (!workspaceHistoryStore) return { ok: true };
-      const path = pathArg as string;
-      await workspaceHistoryStore.addWorkspace(path);
+      if (typeof pathArg !== 'string' || !pathArg.trim()) {
+        return { ok: false, error: 'Invalid workspace path.' };
+      }
+      await workspaceHistoryStore.addWorkspace(pathArg);
       return { ok: true };
     },
     [channels.workspaceHistoryGet]: async () => {

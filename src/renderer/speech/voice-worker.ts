@@ -32,6 +32,8 @@ type LoadedPipeline = {
 
 let loaded: LoadedPipeline | null = null;
 let loading: Promise<LoadedPipeline> | null = null;
+/** Bumped when a new load starts so a stale in-flight build cannot overwrite `loaded`. */
+let loadGeneration = 0;
 
 function configKey(config: WorkerConfig): string {
   return `${config.model}|${config.precision}|${config.device}`;
@@ -67,6 +69,7 @@ async function loadPipeline(config: WorkerConfig, id: number): Promise<LoadedPip
     loaded = null;
   }
 
+  const generation = ++loadGeneration;
   loading = build(config, config.device, id)
     .catch(async (error) => {
       if (config.device !== 'webgpu') throw error;
@@ -78,12 +81,17 @@ async function loadPipeline(config: WorkerConfig, id: number): Promise<LoadedPip
       return build(config, 'wasm', id);
     })
     .then((result) => {
-      loaded = result;
-      loading = null;
+      if (generation === loadGeneration) {
+        loaded = result;
+        loading = null;
+      } else {
+        // Superseded — dispose the orphaned pipeline we just built.
+        void result.pipeline.dispose().catch(() => undefined);
+      }
       return result;
     })
     .catch((error) => {
-      loading = null;
+      if (generation === loadGeneration) loading = null;
       throw error;
     });
 

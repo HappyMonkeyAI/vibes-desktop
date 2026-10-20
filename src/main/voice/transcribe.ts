@@ -1,5 +1,6 @@
 import { readFileSync, rmSync } from 'node:fs';
 import { spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { VoiceTranscribeResult } from '@shared/channels';
 
@@ -111,7 +112,8 @@ function cleanup(...paths: string[]): void {
   }
 }
 
-/** The temp dir a capture should land in — the OS temp, never the workspace. */
+/** The temp dir a capture should land in — the OS temp, never the app cwd. */
 export function voiceTempDir(): string {
-  return path.join(process.env['TEMP'] ?? process.env['TMPDIR'] ?? '.', 'vibes-voice');
+  const base = process.env['TEMP'] ?? process.env['TMPDIR'] ?? tmpdir();
+  return path.join(base, 'vibes-voice');
 }

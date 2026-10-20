@@ -108,6 +108,7 @@ export class SpeechClient {
     this.failAll(new Error('Speech client disposed'));
     this.worker?.terminate();
     this.worker = null;
+    if (sharedClient === this) sharedClient = null;
   }
 }
 

@@ -155,7 +155,7 @@ export async function probeSpeechServer(
       if (res.status < 500) return { ok: true };
       return { ok: false, error: `HTTP ${res.status}` };
     } catch (inner) {
-      return { ok: false, error: inner instanceof Error ? inner.message : String(error) };
+      return { ok: false, error: inner instanceof Error ? inner.message : String(inner) };
     }
   }
 }

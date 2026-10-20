@@ -47,9 +47,6 @@ export interface MissionService {
   stopMission(): Promise<{ stopped: boolean }>;
 }
 
-/** The default checkout location when VIBES_PATH is unset (dev machine). */
-const DEFAULT_VIBES_PATH = 'C:/Users/steph/Documents/development/local-ai-planner';
-
 /** Parse tasks from the plan_mission tool response. The vibes MCP server returns
  *  a JSON array like `[{id:1,name:"...",status:"pending"},...]`; older or degraded
  *  responses may be a numbered/bulleted list, so fall back to line matching. */
@@ -125,9 +122,8 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
   const resolveVibesPath = (): string => {
     const fromEnv = options.vibesPath?.();
     if (fromEnv && existsSync(path.join(fromEnv, 'src', 'mcp', 'server.ts'))) return fromEnv;
-    if (existsSync(path.join(DEFAULT_VIBES_PATH, 'src', 'mcp', 'server.ts'))) return DEFAULT_VIBES_PATH;
     throw new Error(
-      'No vibes checkout found. Set VIBES_PATH in the app environment to a vibes repo (containing src/mcp/server.ts).',
+      'No vibes checkout found. Set vibesPath in Settings (or VIBES_PATH env) to a repo containing src/mcp/server.ts.',
     );
   };
 
@@ -268,7 +264,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
         return { started: true, alreadyRunning: false };
       } catch (error) {
         // Covers a crashed child and a planning error — both are start failures.
-        const message = (error as Error).message;
+        const message = error instanceof Error ? error.message : String(error);
         await store.recordMissionEvent(request, 'failed', root, missionId, message).catch(() => undefined);
         try { if (mission) await mission.stop().catch(() => undefined); } catch {}
         await endBridge();

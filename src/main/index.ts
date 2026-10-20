@@ -13,9 +13,6 @@ import { SettingsStore } from './settings/store';
 
 const isDev = !app.isPackaged;
 
-/** Fallback vibes checkout when neither VIBES_PATH nor settings.vibesPath is set. */
-const DEFAULT_VIBES_PATH = 'C:/Users/steph/Documents/development/local-ai-planner';
-
 let mainWindow: BrowserWindow | null = null;
 let ledger: LedgerStore | null = null;
 
@@ -69,13 +66,11 @@ app.whenReady().then(() => {
   // each spawn so a child always reads the per-role endpoints we just saved.
   // writeVibesConfig itself refuses non-absolute roots, so a bad value can never
   // write .vibes/config.json into the app's own source tree.
-  // vibesPath resolution: VIBES_PATH env (dev override) > settings.vibesPath
-  // (user-set in Settings tab) > bundled default. Validated for src/mcp/server.ts.
+  // vibesPath: VIBES_PATH env (dev) > settings.vibesPath. No hardcoded machine paths.
   const resolveVibesPath = (): string => {
     const candidates = [
       process.env['VIBES_PATH'],
       settingsStore.get().vibesPath,
-      DEFAULT_VIBES_PATH,
     ].filter((c): c is string => !!c);
     for (const candidate of candidates) {
       if (existsSync(path.join(candidate, 'src', 'mcp', 'server.ts'))) return candidate;
