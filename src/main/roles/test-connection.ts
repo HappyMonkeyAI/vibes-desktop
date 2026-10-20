@@ -1,4 +1,5 @@
 import type { TestConnectionRequest, TestConnectionResult } from '@shared/channels';
+import { normalizeOpenAiBaseUrl } from './vibes-config';
 
 /**
  * T8 — probe a single endpoint with a 1-token chat completion. Uses the global
@@ -7,13 +8,20 @@ import type { TestConnectionRequest, TestConnectionResult } from '@shared/channe
  * what the user just typed, not a stale cached endpoint.
  */
 
-const TIMEOUT_MS = 10_000;
+const TIMEOUT_MS = 30_000;
 
 export async function testConnection(req: TestConnectionRequest): Promise<TestConnectionResult> {
-  const baseUrl = (req.baseUrl ?? '').trim().replace(/\/+$/, '');
+  // Probe the SAME URL the child will call: normalize a bare origin to its
+  // /v1 root before appending /chat/completions, so a probe of
+  // `http://host:11434` matches the child's OpenAI client instead of 404ing
+  // on /chat/completions while the child works (or vice versa).
+  const baseUrl = normalizeOpenAiBaseUrl(req.baseUrl ?? '');
   const model = (req.model ?? '').trim();
   if (!baseUrl || !model) return { ok: false, error: 'Both a base URL and a model are required.' };
 
+  // The base URL is the OpenAI-compatible root as configured per role — e.g.
+  // `http://localhost:11434/v1` for Ollama or `https://api.openai.com/v1`.
+  // We append only `/chat/completions`; a second `/v1` would 404 on every such host.
   const url = `${baseUrl}/chat/completions`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -31,7 +39,7 @@ export async function testConnection(req: TestConnectionRequest): Promise<TestCo
     const detail = await safeErrorDetail(res);
     return { ok: false, error: `Endpoint responded ${res.status}${detail ? ` — ${detail}` : ''}.` };
   } catch (error) {
-    if (controller.signal.aborted) return { ok: false, error: 'Connection timed out after 10s.' };
+    if (controller.signal.aborted) return { ok: false, error: 'Connection timed out after 30s.' };
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   } finally {
     clearTimeout(timer);

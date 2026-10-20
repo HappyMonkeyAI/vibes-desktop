@@ -14,6 +14,8 @@ window.vibesDesktop = {
   ledger: {
     get: vi.fn().mockResolvedValue(emptySnapshot),
     onNewEntry: vi.fn(() => () => undefined),
+    search: vi.fn().mockResolvedValue(emptySnapshot),
+    archive: vi.fn().mockResolvedValue({ ok: true, count: 0 }),
   },
   roles: {
     get: vi.fn().mockResolvedValue({}),
@@ -23,9 +25,38 @@ window.vibesDesktop = {
   voice: {
     doctor: vi.fn().mockResolvedValue({ ffmpegAvailable: false, yapsnapAvailable: false, ready: false, ffmpegHint: 'install ffmpeg', yapsnapHint: 'install yapsnap' }),
     transcribe: vi.fn().mockResolvedValue({ ok: true, text: 'stub transcription' }),
+    warm: vi.fn().mockResolvedValue({ ok: true, detail: 'stub warm' }),
+    testServer: vi.fn().mockResolvedValue({ ok: true }),
   },
   mission: {
     start: vi.fn().mockResolvedValue({ started: false, alreadyRunning: false }),
     stop: vi.fn().mockResolvedValue({ stopped: false }),
+    plan: vi.fn().mockResolvedValue({ tasks: [] as string[] }),
+    cancelPlan: vi.fn().mockResolvedValue({ ok: true }),
+  },
+  workspace: {
+    select: vi.fn().mockResolvedValue({ path: null }),
+    history: {
+      save: vi.fn().mockResolvedValue({ ok: true }),
+      get: vi.fn().mockResolvedValue([]),
+      clear: vi.fn().mockResolvedValue({ ok: true }),
+    },
+  },
+  settings: {
+    get: vi.fn().mockResolvedValue({
+      vibesPath: '',
+      contextPath: '',
+      memoryPath: '',
+      autoSave: true,
+      verboseLogging: false,
+      speechEngine: 'builtin',
+      speechModel: 'onnx-community/whisper-tiny.en',
+      speechPrecision: 'q8',
+      speechLang: 'auto',
+      speechServerUrl: 'http://127.0.0.1:8765/v1/audio/transcriptions',
+      speechServerModel: 'qwen3-asr-0.6b-q8-0',
+      speechServerHasKey: false,
+    }),
+    save: vi.fn().mockResolvedValue({ ok: true }),
   },
 };

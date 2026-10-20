@@ -16,6 +16,7 @@ export const LEDGER_STATUSES = [
   'pending',
   'done',
   'idle',
+  'archived',
 ] as const;
 export type LedgerStatus = (typeof LEDGER_STATUSES)[number];
 
@@ -34,6 +35,13 @@ export interface LedgerEntry {
   title: string;
   detail?: string;
   context?: string;
+  /** The workspace root this mission was executed in. */
+  workspaceRoot?: string;
+  /** 'mission' marks a mission-level event row; absent on task rows. */
+  kind?: 'mission';
+  /** Scopes a row to one mission: task and mission rows upsert by (missionId, title)
+   *  so two missions never collide on identical titles. Minted per startMission. */
+  missionId?: string;
   needsHuman?: boolean;
   retriesUsed?: number;
   retryBudget?: number;
@@ -79,6 +87,8 @@ export interface TestConnectionRequest {
   model: string;
   /** Optional key for the probe; omitted means "no auth" (local Ollama). */
   apiKey?: string;
+  /** When present and apiKey is omitted, the main process probes with the stored key for this role. */
+  role?: RoleKey;
 }
 
 /** T12 — yapsnap-doctor result: what's present, and how to install what isn't. */
@@ -108,8 +118,11 @@ export interface VoiceTranscribeResult {
 
 export interface MissionStartRequest {
   request: string;
-  /** Optional explicit mission root; falls back to the app's cwd when empty. */
+  /** Required working directory for the mission (no cwd fallback). */
   workspaceRoot?: string;
+  /** When true, execute the plan already reviewed by the user (kept alive by mission:plan)
+   *  instead of planning again. Falls back to a fresh plan when no pending plan matches. */
+  acceptPlan?: boolean;
 }
 export interface MissionStartResult {
   started: boolean;
@@ -118,10 +131,79 @@ export interface MissionStartResult {
   error?: string;
 }
 
+/** Mission plan response from the planner API. */
+export interface MissionPlanResponse {
+  tasks: string[];
+  /** Present when planning failed (no reachable LLM, no workspace, child crash). */
+  error?: string;
+}
+
+export interface MissionPlanRequest {
+  request: string;
+  /** Required working directory for planning (no cwd fallback). */
+  workspaceRoot?: string;
+}
+
 /** Result of the native folder picker used to choose a mission's working directory. */
 export interface WorkspaceSelectResult {
   /** The chosen absolute path, or null when the dialog was cancelled. */
   path: string | null;
+}
+
+/** Workspace history entry. */
+export interface WorkspaceHistoryEntry {
+  path: string;
+  lastUsed: number;
+}
+
+/**
+ * Speech-to-text engine:
+ * - builtin — Whisper ONNX in-app (Transformers.js), downloads model on first talk (ZeroG-style)
+ * - server — OpenAI-compatible /v1/audio/transcriptions (e.g. qwen3-asr)
+ * - yapsnap — legacy local CLI (optional; requires pip install)
+ */
+export type SpeechEngine = 'builtin' | 'server' | 'yapsnap';
+
+/** App settings persisted in userData (Settings tab). */
+export interface AppSettings {
+  /** Absolute path to a vibes checkout (contains src/mcp/server.ts). */
+  vibesPath: string;
+  contextPath: string;
+  memoryPath: string;
+  autoSave: boolean;
+  verboseLogging: boolean;
+  /** STT backend. */
+  speechEngine: SpeechEngine;
+  /** Hugging Face Whisper id for builtin engine. */
+  speechModel: string;
+  /** Transformers.js dtype for builtin: q8 | q4 | fp16 | fp32. */
+  speechPrecision: string;
+  /** Language code for STT, or `auto`. */
+  speechLang: string;
+  /** Full transcriptions URL, e.g. http://127.0.0.1:8765/v1/audio/transcriptions */
+  speechServerUrl: string;
+  /** Model name the server expects (e.g. qwen3-asr-0.6b-q8-0). */
+  speechServerModel: string;
+  /** True when an API key is stored for the speech server (never returned decrypted). */
+  speechServerHasKey: boolean;
+}
+
+/** Partial save payload — empty speechServerApiKey means keep the stored key. */
+export type AppSettingsSaveInput = Partial<Omit<AppSettings, 'speechServerHasKey'>> & {
+  speechServerApiKey?: string;
+};
+
+/** Result of warming / pre-fetching the local yapsnap model cache. */
+export interface VoiceWarmResult {
+  ok: boolean;
+  error?: string;
+  detail?: string;
+}
+
+/** Probe result for the configured speech server. */
+export interface VoiceServerTestResult {
+  ok: boolean;
+  error?: string;
 }
 
 /** Wire shape for the `ledger:new-entry` push event (main → renderer). */
@@ -136,9 +218,19 @@ export const channels = {
   rolesTestConnection: 'roles:test-connection',
   voiceDoctor: 'voice:doctor',
   voiceTranscribe: 'voice:transcribe',
+  voiceWarm: 'voice:warm',
+  voiceTestServer: 'voice:test-server',
   missionStart: 'mission:start',
   missionStop: 'mission:stop',
+  missionPlan: 'mission:plan',
+  missionCancelPlan: 'mission:cancel-plan',
   workspaceSelect: 'workspace:select',
+  workspaceHistorySave: 'workspace:history:save',
+  workspaceHistoryGet: 'workspace:history:get',
+  workspaceHistoryClear: 'workspace:history:clear',
+  ledgerArchive: 'ledger:archive',
+  settingsGet: 'settings:get',
+  settingsSave: 'settings:save',
 } as const;
 
 export type ChannelName = (typeof channels)[keyof typeof channels];

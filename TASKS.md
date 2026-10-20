@@ -26,3 +26,23 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T13 Stop/cancel mission: clean child termination, in-flight tasks → blocked — SPEC S6 ✅ 2026-10-13 (service.ts stopMission ends the child via endBridge then store.markInFlightBlocked rewrites running/verifying mission tasks to blocked. Live verify: Stop button appears only while a mission runs; kill tree confirmed clean termination. markInFlightBlocked test + stop no-child/with-child tests)
 - [x] T14 Single-mission guard (second start rejected) — SPEC S6 ✅ 2026-10-13 (service.ts state==='running' check at the top of startMission, before any await; returns {started:false, alreadyRunning:true}. Live verify: Start disabled while a mission runs. already-running guard test)
 - [x] T15 electron-builder Windows installer; live pass of S1–S3 on a clean machine — SPEC S8 ✅ 2026-10-13 (electron-builder@^26 NSIS x64 target in package.json build config + `dist` script. Built `Vibes Desktop Setup 0.0.1.exe` (115 MB) + win-unpacked/. Live pass: launched the PACKAGED exe directly — S1 verified by vision analysis (Mission Control renders, "All quiet" empty state, no error banner, four zero stat tiles, LIVE indicator, Operations+Roles tabs); app created userData Chromium runtime data without crashing. Clean-machine pass against a live LLM endpoint for S2/S3 e2e remains the one outstanding item.)
+
+## P5 — Hybrid C awareness UI (DESIGN.md)
+- [x] T16 Always-on dispatch bar (workspace + mission + voice + Start/Stop) above the card grid; Start can run without Review; Launch modal still offers Generate Tasks → Review Plan ✅ 2026-10-20
+- [x] T17 Metric strip from ledger `classify()` groups: Needs You / Running / Upcoming / Recent (click filters cards) ✅ 2026-10-20
+- [x] T18 Mission depth panel (split when wide): status, workspace, `LedgerEntry.detail` diagnostics, live task checklist, Retry/Terminate/Archive ✅ 2026-10-20
+- [x] T19 Live logs pane in depth panel — append from ledger entry events only (honest empty state; no fabricated streams) ✅ 2026-10-20
+- [x] T20 Footer telemetry + dark theme tokens aligned with DESIGN.md ✅ 2026-10-20
+- [x] T21 V0 typecheck/tests ✅ 2026-10-20 (99/99); V3 live mission pass still owed
+
+## P6 — Voice settings (ADR-0002 amend)
+- [x] T22 Settings → Voice: engine pick (builtin Whisper | server | yapsnap legacy), language, doctor/warm ✅ 2026-10-20
+- [x] T23 Optional OpenAI-compatible speech server (qwen3-asr URL/model/key) + probe; route `voice:transcribe` by engine ✅ 2026-10-20
+- [x] T25 Seed reviewed plan tasks into ledger (0/N progress); mark open tasks failed on mission fail; hide Mission Scheduler from checklist ✅ 2026-10-20
+- [x] T27 Expandable mission/step failure detail in depth panel; child emits task error on TASK_STATUS ✅ 2026-10-20
+- [x] T28 Dark Mission Control default + Stitch sky accent; light toggle retained ✅ 2026-10-20
+- [ ] T24 Optional later: Agent Voice TTS announce on mission done/failed (HTTP to local daemon)
+
+## P7 — Roadmap (next)
+- [ ] T26 External MCP servers for missions: configure/register local MCP tools (e.g. html-design-advisor) so plan steps can call them — naming a path in the prompt is not enough
+- [ ] T21 V3 live mission pass (checklist + logs + failure detail without DevTools) — still owed from P5

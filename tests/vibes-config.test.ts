@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toVibesConfig, omitEmpty } from '../src/main/roles/vibes-config';
+import { toVibesConfig, omitEmpty, normalizeOpenAiBaseUrl } from '../src/main/roles/vibes-config';
 import type { RolesConfigInput } from '@shared/channels';
 
 const full: RolesConfigInput = {
@@ -43,11 +43,62 @@ describe('toVibesConfig (T9 mapping)', () => {
     expect(cfg.TRIAGE_BASE_URL).toBe('');
     expect(cfg.TRIAGE_MODEL).toBe('');
   });
+
+  it('normalizes a bare origin to its /v1 root (the false-done 404 fix)', () => {
+    // The user typed http://host:11434 (no /v1) — the child SDK would post to
+    // /chat/completions and 404. Config must carry the normalized URL.
+    const cfg = toVibesConfig({
+      ...full,
+      executor: { baseUrl: 'http://192.168.5.232:11434', model: 'm', apiKey: '' },
+    });
+    expect(cfg.OLLAMA_BASE_URL).toBe('http://192.168.5.232:11434/v1');
+  });
+
+  it('enables the reviewer gates only when a reviewer is configured', () => {
+    const configured = toVibesConfig(full);
+    expect(configured.ENABLE_REVIEWER).toBe('true');
+    expect(configured.ENABLE_ADVERSARIAL_AUDIT).toBe('true');
+
+    // Unconfigured reviewer → vibes would default to gemma2:27b on the
+    // executor's server (a model that usually doesn't exist there) and fail
+    // every reviewed task — so the desktop turns both gates off explicitly.
+    const unconfigured = toVibesConfig({ ...full, reviewer: { baseUrl: '', model: '', apiKey: '' } });
+    expect(unconfigured.ENABLE_REVIEWER).toBe('false');
+    expect(unconfigured.ENABLE_ADVERSARIAL_AUDIT).toBe('false');
+  });
+});
+
+describe('normalizeOpenAiBaseUrl', () => {
+  it('appends /v1 to a bare origin', () => {
+    expect(normalizeOpenAiBaseUrl('http://192.168.5.232:11434')).toBe('http://192.168.5.232:11434/v1');
+    expect(normalizeOpenAiBaseUrl('http://192.168.5.232:11434/')).toBe('http://192.168.5.232:11434/v1');
+  });
+
+  it('leaves URLs that already carry a path untouched', () => {
+    expect(normalizeOpenAiBaseUrl('http://localhost:11434/v1')).toBe('http://localhost:11434/v1');
+    expect(normalizeOpenAiBaseUrl('http://localhost:11434/v1/')).toBe('http://localhost:11434/v1');
+    expect(normalizeOpenAiBaseUrl('https://openrouter.ai/api/v1')).toBe('https://openrouter.ai/api/v1');
+    expect(normalizeOpenAiBaseUrl('https://api.openai.com/v1')).toBe('https://api.openai.com/v1');
+  });
+
+  it('returns empty for empty/whitespace input', () => {
+    expect(normalizeOpenAiBaseUrl('')).toBe('');
+    expect(normalizeOpenAiBaseUrl('   ')).toBe('');
+  });
+
+  it('passes non-URL text through unchanged (probe surfaces the error)', () => {
+    expect(normalizeOpenAiBaseUrl('not a url')).toBe('not a url');
+  });
 });
 
 describe('omitEmpty (T9)', () => {
   it('drops empty-string entries so a save never blanks untouched keys', () => {
     const out = omitEmpty({ OLLAMA_MODEL: 'm', PLANNER_MODEL: '', REVIEWER_BASE_URL: '' } as never);
     expect(out).toEqual({ OLLAMA_MODEL: 'm' });
+  });
+
+  it('keeps explicit "false" flags (they are real values, not blanks)', () => {
+    const out = omitEmpty({ ENABLE_REVIEWER: 'false', OLLAMA_MODEL: 'm' } as never);
+    expect(out).toEqual({ ENABLE_REVIEWER: 'false', OLLAMA_MODEL: 'm' });
   });
 });

@@ -1,6 +1,6 @@
-# ADR-0002 — yapsnap as the sole STT backend
+# ADR-0002 — yapsnap as the default STT backend
 
-Status: accepted (2026-10-13)
+Status: accepted (2026-10-13); amended 2026-10-20 — default engine is in-app Whisper ONNX (ZeroG-style download-on-first-talk); optional OpenAI-compatible server (qwen3-asr); yapsnap CLI retained as legacy.
 
 ## Context
 
@@ -8,11 +8,16 @@ The dashboard used the browser Web Speech API for voice commands. It only works 
 
 ## Decision
 
-yapsnap (kouhxp/yapsnap) is the sole speech-to-text backend: push-to-talk records mic audio to a temporary wav; on release, `yapsnap <wav> --lang auto` runs as a CLI child process; stdout text lands in the mission request field. sherpa-onnx Zipformer transducer, CPU-only, ~80MB model per language cached locally after first fetch, fully offline thereafter. Requires ffmpeg on PATH (documented install hint via yapsnap-doctor).
+**Default engine:** in-app Whisper ONNX via `@huggingface/transformers` (same approach as ZeroG Terminal). Hold-to-talk downloads the chosen model on first release (~41 MB for tiny.en q8) and caches it; no pip/PATH dependency.
+
+**Optional engines:**
+- OpenAI-compatible `POST …/v1/audio/transcriptions` (qwen3-asr-server, whisper.cpp server, …)
+- Legacy **yapsnap** CLI (ffmpeg + `pip install yapsnap`)
+
+Rejected: Web Speech API (cloud / Chrome-only).
 
 ## Consequences
 
-- Voice input works identically on Windows/macOS/Linux with no browser dependency and no audio leaving the machine.
-- First-use friction: model download (~80MB) — mitigated by a doctor screen that pre-fetches models in a controlled step; app launch never blocks on it.
-- No wake-word listening loop in v1 (the dashboard had one); push-to-talk only. Wake word can be added later as an opt-in mode without changing the transcription path.
-- Rejected Web Speech API outright: Chrome-only + cloud-dependent fails the local-first requirement.
+- Hold-to-talk works out of the box after a one-time model download shown on the button.
+- Settings → Voice picks engine, Whisper model/precision, or server URL/key.
+- No wake-word in v1; push-to-talk only.

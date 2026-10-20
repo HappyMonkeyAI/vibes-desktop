@@ -1,5 +1,6 @@
 import { readFileSync, rmSync } from 'node:fs';
 import { spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { VoiceTranscribeResult } from '@shared/channels';
 
@@ -69,8 +70,14 @@ export const spawnYapsnap: CliRunner = (args) =>
  * are deleted (SPEC S5: the wav is removed after transcription). Returns an
  * actionable error on any failure — never throws.
  */
-export async function transcribeFile(inputPath: string, outPath: string, runner: CliRunner = spawnYapsnap): Promise<VoiceTranscribeResult> {
-  const args = [inputPath, '-o', outPath, '--lang', 'auto'];
+export async function transcribeFile(
+  inputPath: string,
+  outPath: string,
+  runner: CliRunner = spawnYapsnap,
+  lang = 'auto',
+): Promise<VoiceTranscribeResult> {
+  const language = lang.trim() || 'auto';
+  const args = [inputPath, '-o', outPath, '--lang', language];
   let result;
   try {
     result = await runner(args);
@@ -105,7 +112,8 @@ function cleanup(...paths: string[]): void {
   }
 }
 
-/** The temp dir a capture should land in — the OS temp, never the workspace. */
+/** The temp dir a capture should land in — the OS temp, never the app cwd. */
 export function voiceTempDir(): string {
-  return path.join(process.env['TEMP'] ?? process.env['TMPDIR'] ?? '.', 'vibes-voice');
+  const base = process.env['TEMP'] ?? process.env['TMPDIR'] ?? tmpdir();
+  return path.join(base, 'vibes-voice');
 }

@@ -16,10 +16,12 @@ import type { ActivityGroup, LedgerEntry, LedgerSnapshot } from '@shared/channel
 
 export interface TaskStatusInput {
   name: string;
-  status: 'in-progress' | 'complete' | 'failed';
+  status: 'pending' | 'in-progress' | 'complete' | 'failed';
+  detail?: string;
 }
 
 const STATUS_MAP = {
+  pending: 'pending',
   'in-progress': 'running',
   complete: 'done',
   failed: 'failed',
@@ -83,35 +85,69 @@ export class LedgerStore extends EventEmitter {
     return () => this.off('new-entry', onNew);
   }
 
-  /** Record a vibes task lifecycle event as a ledger entry (idempotent upsert). Serialized so two events for the same title cannot both miss each other and mint duplicate rows. */
-  async recordTaskStatus(input: TaskStatusInput): Promise<LedgerEntry> {
+  /** Record a vibes task lifecycle event as a ledger entry (idempotent upsert).
+   *  Scoped by missionId so two missions with same-named tasks never share a row.
+   *  Serialized so two events for the same (missionId, title) cannot both miss each other. */
+  async recordTaskStatus(input: TaskStatusInput, workspaceRoot?: string, missionId?: string): Promise<LedgerEntry> {
     const status = STATUS_MAP[input.status];
     return this.enqueue(async () => {
       await this.ready;
-      const existing = [...this.entries.values()].find((e) => e.source === 'vibes-mission' && e.title === input.name);
+      const existing = [...this.entries.values()].find(
+        (e) => e.source === 'vibes-mission' && e.title === input.name && e.missionId === missionId,
+      );
+      // Never downgrade a terminal/live status back to pending (plan seed vs late events).
+      if (existing && input.status === 'pending' && existing.status !== 'pending') {
+        return existing;
+      }
       const entry: LedgerEntry = {
         id: existing?.id ?? crypto.randomUUID(),
         group: classify({ status, needsHuman: false }),
         status,
         source: 'vibes-mission',
         title: input.name,
+        detail: input.detail ?? existing?.detail,
+        missionId,
+        workspaceRoot: workspaceRoot || existing?.workspaceRoot,
         updatedAt: Date.now(),
       };
       return this.append(entry);
     });
   }
 
-  /** Record a mission-level event (start / finish) as a ledger entry. */
-  async recordMissionEvent(title: string, status: LedgerEntry['status']): Promise<LedgerEntry> {
+  /** Seed the reviewed/planned task names as pending rows so the UI shows 0/N
+   *  before any task-status events arrive (Accept & Launch path). */
+  async seedPlannedTasks(names: string[], workspaceRoot: string, missionId: string): Promise<void> {
+    for (const name of names) {
+      const trimmed = name.trim();
+      if (!trimmed) continue;
+      await this.recordTaskStatus({ name: trimmed, status: 'pending' }, workspaceRoot, missionId);
+    }
+  }
+
+  /** Record a mission-level event as a ledger entry. One mission = one row:
+   *  upserts by (missionId, title) so the mission's lifecycle updates in place. */
+  async recordMissionEvent(
+    title: string,
+    status: LedgerEntry['status'],
+    workspaceRoot?: string,
+    missionId?: string,
+    detail?: string,
+  ): Promise<LedgerEntry> {
     return this.enqueue(async () => {
       await this.ready;
-      const existing = [...this.entries.values()].find((e) => e.source === 'vibes-mission' && e.title === title);
+      const existing = [...this.entries.values()].find(
+        (e) => e.source === 'vibes-mission' && e.title === title && e.missionId === missionId,
+      );
       const entry: LedgerEntry = {
         id: existing?.id ?? crypto.randomUUID(),
         group: classify({ status, needsHuman: false }),
         status,
         source: 'vibes-mission',
+        kind: 'mission',
         title,
+        detail: detail ?? existing?.detail,
+        missionId,
+        workspaceRoot: workspaceRoot || existing?.workspaceRoot,
         updatedAt: Date.now(),
       };
       return this.append(entry);
@@ -131,14 +167,16 @@ export class LedgerStore extends EventEmitter {
    * T13 — when a mission is stopped/cancelled, every in-flight task (running or
    * verifying) becomes blocked. Rewrites each such entry in place (same id, new
    * status) so the renderer's upsert replaces its row rather than duplicating it.
+   * Scoped to one mission when missionId is given; without it, blocks all in-flight rows.
    * Returns how many tasks were blocked.
    */
-  async markInFlightBlocked(): Promise<number> {
+  async markInFlightBlocked(missionId?: string): Promise<number> {
     return this.enqueue(async () => {
       await this.ready;
       let count = 0;
       for (const entry of [...this.entries.values()]) {
         if (entry.source !== 'vibes-mission') continue;
+        if (missionId !== undefined && entry.missionId !== missionId) continue;
         if (entry.status !== 'running' && entry.status !== 'verifying') continue;
         const blocked: LedgerEntry = {
           ...entry,
@@ -150,6 +188,59 @@ export class LedgerStore extends EventEmitter {
         count += 1;
       }
       return count;
+    });
+  }
+
+  /** When a mission fails, leave no checklist row stuck on EXECUTING / PENDING.
+   *  Preserves any richer step/system detail already on the row; does not stamp
+   *  the mission summary onto every incomplete step. */
+  async markOpenTasksFailed(missionId: string): Promise<number> {
+    return this.enqueue(async () => {
+      await this.ready;
+      let count = 0;
+      for (const entry of [...this.entries.values()]) {
+        if (entry.source !== 'vibes-mission') continue;
+        if (entry.kind === 'mission') continue;
+        if (entry.missionId !== missionId) continue;
+        if (entry.status !== 'running' && entry.status !== 'verifying' && entry.status !== 'pending') continue;
+        const failed: LedgerEntry = {
+          ...entry,
+          status: 'failed',
+          group: classify({ status: 'failed', needsHuman: false }),
+          detail:
+            entry.detail
+            || (entry.status === 'pending'
+              ? 'Left pending when the mission ended (dependency never became runnable).'
+              : 'Left incomplete when the mission ended.'),
+          updatedAt: Date.now(),
+        };
+        await this.append(failed);
+        count += 1;
+      }
+      return count;
+    });
+  }
+
+  /**
+   * Archive ledger entries by id. Rewrites each with 'archived' status.
+   * Returns the archived entries (empty if none were found).
+   */
+  async archiveEntries(entryIds: string[]): Promise<LedgerEntry[]> {
+    return this.enqueue(async () => {
+      await this.ready;
+      const archived: LedgerEntry[] = [];
+      for (const entryId of entryIds) {
+        const entry = this.entries.get(entryId);
+        if (!entry || entry.status === 'archived') continue;
+        const next: LedgerEntry = {
+          ...entry,
+          status: 'archived',
+          group: classify({ status: 'archived', needsHuman: false }),
+          updatedAt: Date.now(),
+        };
+        archived.push(await this.append(next));
+      }
+      return archived;
     });
   }
 }

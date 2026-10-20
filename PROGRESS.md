@@ -2,6 +2,184 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-20 (theme) — Contrast pass: dark inputs + stronger light
+
+**Done:** Dark composer/selects use `--input-bg` `#0b101b` + light text (no white Arco fill). Light mode: cooler gray page `#e8ecf2`, darker text/borders, white cards with visible borders/shadows.
+
+## 2026-10-20 (theme) — Dark Mission Control default + Stitch sky accent
+
+**Done:** Boot/`ThemeToggle` default to dark (`#090d16` canvas). Dark Arco/`--brand` primary = sky `#38bdf8`; light keeps orange. `index.html` honors stored preference before paint.
+
+**Evidence:** theme-toggle tests updated; `npm test` after change.
+
+## 2026-10-20 (UX) — Expandable failure detail for missions + steps
+
+**Done:** Depth panel **Why this failed** (`<details>`, open on failed) shows mission summary, system rows (Scheduler), and failed steps. Checklist rows with errors expand. Vibes child now emits `error` on `[TASK_STATUS]` failed; bridge maps to ledger `detail`. Patched both `vibes` and `local-ai-planner` server.ts.
+
+**Evidence:** vibes-bridge parse test; typecheck + 108 tests green.
+
+**Note:** Older ledger rows still lack step `detail` until a new failing run.
+
+## 2026-10-20 (milestone) — Commit Hybrid C + voice + plan-seed; MCP roadmap
+
+**Done:** Parked a good stopping point. TASKS P7/T26 = external MCP registration for missions (prompt path ≠ wired tools). T24 TTS still later; T21 V3 live pass still owed.
+
+**What's next:** Commit on `ag/ledger-ux-theme-audit`; then T26 design or V3 live verify.
+
+## 2026-10-20 (mission UX) — Plan showed 6 steps; card showed 0/2 then failed 1/5
+
+**Symptom:** Launch Agent review listed ~6 tasks; live card showed 0/2 (then 0/2 with Mission Scheduler). Diagnostics: `Mission failed. Completed 1/5 tasks.` First task stuck EXECUTING.
+
+**Cause:** Checklist only lists ledger rows from `[TASK_STATUS]` events — planned tasks were never seeded. Child completed 1/5 then dependency-deadlocked (`Mission Scheduler` synthetic failure). Asking for an MCP path in the prompt does not register that server with the vibes child.
+
+**Fix:** `seedPlannedTasks` on start (incl. acceptPlan); `markOpenTasksFailed` on mission failure; hide `Mission Scheduler` from progress/checklist.
+
+**Evidence:** new mission-service + ledger-store tests; `npm test` / typecheck.
+
+## 2026-10-20 (UI) — Depth panel / ops layout on short screens
+
+**Done:** Retry moved under depth header. Mid fix over-constrained ops (`max-height` + flex-shrunk `.split`) → cards only in a tiny top strip with empty white below. Reset: ops grows naturally; tab pane scrolls; split `flex: 0 0 auto`. Rebuilt.
+
+**Evidence:** `npm test` 104; `npm run build` ok.
+
+**What's next:** Restart app — full card grid should fill the pane again; open a failed mission for Retry under the title.
+
+## 2026-10-20 (voice fix) — Builtin Whisper default; stale out/ was still yapsnap
+
+**Done:** Default STT is in-app Whisper ONNX (download on first hold-to-talk, ZeroG-style). Soft-migrate `yapsnap` → `builtin` on boot. User still saw yapsnap install hint because **`out/` was stale** (`DEFAULT_SETTINGS.speechEngine: "yapsnap"`, `asEngine` fell back to yapsnap when `settings.json` had no `speechEngine`). Rebuilt; bundle includes `voice-worker` + WASM.
+
+**Evidence:** `npm run build` → voice-worker + ort-wasm assets. `npm test` → 104 passed. Source `settings.json` has no speechEngine → new `asEngine` → `builtin`.
+
+**What's next:** Restart app (`npm start` or `npm run dev`), hold-to-talk — expect “Downloading speech model …%” then transcript. T24 Agent Voice TTS later.
+
+## 2026-10-20 (voice) — Settings → Voice: yapsnap + optional qwen3-asr server
+
+**Done:** Locked STT path A (yapsnap) plus optional OpenAI-compatible server (same shape as ZeroG / qwen3-asr-server). Settings gains General | Voice tabs: engine pick, language, doctor + **Download / warm models**, server URL/model/encrypted key + Test. `voice:transcribe` routes by engine. ADR-0002 amended; TTS announce deferred (T24).
+
+**Evidence:** `npm test` → **104/104** (+ speech-server + settings-voice). Typecheck clean.
+
+**What's next:** Point Voice → Server at your qwen3-asr URL/key and Test; warm yapsnap if staying local. T24 Agent Voice TTS later.
+
+## 2026-10-20 (later) — Hybrid C UI implemented (T16–T20)
+
+**Done:** Built Hybrid C Operations shell per `DESIGN.md` + mock at `.planning/hybrid-c/mockups/hybrid-c/`.
+- Always-on dispatch (Start direct; Review plan… optional; Launch modal + Accept & Launch unchanged)
+- Metric strip from `classify()` (Needs you / Running / Upcoming / Recent) with click-to-filter
+- Card grid retained; selecting a card (auto-select running) opens sticky depth panel: diagnostics from `LedgerEntry.detail`, live checklist, ledger-derived live logs, Retry/Terminate/Archive
+- App header LIVE / voice pills; footer engine line; dark theme tokens shifted to Mission Control navy canvas
+- Wayland Mission Control path noted as pattern source (not engine)
+
+**Evidence:** `npm test` → **99/99 passed** (3 skipped). `npm run typecheck` clean. Mock still at http://localhost:5179 if serve is up.
+
+**What's next:** T21 V3 — run a live mission and confirm checklist + logs + failure `detail` without DevTools.
+
+**Open questions:** Wire real model/context into footer when the child exposes it.
+
+## 2026-10-20 — UI direction locked: Hybrid C (cards + Mission Control depth)
+
+**Done:** Compared TUI screenshots, stitch card mockups, and Mission Control HTML against current OperationsView. Locked **Hybrid C** in `DESIGN.md`. Added P5 tasks T16–T21.
+
+**Evidence:** Design contract + HTML mockup.
+
+**What's next:** Implement (done in later entry).
+
+## 2026-10-19 (later) — False-done mission bug: root-caused across both processes, fixed + V3 verified against real LLMs
+
+**Symptom:** a live mission ("Update index.html to have a bootstrap enabled via CDN") reported **done in ~36 ms** with zero tasks executed and the target file untouched.
+
+**Root cause — four independent bugs, all layers:**
+1. **URL.** The Roles config held a bare origin (`http://192.168.5.232:11434`, no `/v1`). It was written verbatim to the workspace `.vibes/config.json` as `OLLAMA_BASE_URL`, so the child's OpenAI SDK posted to `/chat/completions` → **404** (verified live; `/v1/chat/completions` → 200). The SDK does not retry 404 → planner failed in ~35 ms.
+2. **Child swallowed errors.** `local-ai-planner/src/mcp/server.ts` caught planner/executor errors and **returned** them as normal tool text (`"Mission planning failed: …"`, `"Mission failed: …"`, `"No mission has been planned."`) — never throwing, never `isError`.
+3. **Wire shape.** FastMCP ^4.0.1 wraps string returns as `{ content: [{ type: 'text', text }], isError? }` (not a string). The desktop's `callTool` cast `response.result` to `string` — so failures resolved as **success**.
+4. **Trust-on-resolve.** `service.ts` discarded the plan result and recorded `done` whenever `executePlanned()` **resolved**, never inspecting its text.
+
+**Fix (desktop):**
+- `vibes-bridge.ts`: new exported `unwrapToolResult(result, toolName)` — tolerates bare strings, extracts joined `content[].text`, **throws** on `isError: true` or an unexpected shape. `callTool` now returns `unwrapToolResult(...)`; the erroneous `as string` casts are gone.
+- `mission/service.ts`: new exported `missionOutcomeFrom(result)` honesty gate — records **done only** for `Mission completed. Completed N/N tasks.` with `N > 0`; every other shape (failed/partial/empty/"No mission has been planned.") → **failed** with the child's raw text in `detail`. `startMission` now validates the plan (empty task list or a planning-failure string → start fails and records `failed`, never dispatches a no-op). Review-flow `planMission` surfaces the failure text as `error` instead of a silent empty list.
+- `ledger/store.ts`: `recordMissionEvent` accepts an optional `detail`.
+- `roles/vibes-config.ts`: `normalizeOpenAiBaseUrl` appends `/v1` only when the URL has no path (full URLs like `…/v1`, `/api/v1` untouched); applied in `toVibesConfig` for all four roles. Also emits `ENABLE_REVIEWER` / `ENABLE_ADVERSARIAL_AUDIT` (`false` when no reviewer role is configured — otherwise vibes defaults to a nonexistent `gemma2:27b` on the executor's server and fails every reviewed task).
+- `roles/test-connection.ts`: probe uses the same normalizer, so probe and child agree on the URL.
+
+**Fix (child, surgical):** the three mission tools (`execute_mission`, `plan_mission`, `start_execution`) now **rethrow** instead of returning error strings, and `start_execution` throws on no-plan — FastMCP turns these into `isError` results. Only catch blocks touched (user has uncommitted provider-catalog work in the same file).
+
+**Evidence (all run 2026-10-19):**
+- **V0 desktop:** `npm test` → **99/99 passed** (16 files; +21 new tests: unwrap shapes, outcome classifier, plan-failure text, failed/partial/empty execution, URL normalization, reviewer gates, probe `/v1`). `npm run typecheck` clean. `npm run build` exit 0.
+- **V0 child:** `npm run build` clean; `npm test` → 137/140, the 3 failures **pre-existing and unrelated** (2× `worktree-manager` assert POSIX paths on Windows; `scheduler-retry` fails 1/1 with my edits **stashed**).
+- **V3 live (real child + real LLMs, `VIBES_LIVE=1`) — 3/3 pass:** (a) bare origin `http://192.168.5.232:11434` + Qwen3-4B → normalizes to `/v1`, plans, executes, `hello.txt` contains `bonjour`, mission row **done**; (b) nonexistent model → start **fails** (`started:false` + `failed` row), no file; (c) executor `5.232` + reviewer `google/gemma-4-e2b` on `5.229:1234` → mission **done** through the reviewer path (`ENABLE_REVIEWER=true`).
+- **Independent raw JSON-RPC** (bypassing the desktop entirely): `plan_mission` → `{content:[{type:'text',text:'[{"id":1,…}]'}]}` (4.6 s); `start_execution` → `{content:[{type:'text',text:'Mission completed. Completed 1/1 tasks.'}]}` (5.1 s); `hello.txt` == `bonjour` on disk.
+
+**What's next:** commit when the user asks (both repos have uncommitted work). Optional UX: surface `LedgerEntry.detail` in the mission card detail modal so a failed mission shows the child's reason inline.
+
+**Open questions:** the 3 pre-existing child test failures (Windows path assertions, scheduler-retry) are out of scope here — worth a separate ticket.
+
+## 2026-10-19 — MVP stabilization: ~15 bug fixes, vibesPath resolution, full V0+V3 green
+
+**Done:** Full audit pass (~20 bugs found) plus targeted fixes across data path, mission UX, roles/settings/theme, and main-process safety; finished by reconciling tests with the corrected semantics and running the whole verification ladder.
+- **Ledger row identity.** `LedgerEntry` gained `missionId`; mission/task rows upsert by `(missionId, title)` so a second mission never mutates the first's rows and mission cards stop collapsing on global titles ("Executing mission"/"Mission complete"). `markInFlightBlocked` scoped by missionId.
+- **Mission service semantics.** `startMission` now returns at dispatch (toast/spinner at start, not end); execution streams live `task-status` into the ledger in the background. Pending-plan adoption keeps the planning child alive so **Accept & Launch executes the reviewed plan** instead of re-planning. Generation counter prevents an old mission's chain from tearing down a newer bridge; `stopRequested` avoids a spurious "failed" on terminate. Explicit workspace required everywhere (no `process.cwd()` fallback).
+- **Voice input.** `VoiceInput` awaits the final `dataavailable`/`stop` before building the blob (real MediaRecorder delivers the last chunk async); mock-compatible for both callback and addEventListener recorder styles.
+- **One card per mission.** OperationsView groups by `missionId`; Launch New Agent card always visible (including the first-launch empty state, which also restores ADR-0003's "All quiet" copy); Generate Tasks guarded + loading state; workspace picker wired to recent-history dropdown (get/save/clear); Retry re-sends the original request; Terminate only while running.
+- **Roles/settings/theme/safety.** Test-connection probes with the stored key (role id + optional override); `SettingsStore` persists real settings via IPC (Settings tab no longer fakes a save); Arco `--primary-6..10`/`--arcoblue-6..10` converted to RGB triples in both themes; dialog parent guarded; MCP `notifications/initialized` sent post-handshake; jsonrpc clears per-request timers on settle; config-writer refuses non-absolute workspace roots.
+- **vibesPath resolution (the "checkout not found" bug).** `main/index.ts` no longer hardcodes the broken `%TEMP%\vibes` checkout. Resolution order: `VIBES_PATH` env → `settings.vibesPath` (new Settings tab field, persisted) → `DEFAULT_VIBES_PATH` (`local-ai-planner`), each validated for `src/mcp/server.ts` before use.
+- **Dead surface cleanup.** Removed `ledger:search` channel + store method, dead pagination code; archive returns `{ ok, count }`.
+
+**Evidence (all run 2026-10-19):** `npm test` → **78/78 passed** across 16 files (mission-service and all-quiet tests rewritten to the new semantics: mission card titled by the original request, start resolves at dispatch, exec failure surfaces via ledger). `npm run typecheck` clean on both configs. `npm run build` exit 0 (main/preload/renderer emitted). **V3 live boot:** launched the built app (`electron .`), window titled "Vibes Desktop" confirmed alive with renderer loaded after 15s, no crash dialog; killed by exact process-tree only.
+
+**What's next:** End-to-end mission against a local LLM (configure endpoint, run a real mission, watch cards populate) — the remaining V3 depth beyond boot.
+
+**Open questions:** None.
+
+## 2026-10-16 — Card-view bug-fix pass: real data, honest errors, working CSS
+
+**Done:** The uncommitted OperationsView card refactor (from 2026-10-15) was left half-wired with fake data and several latent bugs. This session finished the render rework and fixed every defect found in the diff.
+- **Test-connection probe double `/v1`.** `test-connection.ts` probed `${baseUrl}/v1/chat/completions`, but role base URLs already end in `/v1` (e.g. `http://localhost:11434/v1`) — every compliant endpoint 404'd on `/v1/v1/…`. Now appends only `/chat/completions`; timeout message corrected to "30s" to match `TIMEOUT_MS = 30_000`. This was the one failing test.
+- **Plan parsing.** The vibes MCP server's `plan_mission` returns a JSON array of `{id, name, status}` objects (verified against the checkout's `src/mcp/server.ts`). `parseTasksFromPlan` now JSON-parses that primary shape and extracts `.name`, with a numbered/bulleted line-match fallback for degraded responses.
+- **Planning no longer steals the live mission.** `spawnBridge` gained an `adopt` flag; `planMission` spawns a throwaway bridge (`adopt=false`) that never touches the shared single-mission slot, stopped in a `finally`. A plan-only call can no longer clobber a running mission's connection.
+- **No silent empty plans.** Planning failures (no LLM, no workspace, child crash) now return `{ tasks: [], error }`; both UI call sites surface the message via `Message.error` instead of opening an empty review modal. `MissionPlanResponse.error?` added to channels.
+- **Explicit workspace required.** `startMission` dropped the `process.cwd()` fallback (which would point the agent at the app's own source tree) and returns "Choose a working directory before starting a mission." The Start button is disabled until a directory is picked.
+- **Real card view.** OperationsView now groups ledger rows into one card per `kind === 'mission'` event row, attaching that mission's task rows (same workspace root). Task progress on cards and in the detail modal comes from real ledger rows; fake placeholder tasks and the fabricated log stream are gone, replaced by honest empty states. Detail modal driven by a `selectedCard` object (title, status, dir, updated time, task checklist with state icons); duplicate Retry/Terminate buttons removed (kept in the footer only).
+- **Batch archive.** Archiving a card archives the mission row plus all its task rows: `ledger.archive` accepts `string | string[]`, store exposes `archiveEntries(ids)`, handler validates and returns `{ ok, count }`.
+- **CSS module fixes.** Arco renders lowercase DOM elements; selectors like `.dirInputRow Input` never matched. Converted to the project's `:global(.arco-input)` convention. Added missing keys the JSX referenced (`opsToolbar`, `live`, `liveDot`, `voiceNotReady`, `composerRow`, `missionInput`, `taskChecklistItems`) and deleted dead ones (`.detailActions`, the logs-stream block). Verified programmatically that every `styles.X` in the component resolves to a real CSS key.
+- **Ledger tagging.** Bridge passes `workspaceRoot` into `recordTaskStatus` so new task rows carry their workspace; mission-level event rows are tagged `kind: 'mission'` (new optional field on `LedgerEntry`) which is what the card grouping keys off.
+- Deleted a stray `nul` file (Windows reserved-name junk) from the project root.
+
+**Evidence (all run this session):** `npm test` → 78/78 passed across 16 files (the all-quiet and live-push tests were rewritten to the card/grouping model: mission event rows become cards, task rows are grouped under their card rather than rendered standalone). `npm run typecheck` clean on both node and web configs. `npm run build` exit 0. No `selectedEntry` references or fake task titles remain in the renderer (grep-verified).
+
+**What's next:** V3 live verification still owed — launch the packaged app, configure an endpoint against the local Ollama instance, start a real mission and watch the ledger/cards populate end-to-end. Nothing else outstanding from this pass.
+
+**Open questions:** None currently.
+
+## 2026-10-15 — Operations view card-based refactor, modal workflow, workspace root fix
+
+**Done:**
+- **OperationsView component created** with card-based grid layout replacing the flat ledger list. Summary bar shows ACTIVE/COMPLETED/TASKS DONE metrics.
+- **Launch New Agent card** with dashed border, + icon, opens Launch Modal.
+- **Mission Status Cards** with truncated title, status badge pill (EXECUTING/COMPLETE/FAILED/BLOCKED), working directory, progress bar with task counter.
+- **Modal 1: Launch New Agent** — working directory input + mission textarea with integrated voice input, Generate Tasks button.
+- **Modal 2: Review Proposed Tasks** — editable mission prompt, numbered task list, Decline/Regenerate Plan/Accept & Launch buttons.
+- **Modal 3: Work-In-Progress Details** — back navigation, mission title, Retry/Terminate actions, stats strip (STATUS/PROGRESS/WORKING DIR), goal box, live task checklist with state icons, live terminal/logs stream.
+- **Fixed workspace root bug** — handlers.ts and service.ts no longer fall back to `process.cwd()` when `workspaceRoot` is empty; respects the directory selected from recent history dropdown.
+- **Theme compliance** — all new CSS uses existing custom properties (`var(--bg-base)`, `var(--text-primary)`, `var(--surface-card)`, etc.) for automatic light/dark mode support.
+
+**Evidence:** `npm run build` exit 0. App launches with new Operations view rendering.
+
+**What's next:** Connect "Generate Tasks" to the actual LLM planner API, wire up live log stream from mission service to detail modal.
+
+**Open questions:** None currently.
+
+
+**Done:**
+- **Theme toggle feature completed.** Fixed import mismatch (`ThemeToggle` named vs default import), wrapped test click in `act()`, removed unused CSS import. All 78 tests pass, typecheck clean.
+- **Dark theme refined.** Shifted from pure black (`#0a0a0a`) to warmer blue-tinted neutrals (`#111114` background, `#e8e8eb` text, `#3a3a45` borders) for reduced eye strain.
+- **Composer row button sizing uniformized.** Added `height: 40px` to all buttons and `align-items: center` to `.composerRow` for consistent alignment.
+- **Voice not ready indicator moved** from `VoiceInput.tsx` to `opsToolbar` in `App.tsx` with right-aligned styling.
+- **RolesTab redesigned** with card-based layout, role color-coded indicators, labeled inputs, and improved visual hierarchy.
+- **Settings tab added** with context/memory file path inputs and preferences (auto-save, verbose logging) toggle switches.
+
+**Evidence:** `npm test` exit 0 (78/78), `npm run typecheck` clean, `npm run build` exit 0. App launched and verified.
+
+**What's next:** Continue with remaining P2-P4 tasks from TASKS.md.
+
 ## 2026-10-13 — Mission crash fix (post-plan) — `spawn tsx ENOENT` no longer kills the app
 
 **Done:** The user started a mission ("update the web page in the `test` directory") and the whole app died with Electron's "A JavaScript error occurred in the main process" dialog: `Uncaught Exception: Error: spawn tsx ENOENT`. Two root causes, both fixed.

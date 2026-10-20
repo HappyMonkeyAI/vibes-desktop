@@ -17,8 +17,11 @@ export function vibesConfigPath(workspaceRoot: string): string {
   return path.join(workspaceRoot, VIBES_DIR, CONFIG_FILE);
 }
 
-/** Merge our config into the workspace's native file. Returns the path, or null. */
+/** Merge our config into the workspace's native file. Returns the path, or null.
+ *  Refuses non-absolute roots: a relative path would resolve against the app's
+ *  own cwd and write .vibes/config.json into the source tree. */
 export function writeVibesConfig(workspaceRoot: string, input: RolesConfigInput): string | null {
+  if (!workspaceRoot || !path.isAbsolute(workspaceRoot)) return null;
   const target = vibesConfigPath(workspaceRoot);
   try {
     // Read any existing file so we merge rather than clobber.

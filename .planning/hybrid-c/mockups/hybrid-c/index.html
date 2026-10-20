@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vibes Desktop — Hybrid C (design pass)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --canvas: #090d16;
+      --surface: #0f172a;
+      --surface-card: #161f33;
+      --surface-subtle: #1e293b;
+      --border: #24334c;
+      --border-hot: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --sky: #38bdf8;
+      --sky-dim: rgba(56, 189, 248, 0.15);
+      --rose: #fb7185;
+      --rose-dim: rgba(244, 63, 94, 0.14);
+      --amber: #fbbf24;
+      --amber-dim: rgba(251, 191, 36, 0.12);
+      --emerald: #34d399;
+      --emerald-dim: rgba(52, 211, 153, 0.12);
+      --font: "IBM Plex Sans", system-ui, sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--canvas);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 100vh;
+    }
+
+    /* —— Header —— */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding-bottom: 12px;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .brand .tag {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 400;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+    .pill .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+    .pill-live {
+      background: var(--emerald-dim);
+      border-color: rgba(52, 211, 153, 0.35);
+      color: var(--emerald);
+    }
+    .pill-live .dot {
+      background: var(--emerald);
+      animation: pulse 2.2s ease-in-out infinite;
+    }
+    .pill-voice {
+      background: rgba(251, 113, 133, 0.1);
+      border-color: rgba(251, 113, 133, 0.3);
+      color: #fda4af;
+    }
+    .pill-voice .dot { background: var(--rose); }
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #162032;
+      color: var(--amber);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+    .icon-btn:hover { border-color: rgba(251, 191, 36, 0.4); }
+
+    .tabs {
+      display: flex;
+      gap: 20px;
+      width: 100%;
+      border-top: 1px solid #1c273d;
+      padding: 0 4px;
+    }
+    .tab {
+      padding: 10px 2px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      font-size: 13px;
+    }
+    .tab.active {
+      color: var(--sky);
+      border-bottom-color: var(--sky);
+      font-weight: 600;
+    }
+    .tab .count {
+      margin-left: 6px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--sky-dim);
+      color: #7dd3fc;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    /* —— Main —— */
+    .main {
+      flex: 1;
+      overflow: auto;
+      padding: 16px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Dispatch */
+    .dispatch {
+      background: #121b2b;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .dispatch-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+      flex-wrap: wrap;
+    }
+    .prompt-wrap {
+      flex: 1;
+      min-width: 220px;
+      position: relative;
+    }
+    .prompt-wrap .prefix {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--sky);
+      font-family: var(--mono);
+      font-weight: 700;
+    }
+    .prompt-wrap input {
+      width: 100%;
+      padding: 11px 12px 11px 28px;
+      border-radius: 8px;
+      border: 1px solid #2a3b57;
+      background: #0b101b;
+      color: var(--text);
+      font: inherit;
+    }
+    .prompt-wrap input:focus {
+      outline: none;
+      border-color: var(--sky);
+      box-shadow: 0 0 0 1px var(--sky);
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn {
+      border-radius: 8px;
+      padding: 10px 14px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: var(--sky);
+      color: #0b1220;
+      box-shadow: 0 0 18px -4px rgba(56, 189, 248, 0.35);
+    }
+    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-amber {
+      background: #1c2538;
+      border-color: rgba(251, 191, 36, 0.4);
+      color: #fcd34d;
+    }
+    .btn-ghost {
+      background: #162032;
+      border-color: #283852;
+      color: var(--text-muted);
+    }
+    .btn-danger {
+      background: #241a22;
+      border-color: rgba(251, 113, 133, 0.4);
+      color: #fda4af;
+    }
+    .btn-sm { padding: 6px 10px; font-size: 12px; }
+
+    .workspace {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #111a29;
+      border: 1px solid #223046;
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .workspace .path {
+      font-family: var(--mono);
+      color: #f1f5f9;
+      background: #0a0f1a;
+      border: 1px solid #212c3f;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+    .workspace .label {
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-dim);
+    }
+
+    /* Metrics */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 800px) {
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+    .metric {
+      background: var(--surface-card);
+      border: 1px solid #25354f;
+      border-left-width: 4px;
+      border-radius: 8px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .metric:hover { border-color: var(--border-hot); }
+    .metric.active-filter {
+      outline: 1px solid var(--sky);
+      outline-offset: 0;
+    }
+    .metric .n {
+      font-size: 1.75rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .metric .k {
+      margin-top: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .metric .h {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .m-rose { border-left-color: var(--rose); }
+    .m-rose .k { color: var(--rose); }
+    .m-sky { border-left-color: var(--sky); }
+    .m-sky .k { color: var(--sky); }
+    .m-slate { border-left-color: #64748b; }
+    .m-slate .k { color: var(--text-muted); }
+    .m-emerald { border-left-color: var(--emerald); }
+    .m-emerald .k { color: var(--emerald); }
+
+    /* Split: cards + depth */
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+      gap: 14px;
+      align-items: start;
+      min-height: 360px;
+    }
+    @media (max-width: 960px) {
+      .split { grid-template-columns: 1fr; }
+    }
+
+    .cards-col h2 {
+      margin: 0 0 10px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+    }
+
+    .card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      min-height: 132px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-align: left;
+      color: inherit;
+      font: inherit;
+      width: 100%;
+    }
+    .card:hover { border-color: #3b4f6e; }
+    .card.selected {
+      border-color: var(--sky);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
+    }
+    .card-launch {
+      border-style: dashed;
+      border-color: #3a4d6a;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      background: transparent;
+    }
+    .card-launch .plus {
+      font-size: 28px;
+      font-weight: 300;
+      line-height: 1;
+      color: #64748b;
+    }
+    .card-title {
+      font-weight: 600;
+      font-size: 13px;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .status .dot { width: 7px; height: 7px; border-radius: 50%; }
+    .st-exec { color: var(--sky); }
+    .st-exec .dot { background: var(--sky); }
+    .st-done { color: var(--emerald); }
+    .st-done .dot { background: var(--emerald); }
+    .st-fail { color: var(--rose); }
+    .st-fail .dot { background: var(--rose); }
+    .card-meta {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .progress {
+      margin-top: auto;
+      height: 4px;
+      border-radius: 2px;
+      background: #0b101b;
+      overflow: hidden;
+    }
+    .progress > span {
+      display: block;
+      height: 100%;
+      background: var(--sky);
+      border-radius: 2px;
+    }
+    .progress.full > span { background: var(--emerald); width: 100%; }
+    .progress.empty > span { width: 0; }
+    .card-foot {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* Depth panel */
+    .depth {
+      background: #111927;
+      border: 1px solid #2d3e59;
+      border-radius: 12px;
+      overflow: hidden;
+      position: sticky;
+      top: 8px;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 120px);
+    }
+    .depth-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 16px;
+      background: #152033;
+      border-bottom: 1px solid #223047;
+    }
+    .depth-head h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .depth-body {
+      padding: 14px 16px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+    }
+    .field label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .diag {
+      background: #090d15;
+      border: 1px solid #25334c;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.55;
+      color: #fecdd3;
+      white-space: pre-wrap;
+    }
+    .diag .ok { color: #86efac; }
+    .diag .info { color: #7dd3fc; }
+    .diag .dim { color: #64748b; }
+
+    .checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+    .checklist li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: #141e30;
+      border: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .checklist li.active {
+      border-color: rgba(56, 189, 248, 0.45);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.15);
+    }
+    .checklist li.done { opacity: 0.85; }
+    .check-ico { width: 1.1em; text-align: center; }
+
+    .logs-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .logs {
+      background: #05080f;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.5;
+      color: #cbd5e1;
+      max-height: 160px;
+      overflow: auto;
+    }
+    .logs .ts { color: #64748b; }
+    .logs .lvl-debug { color: #94a3b8; }
+    .logs .lvl-info { color: #7dd3fc; }
+    .logs .lvl-warn { color: #fcd34d; }
+
+    .depth-foot {
+      padding: 12px 16px;
+      background: #0e1524;
+      border-top: 1px solid #1e293b;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Footer */
+    .footer {
+      height: 28px;
+      background: #0b101b;
+      border-top: 1px solid #1e293b;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      flex-shrink: 0;
+    }
+    .footer .online { color: #94a3b8; display: inline-flex; align-items: center; gap: 6px; }
+    .footer .online .dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--emerald);
+    }
+
+    .banner {
+      background: linear-gradient(90deg, rgba(56,189,248,0.12), transparent);
+      border: 1px solid rgba(56,189,248,0.25);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #bae6fd;
+    }
+    .banner strong { color: var(--sky); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.55; transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <h1>Mission Control</h1>
+        <span class="tag">Hybrid C — cards + depth</span>
+      </div>
+      <div class="header-right">
+        <span class="pill pill-live"><span class="dot"></span> Live</span>
+        <span class="pill pill-voice"><span class="dot"></span> Voice standby</span>
+        <button class="icon-btn" type="button" title="Theme" aria-label="Theme">☾</button>
+      </div>
+      <nav class="tabs" aria-label="Main">
+        <a class="tab active" href="#">Operations <span class="count">3</span></a>
+        <a class="tab" href="#">Roles</a>
+        <a class="tab" href="#">Settings</a>
+      </nav>
+    </header>
+
+    <main class="main">
+      <div class="banner">
+        <strong>Design pass.</strong> Dispatch always on · metrics filter cards · select a card to drive the depth panel (checklist + detail + live logs).
+      </div>
+
+      <section class="dispatch" aria-label="Dispatch">
+        <div class="dispatch-row">
+          <div class="prompt-wrap">
+            <span class="prefix" aria-hidden="true">❯</span>
+            <input type="text" value="Add an image of a cat to the homepage" aria-label="Mission prompt" />
+          </div>
+          <div class="actions">
+            <button class="btn btn-amber" type="button">Hold to talk</button>
+            <button class="btn btn-primary" type="button">Start mission</button>
+            <button class="btn btn-danger" type="button">Stop</button>
+            <button class="btn btn-ghost" type="button" title="Review plan first">Review plan…</button>
+          </div>
+        </div>
+        <div class="workspace">
+          <div>
+            <span class="label">Working directory</span>
+            <span class="path">/home/stephen/test</span>
+          </div>
+          <div class="actions">
+            <button class="btn btn-ghost btn-sm" type="button">Choose…</button>
+            <button class="btn btn-ghost btn-sm" type="button">Recent ▾</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics" aria-label="Status metrics">
+        <div class="metric m-rose" data-filter="needs-you">
+          <div class="n">1</div>
+          <div class="k">Needs you</div>
+          <div class="h">Failed / intervention</div>
+        </div>
+        <div class="metric m-sky active-filter" data-filter="running">
+          <div class="n">1</div>
+          <div class="k">Running</div>
+          <div class="h">Agents executing</div>
+        </div>
+        <div class="metric m-slate" data-filter="upcoming">
+          <div class="n">0</div>
+          <div class="k">Upcoming</div>
+          <div class="h">Queue empty</div>
+        </div>
+        <div class="metric m-emerald" data-filter="recent">
+          <div class="n">1</div>
+          <div class="k">Recent</div>
+          <div class="h">Delivered</div>
+        </div>
+      </section>
+
+      <section class="split">
+        <div class="cards-col">
+          <h2><span style="width:8px;height:8px;border-radius:50%;background:var(--sky);display:inline-block"></span> Missions</h2>
+          <div class="cards">
+            <button class="card card-launch" type="button" id="launchCard">
+              <span class="plus">+</span>
+              <span>Launch New Agent</span>
+            </button>
+
+            <button class="card selected" type="button" data-mission="exec" id="cardExec">
+              <div class="card-title">Add an image of a cat to the homepage</div>
+              <div class="status st-exec"><span class="dot"></span> Executing</div>
+              <div class="card-meta">/home/stephen/test</div>
+              <div class="progress empty"><span style="width:35%"></span></div>
+              <div class="card-foot"><span>1 / 3 tasks</span><span>35%</span></div>
+            </button>
+
+            <button class="card" type="button" data-mission="done" id="cardDone">
+              <div class="card-title">Add a new image in the featured section for…</div>
+              <div class="status st-done"><span class="dot"></span> Complete</div>
+              <div class="card-meta">/home/stephen/test</div>
+              <div class="progress full"><span></span></div>
+              <div class="card-foot"><span>2 / 2 tasks</span><span>100%</span></div>
+            </button>
+
+            <button class="card" type="button" data-mission="fail" id="cardFail">
+              <div class="card-title">Update index.html title to Vibes Works</div>
+              <div class="status st-fail"><span class="dot"></span> Failed</div>
+              <div class="card-meta">~/App/default</div>
+              <div class="progress"><span style="width:40%;background:var(--rose)"></span></div>
+              <div class="card-foot"><span>0 / 2 tasks</span><span>—</span></div>
+            </button>
+          </div>
+        </div>
+
+        <aside class="depth" id="depth" aria-label="Mission depth">
+          <div class="depth-head">
+            <div>
+              <h3 id="depthTitle">Add an image of a cat to the homepage</h3>
+              <div class="status st-exec" id="depthStatus" style="margin-top:6px"><span class="dot"></span> Executing</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" type="button" title="Close panel">✕</button>
+          </div>
+          <div class="depth-body">
+            <div class="grid2">
+              <div class="field">
+                <label>Working directory</label>
+                <div class="card-meta" id="depthDir">/home/stephen/test</div>
+              </div>
+              <div class="field">
+                <label>Progress</label>
+                <div>1 / 3 tasks · 35%</div>
+              </div>
+            </div>
+
+            <div class="field" id="detailBlock" hidden>
+              <label>Diagnostics</label>
+              <pre class="diag" id="depthDetail"></pre>
+            </div>
+
+            <div class="field">
+              <label>Tasks</label>
+              <ul class="checklist" id="depthTasks">
+                <li class="done"><span class="check-ico">✓</span> Choose image source</li>
+                <li class="active"><span class="check-ico">⏳</span> Update HTML</li>
+                <li><span class="check-ico">·</span> Verify display</li>
+              </ul>
+            </div>
+
+            <div>
+              <div class="logs-label">Live logs</div>
+              <div class="logs" id="depthLogs">
+                <div><span class="ts">18:36:05</span> <span class="lvl-debug">[DEBUG]</span> Scheduler: 2 pending, 1 ready, 1 running</div>
+                <div><span class="ts">18:36:06</span> <span class="lvl-info">[TASK]</span> Update HTML → running</div>
+                <div><span class="ts">18:36:08</span> <span class="lvl-debug">[DEBUG]</span> Patching index.html featured section</div>
+              </div>
+            </div>
+          </div>
+          <div class="depth-foot">
+            <button class="btn btn-danger btn-sm" type="button">Terminate</button>
+            <div class="actions">
+              <button class="btn btn-ghost btn-sm" type="button">Archive</button>
+              <button class="btn btn-primary btn-sm" type="button">Retry</button>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="online"><span class="dot"></span> Engine online · child MCP</div>
+      <div>Model: gemma-4-12b · Context — · Concurrent 1</div>
+      <div style="color:var(--sky)">Hybrid C mock · DESIGN.md</div>
+    </footer>
+  </div>
+
+  <script>
+    const missions = {
+      exec: {
+        title: "Add an image of a cat to the homepage",
+        statusClass: "st-exec",
+        statusLabel: "Executing",
+        dir: "/home/stephen/test",
+        progress: "1 / 3 tasks · 35%",
+        detail: null,
+        tasks: [
+          { text: "Choose image source", state: "done", ico: "✓" },
+          { text: "Update HTML", state: "active", ico: "⏳" },
+          { text: "Verify display", state: "", ico: "·" },
+        ],
+        logs: [
+          ['18:36:05', 'debug', 'Scheduler: 2 pending, 1 ready, 1 running'],
+          ['18:36:06', 'info', 'Update HTML → running'],
+          ['18:36:08', 'debug', 'Patching index.html featured section'],
+        ],
+      },
+      done: {
+        title: "Add a new image in the featured section for…",
+        statusClass: "st-done",
+        statusLabel: "Complete",
+        dir: "/home/stephen/test",
+        progress: "2 / 2 tasks · 100%",
+        detail: null,
+        tasks: [
+          { text: "Add image asset", state: "done", ico: "✓" },
+          { text: "Wire featured section", state: "done", ico: "✓" },
+        ],
+        logs: [
+          ['17:12:01', 'info', 'Mission completed. Completed 2/2 tasks.'],
+        ],
+      },
+      fail: {
+        title: "Update index.html title to Vibes Works",
+        statusClass: "st-fail",
+        statusLabel: "Failed",
+        dir: "~/App/default",
+        progress: "0 / 2 tasks",
+        detail: "[ERR] Process exited with status code 1\\nTarget path: /workspace/app/index.html not initialized.\\n[SUGGESTION] Run npm run init:app or verify working directory.",
+        tasks: [
+          { text: "Modify index.html title", state: "", ico: "✕" },
+          { text: "Add overview paragraph", state: "", ico: "·" },
+        ],
+        logs: [
+          ['19:32:54', 'warn', 'ENOENT: open /workspace/index.html'],
+          ['19:32:55', 'info', 'Mission recorded as failed'],
+        ],
+      },
+    };
+
+    function renderDepth(key) {
+      const m = missions[key];
+      if (!m) return;
+      document.getElementById("depthTitle").textContent = m.title;
+      const st = document.getElementById("depthStatus");
+      st.className = "status " + m.statusClass;
+      st.innerHTML = '<span class="dot"></span> ' + m.statusLabel;
+      document.getElementById("depthDir").textContent = m.dir;
+      document.querySelector("#depth .grid2 .field:nth-child(2) div:last-child").textContent = m.progress;
+
+      const detailBlock = document.getElementById("detailBlock");
+      const detailEl = document.getElementById("depthDetail");
+      if (m.detail) {
+        detailBlock.hidden = false;
+        detailEl.textContent = m.detail.replace(/\\n/g, "\n");
+      } else {
+        detailBlock.hidden = true;
+        detailEl.textContent = "";
+      }
+
+      const ul = document.getElementById("depthTasks");
+      ul.innerHTML = m.tasks.map((t) =>
+        '<li class="' + t.state + '"><span class="check-ico">' + t.ico + "</span> " + t.text + "</li>"
+      ).join("");
+
+      const logs = document.getElementById("depthLogs");
+      logs.innerHTML = m.logs.map(([ts, lvl, msg]) =>
+        '<div><span class="ts">' + ts + '</span> <span class="lvl-' + lvl + '">[' + lvl.toUpperCase() + "]</span> " + msg + "</div>"
+      ).join("");
+    }
+
+    document.querySelectorAll(".card[data-mission]").forEach((card) => {
+      card.addEventListener("click", () => {
+        document.querySelectorAll(".card[data-mission]").forEach((c) => c.classList.remove("selected"));
+        card.classList.add("selected");
+        renderDepth(card.getAttribute("data-mission"));
+      });
+    });
+
+    document.getElementById("launchCard").addEventListener("click", () => {
+      alert("Launch modal (existing flow): workspace + mission → Generate Tasks → Review Plan → Accept & Launch.\\n\\nDispatch Start skips review.");
+    });
+  </script>
+</body>
+</html>

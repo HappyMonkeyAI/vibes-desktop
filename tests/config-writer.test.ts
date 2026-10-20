@@ -31,6 +31,10 @@ describe('writeVibesConfig (T9)', () => {
     // Empty roles are omitted, not written as blanks.
     expect(written.REVIEWER_MODEL).toBeUndefined();
     expect(written.TRIAGE_BASE_URL).toBeUndefined();
+    // Unconfigured reviewer → both gates explicitly off (vibes would otherwise
+    // default to a nonexistent gemma2:27b and fail every reviewed task).
+    expect(written.ENABLE_REVIEWER).toBe('false');
+    expect(written.ENABLE_ADVERSARIAL_AUDIT).toBe('false');
   });
 
   it('merges with an existing file without blanking untouched keys', () => {

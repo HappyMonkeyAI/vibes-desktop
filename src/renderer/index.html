@@ -4,14 +4,24 @@
     <meta charset="UTF-8" />
     <title>Vibes Desktop</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
     <script>
-      // Synchronous: sets Arco's light theme on <html> before first paint, so no
-      // dark-mode flash. A future theme toggle flips both attributes (zerogterm pattern).
-      document.documentElement.setAttribute('arco-theme', 'light');
-      document.documentElement.setAttribute('data-theme', 'light');
+      // Synchronous before first paint: dark Mission Control is default (DESIGN.md /
+      // Stitch). Honor a stored preference when present.
+      (function () {
+        var mode = 'dark';
+        try {
+          var stored = localStorage.getItem('vibes-theme');
+          if (stored === 'light' || stored === 'dark') mode = stored;
+        } catch (e) {}
+        document.documentElement.setAttribute('data-theme', mode);
+        document.documentElement.setAttribute('arco-theme', mode);
+      })();
     </script>
     <script type="module" src="./main.tsx"></script>
   </body>

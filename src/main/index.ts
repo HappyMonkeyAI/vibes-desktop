@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import path from 'node:path';
+import { existsSync } from 'node:fs';
 import { registerIpcHandlers } from './ipc/handlers';
 import { LedgerStore } from './ledger/store';
 import { RolesStore } from './roles/store';
@@ -7,6 +8,8 @@ import { makeSafeCipher } from './roles/safeCipher';
 import { writeVibesConfig } from './roles/config-writer';
 import { createMissionService } from './mission/service';
 import { VibesBridge } from './bridge/vibes-bridge';
+import { WorkspaceHistoryStore } from './workspace/history';
+import { SettingsStore } from './settings/store';
 
 const isDev = !app.isPackaged;
 
@@ -47,25 +50,54 @@ app.whenReady().then(() => {
   ledger = new LedgerStore(app.getPath('userData'));
   // Role endpoints persist alongside the ledger; keys encrypt via the OS safe store.
   const rolesStore = new RolesStore(app.getPath('userData'), makeSafeCipher());
+  // Workspace history store
+  const workspaceHistoryStore = new WorkspaceHistoryStore(app.getPath('userData'));
+  // App settings (Settings tab) — speech-server key uses the same OS cipher as Roles.
+  const settingsStore = new SettingsStore(app.getPath('userData'), makeSafeCipher());
+  // Soft-migrate: previous default was yapsnap CLI; builtin Whisper downloads on
+  // first talk (ZeroG-style) and does not require pip. Users can re-select yapsnap.
+  {
+    const current = settingsStore.get();
+    if (current.speechEngine === 'yapsnap') {
+      settingsStore.save({ speechEngine: 'builtin' });
+    }
+  }
   // T13/T14 — mission lifecycle. The bridge factory writes the native config before
   // each spawn so a child always reads the per-role endpoints we just saved.
+  // writeVibesConfig itself refuses non-absolute roots, so a bad value can never
+  // write .vibes/config.json into the app's own source tree.
+  // vibesPath: VIBES_PATH env (dev) > settings.vibesPath. No hardcoded machine paths.
+  const resolveVibesPath = (): string => {
+    const candidates = [
+      process.env['VIBES_PATH'],
+      settingsStore.get().vibesPath,
+    ].filter((c): c is string => !!c);
+    for (const candidate of candidates) {
+      if (existsSync(path.join(candidate, 'src', 'mcp', 'server.ts'))) return candidate;
+    }
+    throw new Error(
+      'No valid vibes checkout found. Set vibesPath in Settings (or VIBES_PATH env) to a repo containing src/mcp/server.ts.',
+    );
+  };
   const missionService = createMissionService({
     store: ledger,
-    vibesPath: () => process.env['VIBES_PATH'],
+    vibesPath: () => {
+      try { return resolveVibesPath(); } catch { return undefined; }
+    },
     createBridge: (workspaceRoot) => {
       writeVibesConfig(workspaceRoot, rolesStore.input());
-      const vibesPath = process.env['VIBES_PATH'] ?? 'C:/Users/steph/AppData/Local/Temp/vibes';
-      return new VibesBridge({ vibesPath, workspaceRoot });
+      return new VibesBridge({ vibesPath: resolveVibesPath(), workspaceRoot });
     },
   });
   createWindow();
   // Native folder picker for the mission working directory (parented to the focused window).
   const selectWorkspace = async () => {
     const parent = BrowserWindow.getFocusedWindow() ?? mainWindow;
-    const res = await dialog.showOpenDialog(parent!, { properties: ['openDirectory'] });
+    const options = { properties: ['openDirectory' as const] };
+    const res = parent ? await dialog.showOpenDialog(parent, options) : await dialog.showOpenDialog(options);
     return { path: res.canceled ? null : (res.filePaths[0] ?? null) };
   };
-  registerIpcHandlers(ipcMain, { store: ledger, webContents: mainWindow?.webContents, rolesStore, missionService, selectWorkspace });
+  registerIpcHandlers(ipcMain, { store: ledger, webContents: mainWindow?.webContents, rolesStore, missionService, selectWorkspace, workspaceHistoryStore, settingsStore });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

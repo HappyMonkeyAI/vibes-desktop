@@ -1,8 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import {
   channels,
+  type AppSettings,
+  type AppSettingsSaveInput,
   type LedgerNewEntryEvent,
   type LedgerSnapshot,
+  type MissionPlanRequest,
+  type MissionPlanResponse,
   type MissionStartRequest,
   type MissionStartResult,
   type RolesConfigInput,
@@ -10,8 +14,11 @@ import {
   type TestConnectionRequest,
   type TestConnectionResult,
   type VoiceDoctorResult,
+  type VoiceServerTestResult,
   type VoiceTranscribeRequest,
   type VoiceTranscribeResult,
+  type VoiceWarmResult,
+  type WorkspaceHistoryEntry,
   type WorkspaceSelectResult,
 } from '@shared/channels';
 
@@ -27,6 +34,9 @@ const api = {
       ipcRenderer.on(channels.ledgerNewEntry, listener);
       return () => ipcRenderer.removeListener(channels.ledgerNewEntry, listener);
     },
+    /** Archive one entry or a batch (a mission card plus its task rows). */
+    archive: (entryIds: string | string[]): Promise<{ ok: boolean; count?: number; error?: string }> =>
+      ipcRenderer.invoke(channels.ledgerArchive, entryIds),
   },
   roles: {
     get: (): Promise<RolesConfigView> => ipcRenderer.invoke(channels.rolesGet),
@@ -38,14 +48,29 @@ const api = {
     doctor: (): Promise<VoiceDoctorResult> => ipcRenderer.invoke(channels.voiceDoctor),
     transcribe: (request: VoiceTranscribeRequest): Promise<VoiceTranscribeResult> =>
       ipcRenderer.invoke(channels.voiceTranscribe, request),
+    warm: (): Promise<VoiceWarmResult> => ipcRenderer.invoke(channels.voiceWarm),
+    testServer: (): Promise<VoiceServerTestResult> => ipcRenderer.invoke(channels.voiceTestServer),
   },
   mission: {
     start: (request: MissionStartRequest): Promise<MissionStartResult> =>
       ipcRenderer.invoke(channels.missionStart, request),
     stop: (): Promise<{ stopped: boolean }> => ipcRenderer.invoke(channels.missionStop),
+    plan: (request: MissionPlanRequest): Promise<MissionPlanResponse> =>
+      ipcRenderer.invoke(channels.missionPlan, request),
+    /** Discard a reviewed-but-unlaunched plan (Decline / modal close). */
+    cancelPlan: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.missionCancelPlan),
   },
   workspace: {
     select: (): Promise<WorkspaceSelectResult> => ipcRenderer.invoke(channels.workspaceSelect),
+    history: {
+      save: (path: string): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.workspaceHistorySave, path),
+      get: (): Promise<WorkspaceHistoryEntry[]> => ipcRenderer.invoke(channels.workspaceHistoryGet),
+      clear: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.workspaceHistoryClear),
+    },
+  },
+  settings: {
+    get: (): Promise<AppSettings> => ipcRenderer.invoke(channels.settingsGet),
+    save: (input: AppSettingsSaveInput): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.settingsSave, input),
   },
 };
 

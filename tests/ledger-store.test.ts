@@ -125,6 +125,48 @@ describe('LedgerStore (T5)', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it('seedPlannedTasks writes pending rows; later in-progress upserts in place', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const missionId = 'm-seed';
+    await store.seedPlannedTasks(['Alpha', 'Beta'], dir, missionId);
+    await store.recordTaskStatus({ name: 'Alpha', status: 'in-progress' }, dir, missionId);
+
+    const snap = await store.snapshot();
+    const alpha = snap.entries.find((e) => e.title === 'Alpha')!;
+    const beta = snap.entries.find((e) => e.title === 'Beta')!;
+    expect(alpha.status).toBe('running');
+    expect(beta.status).toBe('pending');
+    expect(snap.entries.filter((e) => e.title === 'Alpha')).toHaveLength(1);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('markOpenTasksFailed flips pending/running task rows but not mission rows', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const missionId = 'm-fail';
+    await store.recordMissionEvent('Do the thing', 'running', dir, missionId);
+    await store.seedPlannedTasks(['A', 'B'], dir, missionId);
+    await store.recordTaskStatus({ name: 'A', status: 'in-progress' }, dir, missionId);
+    await store.recordTaskStatus(
+      { name: 'Mission Scheduler', status: 'failed', detail: 'Scheduler deadlock: circular depends_on' },
+      dir,
+      missionId,
+    );
+
+    const count = await store.markOpenTasksFailed(missionId);
+    expect(count).toBe(2);
+
+    const snap = await store.snapshot();
+    expect(snap.entries.find((e) => e.title === 'A')!.status).toBe('failed');
+    expect(snap.entries.find((e) => e.title === 'A')!.detail).toBe('Left incomplete when the mission ended.');
+    expect(snap.entries.find((e) => e.title === 'B')!.detail).toContain('Left pending');
+    // Must not overwrite the scheduler's real error with the mission summary.
+    expect(snap.entries.find((e) => e.title === 'Mission Scheduler')!.detail).toContain('Scheduler deadlock');
+    expect(snap.entries.find((e) => e.kind === 'mission')!.status).toBe('running'); // caller updates mission separately
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it('concurrent task-status events for the same title upsert in place — one row, final status', async () => {
     const dir = tempDir();
     const store = new LedgerStore(dir);

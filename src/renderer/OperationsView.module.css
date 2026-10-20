@@ -1,0 +1,795 @@
+/* Hybrid C Operations — dispatch + metrics + cards + depth panel */
+
+.ops {
+  padding: 12px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-base);
+  /* Grow with content; the tab pane owns scrolling. Do not flex-shrink
+     children (that collapsed the card grid into a tiny strip). */
+}
+
+/* ---- Dispatch ---- */
+.dispatch {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-card);
+  background: linear-gradient(180deg, var(--surface-card-grad-top), var(--surface-card-grad-bottom)), var(--surface-card);
+  border: 1px solid var(--color-border-2);
+  flex-shrink: 0;
+}
+
+.dispatchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.missionInput {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Theme-aware composer — never leave Arco’s light fill on a dark canvas. */
+.missionInput :global(.arco-textarea-wrapper),
+.missionInput :global(.arco-input-wrapper),
+.missionInput :global(.arco-input),
+.missionInput :global(textarea.arco-textarea) {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none;
+}
+
+.missionInput :global(textarea.arco-textarea::placeholder),
+.missionInput :global(.arco-input::placeholder) {
+  color: var(--text-muted) !important;
+}
+
+.missionInput :global(.arco-textarea-wrapper:focus-within),
+.missionInput :global(.arco-input-wrapper:focus-within),
+.missionInput :global(.arco-input:focus),
+.missionInput :global(textarea.arco-textarea:focus) {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 2px var(--brand-soft-bg) !important;
+}
+
+.workspaceControls :global(.arco-select-view),
+.workspaceControls :global(.arco-input-wrapper),
+.workspaceControls :global(.arco-input) {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-primary) !important;
+}
+
+.dispatchActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.workspaceBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-card-inner);
+  background: var(--surface-row);
+  border: 1px solid var(--color-border-1);
+}
+
+.workspaceLabel {
+  font-size: var(--type-11);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.workspaceControls {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.voiceNotReady {
+  font-size: var(--type-11);
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ---- Metrics ---- */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.metric {
+  text-align: left;
+  cursor: pointer;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  border: 1px solid var(--color-border-3);
+  border-left: 4px solid var(--accent, var(--brand));
+  color: inherit;
+  font: inherit;
+  box-shadow: var(--shadow-1);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.metric:hover {
+  box-shadow: var(--shadow-1);
+}
+
+.metricActive {
+  outline: 1px solid color-mix(in srgb, var(--accent, var(--brand)) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, var(--brand)) 25%, transparent);
+}
+
+.metricValue {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.metricLabel {
+  margin-top: 4px;
+  font-size: var(--type-11);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent, var(--text-secondary));
+}
+
+.metricHint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ---- Split layout ---- */
+.split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  align-items: start;
+  flex: 0 0 auto;
+}
+
+@media (min-width: 960px) {
+  .splitOpen {
+    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  }
+}
+
+.cardsCol {
+  min-width: 0;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.launchCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 140px;
+  padding: 24px 16px;
+  border: 2px dashed var(--color-border-3);
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color var(--motion-fast), color var(--motion-fast), background var(--motion-fast);
+}
+
+.launchCard:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft-bg);
+}
+
+.launchIcon {
+  opacity: 0.65;
+}
+
+.launchLabel {
+  font-size: var(--type-14);
+  font-weight: 600;
+}
+
+.missionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  border: 1px solid var(--color-border-3);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+  min-height: 140px;
+}
+
+.missionCard:hover {
+  border-color: color-mix(in srgb, var(--accent, var(--brand)) 40%, var(--color-border-2));
+  box-shadow: var(--shadow-1);
+}
+
+.missionCardSelected {
+  border-color: var(--accent, var(--brand));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, var(--brand)) 35%, transparent);
+}
+
+.runningMission {
+  animation: pulseBorder 2s ease-in-out infinite;
+}
+
+@keyframes pulseBorder {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent, var(--brand)) 35%, transparent); }
+  50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, var(--brand)) 12%, transparent); }
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cardTitle {
+  font-size: var(--type-13);
+  font-weight: 600;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+  line-height: 1.35;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeBtn:hover {
+  color: var(--text-primary);
+  background: var(--surface-chip);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent, var(--brand));
+  background: color-mix(in srgb, var(--accent, var(--brand)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, var(--brand)) 28%, transparent);
+  width: fit-content;
+}
+
+.workingDir {
+  font-size: var(--type-11);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progressTracker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.progressBar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-chip);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent, var(--brand));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.missionDate {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* ---- Depth panel ---- */
+.depth {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  border: 1px solid var(--color-border-2);
+  overflow: hidden;
+  min-height: 0;
+  /* Viewport-relative cap — % of parent fails when Arco height chain is auto. */
+  max-height: calc(100vh - 220px);
+  position: sticky;
+  top: 8px;
+}
+
+.depthHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border-1);
+  background: var(--surface-row);
+  flex-shrink: 0;
+}
+
+.depthHeadMain {
+  min-width: 0;
+  flex: 1;
+}
+
+.depthTitle {
+  margin: 0;
+  font-size: var(--type-14);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.depthActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border-1);
+  background: var(--surface-row);
+  flex-shrink: 0;
+}
+
+.depthActionsRight {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.depthStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.depthStatusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.depthBody {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.depthMeta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.fieldLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.diag {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-card-inner);
+  background: #05080f;
+  border: 1px solid color-mix(in srgb, #fb7185 28%, var(--color-border-2));
+  color: #fecdd3;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 220px;
+}
+
+.failurePanel {
+  border: 1px solid color-mix(in srgb, #fb7185 40%, var(--color-border-2));
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, #fb7185 8%, var(--surface-card));
+  overflow: hidden;
+}
+
+.failureSummary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fb7185;
+  user-select: none;
+}
+
+.failureSummary::-webkit-details-marker {
+  display: none;
+}
+
+.failureSummary::before {
+  content: '▸';
+  margin-right: 8px;
+  display: inline-block;
+  transition: transform var(--motion-fast);
+}
+
+.failurePanel[open] > .failureSummary::before {
+  transform: rotate(90deg);
+}
+
+.failureMeta {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.failureBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.failureBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.failureStepList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.failureStepList strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--type-12);
+  color: var(--text-primary);
+}
+
+.failureEmpty {
+  margin: 0;
+  font-size: var(--type-12);
+  color: var(--text-muted);
+}
+
+:root[data-theme='light'] .diag,
+:root:not([data-theme]) .diag {
+  background: #1e293b;
+}
+
+.taskChecklistItems {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.checklistItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface-row);
+  border-radius: var(--radius-card-inner);
+  border: 1px solid var(--color-border-2);
+}
+
+.checklistExpandable {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+.checklistSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.checklistSummary::-webkit-details-marker {
+  display: none;
+}
+
+.checklistFailed {
+  border-color: color-mix(in srgb, #fb7185 45%, var(--color-border-2));
+}
+
+.taskDetail {
+  margin: 0;
+  padding: 0 10px 10px 34px;
+  color: #fecdd3;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.checklistActive {
+  border-color: color-mix(in srgb, #38bdf8 50%, var(--color-border-2));
+  box-shadow: 0 0 0 1px color-mix(in srgb, #38bdf8 20%, transparent);
+}
+
+.checklistIcon {
+  width: 1.25em;
+  text-align: center;
+  font-size: 13px;
+}
+
+.checklistTitle {
+  flex: 1;
+  font-size: var(--type-13);
+  color: var(--text-primary);
+}
+
+.checklistStatus {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.logs {
+  background: #05080f;
+  border: 1px solid var(--color-border-2);
+  border-radius: var(--radius-card-inner);
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-height: 180px;
+  overflow: auto;
+}
+
+:root[data-theme='light'] .logs,
+:root:not([data-theme]) .logs {
+  background: #0f172a;
+  color: #cbd5e1;
+}
+
+.logLine {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.logTs {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.logsEmpty {
+  color: #64748b;
+  font-style: italic;
+}
+
+
+/* ---- Empty state (ADR-0003) ---- */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 12px 8px;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: var(--type-16);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.emptyHint {
+  font-size: var(--type-13);
+  color: var(--text-muted);
+  max-width: 36ch;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0;
+  color: var(--text-dim);
+}
+
+.emptyStateText {
+  font-size: var(--type-13);
+  font-weight: 500;
+}
+
+/* ---- Modals ---- */
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formLabel {
+  font-size: var(--type-11);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.dirInputRow {
+  display: flex;
+  gap: 8px;
+}
+
+.dirInputRow :global(.arco-input) {
+  flex: 1;
+}
+
+.missionTextareaRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.missionTextareaRow :global(.arco-textarea-wrapper) {
+  flex: 1;
+}
+
+.reviewModalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.reviewPrompt {
+  padding: 12px;
+  background: var(--surface-row);
+  border-radius: var(--radius-card-inner);
+  border: 1px solid var(--color-border-2);
+}
+
+.reviewPrompt strong {
+  display: block;
+  font-size: var(--type-12);
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.reviewPrompt p {
+  margin: 0;
+  font-size: var(--type-14);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.taskItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-row);
+  border-radius: var(--radius-card-inner);
+  border: 1px solid var(--color-border-2);
+}
+
+.taskNumber {
+  font-weight: 700;
+  color: var(--brand);
+  min-width: 24px;
+}
+
+.taskTitle {
+  font-size: var(--type-14);
+  color: var(--text-primary);
+}

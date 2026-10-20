@@ -17,14 +17,20 @@ describe('first-launch empty state (S1)', () => {
   it('renders grouped entries when the ledger has activity', async () => {
     vi.mocked(window.vibesDesktop.ledger.get).mockResolvedValueOnce({
       entries: [
-        { id: 'm1', group: 'running', status: 'running', source: 'vibes-mission', title: 'Refactor auth module', updatedAt: Date.now() },
-        { id: 'm2', group: 'needs-you', status: 'blocked', source: 'vibes-mission', title: 'Waiting on API key', needsHuman: true, updatedAt: Date.now() },
+        { id: 'm1', kind: 'mission', group: 'running', status: 'running', source: 'vibes-mission', title: 'Refactor auth module', workspaceRoot: '/w/one', updatedAt: Date.now() },
+        { id: 't1', group: 'running', status: 'running', source: 'vibes-mission', title: 'Update index.html title', workspaceRoot: '/w/one', updatedAt: Date.now() },
+        { id: 'm2', kind: 'mission', group: 'needs-you', status: 'blocked', source: 'vibes-mission', title: 'Waiting on API key', needsHuman: true, workspaceRoot: '/w/two', updatedAt: Date.now() },
       ],
-      groupCounts: { 'needs-you': 1, running: 1, upcoming: 0, recent: 0 },
+      groupCounts: { 'needs-you': 1, running: 2, upcoming: 0, recent: 0 },
     });
     render(<App />);
-    expect(await screen.findByText('Refactor auth module')).toBeTruthy();
+    // Running missions auto-open the depth panel, so the title appears on the
+    // card and again in the panel header.
+    expect((await screen.findAllByText('Refactor auth module')).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Waiting on API key')).toBeTruthy();
+    // Task rows are grouped under their mission card, not shown as separate cards
+    // until the depth panel lists them (this fixture has no missionId link).
+    expect(screen.queryByText('Update index.html title')).toBeNull();
     expect(document.body.textContent).not.toContain('All quiet');
   });
 });
@@ -42,14 +48,17 @@ describe('live ledger push (T5)', () => {
     render(<App />);
     expect(await screen.findByText('All quiet')).toBeTruthy();
 
-    // A task starts running — pushed live.
-    handlers[0]({ entry: { id: 't1', group: 'running', status: 'running', source: 'vibes-mission', title: 'Build widget', updatedAt: 1 } });
-    expect(await screen.findByText('Build widget')).toBeTruthy();
+    // A mission starts — its mission row is pushed live and becomes a card
+    // titled by the original request (depth panel also shows the title).
+    handlers[0]({ entry: { id: 'm1', kind: 'mission', missionId: 'm1', group: 'running', status: 'running', source: 'vibes-mission', title: 'Build widget', workspaceRoot: '/w/widget', updatedAt: 1 } });
+    expect((await screen.findAllByText('Build widget')).length).toBeGreaterThanOrEqual(1);
     expect(document.body.textContent).not.toContain('All quiet');
 
-    // The same task completes in place — must replace, not duplicate.
-    handlers[0]({ entry: { id: 't1', group: 'recent', status: 'done', source: 'vibes-mission', title: 'Build widget', updatedAt: 2 } });
-    await screen.findByText('Build widget');
-    expect(screen.getAllByText('Build widget')).toHaveLength(1);
+    // The mission completes in place — same id/title upsert, still one card
+    // (plus optional depth header while selected).
+    handlers[0]({ entry: { id: 'm1', kind: 'mission', missionId: 'm1', group: 'recent', status: 'done', source: 'vibes-mission', title: 'Build widget', workspaceRoot: '/w/widget', updatedAt: 2 } });
+    const titles = await screen.findAllByText('Build widget');
+    expect(titles.length).toBeGreaterThanOrEqual(1);
+    expect(titles.length).toBeLessThanOrEqual(2);
   });
 });
