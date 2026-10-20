@@ -2,6 +2,24 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-20 (theme) — Contrast pass: dark inputs + stronger light
+
+**Done:** Dark composer/selects use `--input-bg` `#0b101b` + light text (no white Arco fill). Light mode: cooler gray page `#e8ecf2`, darker text/borders, white cards with visible borders/shadows.
+
+## 2026-10-20 (theme) — Dark Mission Control default + Stitch sky accent
+
+**Done:** Boot/`ThemeToggle` default to dark (`#090d16` canvas). Dark Arco/`--brand` primary = sky `#38bdf8`; light keeps orange. `index.html` honors stored preference before paint.
+
+**Evidence:** theme-toggle tests updated; `npm test` after change.
+
+## 2026-10-20 (UX) — Expandable failure detail for missions + steps
+
+**Done:** Depth panel **Why this failed** (`<details>`, open on failed) shows mission summary, system rows (Scheduler), and failed steps. Checklist rows with errors expand. Vibes child now emits `error` on `[TASK_STATUS]` failed; bridge maps to ledger `detail`. Patched both `vibes` and `local-ai-planner` server.ts.
+
+**Evidence:** vibes-bridge parse test; typecheck + 108 tests green.
+
+**Note:** Older ledger rows still lack step `detail` until a new failing run.
+
 ## 2026-10-20 (milestone) — Commit Hybrid C + voice + plan-seed; MCP roadmap
 
 **Done:** Parked a good stopping point. TASKS P7/T26 = external MCP registration for missions (prompt path ≠ wired tools). T24 TTS still later; T21 V3 live pass still owed.

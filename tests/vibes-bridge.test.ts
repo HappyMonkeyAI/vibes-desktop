@@ -78,10 +78,15 @@ describe('VibesBridge task-status events (T4)', () => {
     // The bridge forwards the client's 'log' event; drive it directly (no child process).
     bridge.client.emit('log', '[TASK_STATUS] {"name": "Set up project", "status": "in-progress"}');
     bridge.client.emit('log', '[TASK_STATUS] {"name": "Write tests", "status": "complete"}');
+    bridge.client.emit(
+      'log',
+      '[TASK_STATUS] {"name": "Mission Scheduler", "status": "failed", "error": "dependency deadlock"}',
+    );
 
     expect(events).toEqual([
       { name: 'Set up project', status: 'in-progress' },
       { name: 'Write tests', status: 'complete' },
+      { name: 'Mission Scheduler', status: 'failed', detail: 'dependency deadlock' },
     ]);
   });
 

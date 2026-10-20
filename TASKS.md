@@ -39,6 +39,8 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T22 Settings → Voice: engine pick (builtin Whisper | server | yapsnap legacy), language, doctor/warm ✅ 2026-10-20
 - [x] T23 Optional OpenAI-compatible speech server (qwen3-asr URL/model/key) + probe; route `voice:transcribe` by engine ✅ 2026-10-20
 - [x] T25 Seed reviewed plan tasks into ledger (0/N progress); mark open tasks failed on mission fail; hide Mission Scheduler from checklist ✅ 2026-10-20
+- [x] T27 Expandable mission/step failure detail in depth panel; child emits task error on TASK_STATUS ✅ 2026-10-20
+- [x] T28 Dark Mission Control default + Stitch sky accent; light toggle retained ✅ 2026-10-20
 - [ ] T24 Optional later: Agent Voice TTS announce on mission done/failed (HTTP to local daemon)
 
 ## P7 — Roadmap (next)

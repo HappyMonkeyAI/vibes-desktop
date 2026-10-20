@@ -59,6 +59,8 @@ type MissionCard = {
   updatedAt: number;
   detail?: string;
   tasks: LedgerEntry[];
+  /** Synthetic rows (e.g. Mission Scheduler) kept for failure detail, not progress. */
+  systemFailures: LedgerEntry[];
 };
 
 type LogLine = { at: number; text: string };
@@ -363,6 +365,9 @@ const OperationsView: React.FC = () => {
     const result: MissionCard[] = [];
     for (const entry of entries) {
       if (entry.kind !== 'mission') continue;
+      const related = entry.missionId
+        ? entries.filter((e) => e.kind !== 'mission' && e.missionId === entry.missionId)
+        : [];
       result.push({
         id: entry.id,
         missionId: entry.missionId,
@@ -372,9 +377,8 @@ const OperationsView: React.FC = () => {
         workspaceRoot: entry.workspaceRoot,
         updatedAt: entry.updatedAt,
         detail: entry.detail,
-        tasks: entry.missionId
-          ? entries.filter((e) => e.kind !== 'mission' && e.missionId === entry.missionId && isPlanTask(e))
-          : [],
+        tasks: related.filter(isPlanTask),
+        systemFailures: related.filter((e) => !isPlanTask(e) && (e.status === 'failed' || e.status === 'blocked')),
       });
     }
     return result;
@@ -446,11 +450,17 @@ const OperationsView: React.FC = () => {
         ? 100
         : 0;
 
-  const taskFailureDetail = selectedCard?.tasks
-    .filter((t) => t.status === 'failed' && t.detail)
-    .map((t) => t.detail)
-    .join('\n');
-  const diagnostics = selectedCard?.detail || taskFailureDetail || '';
+  const failedPlanTasks = selectedCard
+    ? selectedCard.tasks.filter((t) => t.status === 'failed' || t.status === 'blocked')
+    : [];
+  const showFailurePanel = Boolean(
+    selectedCard
+    && (selectedCard.status === 'failed'
+      || selectedCard.status === 'blocked'
+      || selectedCard.detail
+      || failedPlanTasks.some((t) => t.detail)
+      || selectedCard.systemFailures.length > 0),
+  );
 
   return (
     <div className={styles.ops}>
@@ -661,27 +671,89 @@ const OperationsView: React.FC = () => {
                 </div>
               </div>
 
-              {diagnostics ? (
-                <div>
-                  <div className={styles.fieldLabel}>Diagnostics</div>
-                  <pre className={styles.diag}>{diagnostics}</pre>
-                </div>
+              {showFailurePanel ? (
+                <details
+                  className={styles.failurePanel}
+                  open={selectedCard.status === 'failed' || selectedCard.status === 'blocked'}
+                >
+                  <summary className={styles.failureSummary}>
+                    <span>Stack trace / diagnostics</span>
+                    <span className={styles.failureMeta}>{STATUS_LABELS[selectedCard.status] || selectedCard.status}</span>
+                  </summary>
+                  <div className={styles.failureBody}>
+                    {/* Prefer scheduler/system detail (richest), then mission summary. */}
+                    {(selectedCard.systemFailures[0]?.detail || selectedCard.detail) ? (
+                      <pre className={styles.diag}>
+                        {selectedCard.systemFailures
+                          .map((row) => (row.detail ? `[${row.title}] ${row.detail}` : null))
+                          .filter(Boolean)
+                          .join('\n\n')
+                          || selectedCard.detail}
+                      </pre>
+                    ) : null}
+                    {failedPlanTasks.some((t) => t.detail && !t.detail.startsWith('Mission failed.') && !t.detail.startsWith('Left ')) ? (
+                      <div className={styles.failureBlock}>
+                        <div className={styles.fieldLabel}>Failed steps</div>
+                        <ul className={styles.failureStepList}>
+                          {failedPlanTasks
+                            .filter((t) => t.detail && !t.detail.startsWith('Mission failed.') && !t.detail.startsWith('Left '))
+                            .map((task) => (
+                              <li key={task.id}>
+                                <strong>{task.title}</strong>
+                                <pre className={styles.diag}>{task.detail}</pre>
+                              </li>
+                            ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {selectedCard.detail && selectedCard.systemFailures.some((r) => r.detail) ? (
+                      <div className={styles.failureBlock}>
+                        <div className={styles.fieldLabel}>Mission outcome</div>
+                        <pre className={styles.diag}>{selectedCard.detail}</pre>
+                      </div>
+                    ) : null}
+                    {!selectedCard.detail && selectedCard.systemFailures.length === 0 ? (
+                      <p className={styles.failureEmpty}>
+                        No failure detail was recorded. Newer runs capture step errors from the mission child.
+                      </p>
+                    ) : null}
+                  </div>
+                </details>
               ) : null}
 
               <div>
                 <div className={styles.fieldLabel}>Tasks</div>
                 <div className={styles.taskChecklistItems}>
                   {selectedCard.tasks.length > 0 ? (
-                    selectedCard.tasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className={`${styles.checklistItem} ${task.status === 'running' || task.status === 'verifying' ? styles.checklistActive : ''}`}
-                      >
-                        <span className={styles.checklistIcon}>{TASK_ICONS[task.status] ?? '·'}</span>
-                        <span className={styles.checklistTitle}>{task.title}</span>
-                        <span className={styles.checklistStatus}>{STATUS_LABELS[task.status] || task.status.toUpperCase()}</span>
-                      </div>
-                    ))
+                    selectedCard.tasks.map((task) => {
+                      const expandable = Boolean(task.detail) || task.status === 'failed' || task.status === 'blocked';
+                      if (!expandable) {
+                        return (
+                          <div
+                            key={task.id}
+                            className={`${styles.checklistItem} ${task.status === 'running' || task.status === 'verifying' ? styles.checklistActive : ''}`}
+                          >
+                            <span className={styles.checklistIcon}>{TASK_ICONS[task.status] ?? '·'}</span>
+                            <span className={styles.checklistTitle}>{task.title}</span>
+                            <span className={styles.checklistStatus}>{STATUS_LABELS[task.status] || task.status.toUpperCase()}</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <details
+                          key={task.id}
+                          className={`${styles.checklistItem} ${styles.checklistExpandable} ${task.status === 'failed' || task.status === 'blocked' ? styles.checklistFailed : ''}`}
+                          open={task.status === 'failed' || task.status === 'blocked'}
+                        >
+                          <summary className={styles.checklistSummary}>
+                            <span className={styles.checklistIcon}>{TASK_ICONS[task.status] ?? '·'}</span>
+                            <span className={styles.checklistTitle}>{task.title}</span>
+                            <span className={styles.checklistStatus}>{STATUS_LABELS[task.status] || task.status.toUpperCase()}</span>
+                          </summary>
+                          <pre className={styles.taskDetail}>{task.detail || 'No step-level error was recorded.'}</pre>
+                        </details>
+                      );
+                    })
                   ) : (
                     <div className={styles.emptyState}>
                       <span className={styles.emptyStateText}>No task activity recorded yet.</span>

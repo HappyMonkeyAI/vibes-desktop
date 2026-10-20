@@ -45,6 +45,8 @@ export function buildChildEnv(llmEnv: Record<string, string> = {}): Record<strin
 export interface TaskStatusEvent {
   name: string;
   status: 'in-progress' | 'complete' | 'failed';
+  /** Failure reason from the child (`error` on task_failed events). */
+  detail?: string;
 }
 
 export type InterventionAction = 'retry' | 'skip' | 'fail' | 'reply';
@@ -105,9 +107,25 @@ export class VibesBridge extends EventEmitter {
       const match = TASK_STATUS_RE.exec(line);
       if (match) {
         try {
-          const parsed = JSON.parse(match[1]) as TaskStatusEvent;
+          const parsed = JSON.parse(match[1]) as {
+            name?: unknown;
+            status?: unknown;
+            error?: unknown;
+            detail?: unknown;
+          };
           if (typeof parsed.name === 'string' && typeof parsed.status === 'string') {
-            this.emit('task-status', parsed);
+            const detail =
+              typeof parsed.detail === 'string'
+                ? parsed.detail
+                : typeof parsed.error === 'string'
+                  ? parsed.error
+                  : undefined;
+            const event: TaskStatusEvent = {
+              name: parsed.name,
+              status: parsed.status as TaskStatusEvent['status'],
+              ...(detail ? { detail } : {}),
+            };
+            this.emit('task-status', event);
             return;
           }
         } catch {

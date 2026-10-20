@@ -142,7 +142,7 @@
   border-top: 1px solid var(--color-border-2);
   background: var(--bg-base);
   font-size: 11px;
-  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-family: var(--font-mono);
   color: var(--text-dim);
 }
 
@@ -278,26 +278,26 @@
   min-width: 0;
 }
 
-.missionInput :global(.arco-input) {
-  background: var(--color-bg-2, #161616);
-  border-color: var(--color-border-3, #4d4d4d);
-  box-shadow: none;
-}
-
+.missionInput :global(.arco-input),
+.missionInput :global(.arco-textarea-wrapper),
 .missionInput :global(textarea) {
-  color: var(--text-primary);
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none;
   font-size: var(--type-14);
   line-height: var(--lh-normal);
 }
 
 .missionInput :global(textarea::placeholder) {
-  color: var(--text-muted);
+  color: var(--text-muted) !important;
 }
 
 .missionInput :global(.arco-input:focus-within),
+.missionInput :global(.arco-textarea-wrapper:focus-within),
 .missionInput :global(textarea:focus) {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.18);
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 2px var(--brand-soft-bg) !important;
 }
 
 /* Working-directory picker — a quiet control under the composer. */
@@ -351,7 +351,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-family: var(--font-mono);
 }
 
 /* ---- stat tiles ---- */

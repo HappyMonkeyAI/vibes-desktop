@@ -36,6 +36,38 @@
   min-width: 200px;
 }
 
+/* Theme-aware composer — never leave Arco’s light fill on a dark canvas. */
+.missionInput :global(.arco-textarea-wrapper),
+.missionInput :global(.arco-input-wrapper),
+.missionInput :global(.arco-input),
+.missionInput :global(textarea.arco-textarea) {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none;
+}
+
+.missionInput :global(textarea.arco-textarea::placeholder),
+.missionInput :global(.arco-input::placeholder) {
+  color: var(--text-muted) !important;
+}
+
+.missionInput :global(.arco-textarea-wrapper:focus-within),
+.missionInput :global(.arco-input-wrapper:focus-within),
+.missionInput :global(.arco-input:focus),
+.missionInput :global(textarea.arco-textarea:focus) {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 2px var(--brand-soft-bg) !important;
+}
+
+.workspaceControls :global(.arco-select-view),
+.workspaceControls :global(.arco-input-wrapper),
+.workspaceControls :global(.arco-input) {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-primary) !important;
+}
+
 .dispatchActions {
   display: flex;
   flex-wrap: wrap;
@@ -97,10 +129,11 @@
   padding: 12px 14px;
   border-radius: var(--radius-card);
   background: var(--surface-card);
-  border: 1px solid var(--color-border-2);
+  border: 1px solid var(--color-border-3);
   border-left: 4px solid var(--accent, var(--brand));
   color: inherit;
   font: inherit;
+  box-shadow: var(--shadow-1);
   transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
 }
 
@@ -199,7 +232,8 @@
   padding: 14px;
   border-radius: var(--radius-card);
   background: var(--surface-card);
-  border: 1px solid var(--color-border-2);
+  border: 1px solid var(--color-border-3);
+  box-shadow: var(--shadow-1);
   cursor: pointer;
   transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
   min-height: 140px;
@@ -277,7 +311,7 @@
 .workingDir {
   font-size: var(--type-11);
   color: var(--text-secondary);
-  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-family: var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -419,17 +453,98 @@
 
 .diag {
   margin: 0;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-radius: var(--radius-card-inner);
-  background: #0b101b;
-  border: 1px solid var(--color-border-2);
+  background: #05080f;
+  border: 1px solid color-mix(in srgb, #fb7185 28%, var(--color-border-2));
   color: #fecdd3;
-  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.55;
   white-space: pre-wrap;
   overflow: auto;
-  max-height: 160px;
+  max-height: 220px;
+}
+
+.failurePanel {
+  border: 1px solid color-mix(in srgb, #fb7185 40%, var(--color-border-2));
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, #fb7185 8%, var(--surface-card));
+  overflow: hidden;
+}
+
+.failureSummary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fb7185;
+  user-select: none;
+}
+
+.failureSummary::-webkit-details-marker {
+  display: none;
+}
+
+.failureSummary::before {
+  content: '▸';
+  margin-right: 8px;
+  display: inline-block;
+  transition: transform var(--motion-fast);
+}
+
+.failurePanel[open] > .failureSummary::before {
+  transform: rotate(90deg);
+}
+
+.failureMeta {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.failureBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.failureBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.failureStepList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.failureStepList strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--type-12);
+  color: var(--text-primary);
+}
+
+.failureEmpty {
+  margin: 0;
+  font-size: var(--type-12);
+  color: var(--text-muted);
 }
 
 :root[data-theme='light'] .diag,
@@ -451,6 +566,40 @@
   background: var(--surface-row);
   border-radius: var(--radius-card-inner);
   border: 1px solid var(--color-border-2);
+}
+
+.checklistExpandable {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+.checklistSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.checklistSummary::-webkit-details-marker {
+  display: none;
+}
+
+.checklistFailed {
+  border-color: color-mix(in srgb, #fb7185 45%, var(--color-border-2));
+}
+
+.taskDetail {
+  margin: 0;
+  padding: 0 10px 10px 34px;
+  color: #fecdd3;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .checklistActive {
@@ -482,7 +631,7 @@
   border: 1px solid var(--color-border-2);
   border-radius: var(--radius-card-inner);
   padding: 10px;
-  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.5;
   color: var(--text-secondary);

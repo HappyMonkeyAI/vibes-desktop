@@ -1,8 +1,7 @@
 /* Vibes Desktop design tokens.
- * Mode is selected by `data-theme` on <html> (zerogterm's pattern): the light
- * palette below is the default; a future theme toggle flips the attribute and
- * every rule that reads these variables re-paints. Arco follows via
- * `arco-theme`, which main.tsx keeps in sync with data-theme.
+ * Mode is selected by `data-theme` on <html> (zerogterm pattern). Dark Mission
+ * Control (Stitch / DESIGN.md) is the default; light remains available via the
+ * header toggle. Arco follows via `arco-theme`.
  * The --primary-N / --arcoblue-N RGB triples are the linchpin: Arco resolves
  * rgb()/rgba() against them, so overriding re-tints every Arco component. */
 
@@ -42,129 +41,44 @@
   --motion-fast: 120ms cubic-bezier(0.2, 0, 0, 1);
   --motion-base: 200ms cubic-bezier(0.2, 0, 0, 1);
 
-  /* Brand — identical across modes by design. */
-  --brand: #ff6b35;
-  --brand-hover: #ff8255;
-  --brand-pressed: #cc5529;
+  /* Stitch / Hybrid C mock typography */
+  --font-sans: 'IBM Plex Sans', system-ui, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
 }
 
-/* ---- Light (default) ---- */
-:root[data-theme='light'],
-:root:not([data-theme]) {
-  color-scheme: light;
-
-  /* Arco primary — brand orange re-tints every component. */
-  --primary-1: 255, 240, 232;
-  --primary-2: 255, 219, 203;
-  --primary-3: 255, 196, 175;
-  --primary-4: 255, 164, 138;
-  --primary-5: 255, 107, 53;
-  --primary-6: rgb(232, 86, 40);
-  --primary-7: rgb(204, 85, 41);
-  --primary-8: rgb(168, 69, 34);
-  --primary-9: rgb(125, 52, 27);
-  --primary-10: rgb(51, 19, 9);
-
-  --arcoblue-1: 255, 240, 232;
-  --arcoblue-2: 255, 219, 203;
-  --arcoblue-3: 255, 196, 175;
-  --arcoblue-4: 255, 164, 138;
-  --arcoblue-5: 255, 107, 53;
-  --arcoblue-6: rgb(232, 86, 40);
-  --arcoblue-7: rgb(204, 85, 41);
-  --arcoblue-8: rgb(168, 69, 34);
-  --arcoblue-9: rgb(125, 52, 27);
-  --arcoblue-10: rgb(51, 19, 9);
-
-  /* Surfaces — white-first. */
-  --bg-base: #ffffff;
-  --bg-1: #f7f8fa;
-  --bg-2: #efeff3;
-  --bg-3: #e6e8ee;
-
-  /* Text — WCAG-tuned against the light ramp. */
-  --text-primary: #1d2129;
-  --text-secondary: #4e5969;
-  --text-disabled: #c9cdd4;
-  --text-muted: #86909c;
-  --text-dim: #a9b0ba;
-
-  /* Borders. */
-  --border-base: #e5e6eb;
-  --border-light: #f2f3f5;
-
-  /* Brand tints for light surfaces. */
-  --brand-soft-bg: rgba(255, 107, 53, 0.08);
-  --brand-soft-border: rgba(255, 107, 53, 0.28);
-
-  /* Semantic — light-mode variants (deeper fills read on white). */
-  --primary: #ff6b35;
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
-
-  /* Arco neutral ramp mapped onto the light scale so Tabs, Input and Modal
-     follow the theme instead of falling back to Arco defaults. */
-  --color-text-1: var(--text-primary);
-  --color-text-2: var(--text-secondary);
-  --color-text-3: var(--text-muted);
-  --color-text-4: var(--text-disabled);
-
-  --color-bg-1: #ffffff;
-  --color-bg-2: #f7f8fa;
-  --color-bg-3: #efeff3;
-  --color-bg-4: #e6e8ee;
-  --color-bg-5: #dcdfe6;
-
-  --color-fill-1: #f7f8fa;
-  --color-fill-2: #efeff3;
-  --color-fill-3: #e6e8ee;
-  --color-fill-4: #dcdfe6;
-
-  --color-border-1: #f2f3f5;
-  --color-border-2: #e5e6eb;
-  --color-border-3: #c9cdd4;
-  --color-border-4: #86909c;
-
-  /* Semantic surfaces — the module CSS reads these, never literal overlays. */
-  --surface-card: #ffffff;
-  --surface-card-grad-top: rgba(17, 24, 39, 0.02);
-  --surface-card-grad-bottom: rgba(17, 24, 39, 0.006);
-  --surface-row: #f7f8fa;
-  --surface-row-hover: #eef0f4;
-  --surface-chip: rgba(17, 24, 39, 0.05);
-  --shadow-1: 0 1px 2px rgba(17, 24, 39, 0.06);
-  --shadow-2: 0 4px 16px rgba(17, 24, 39, 0.08);
-  --shadow-3: 0 12px 36px rgba(17, 24, 39, 0.12);
-}
-
-/* ---- Dark (refined cinematic) ---- */
+/* ---- Dark (default) — Stitch Mission Control navy + sky accent ---- */
+:root,
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --primary-1: 85, 42, 24;
-  --primary-2: 170, 84, 48;
-  --primary-3: 221, 110, 63;
-  --primary-4: 250, 125, 80;
-  --primary-5: 255, 107, 53;
-  --primary-6: 255, 107, 53;
-  --primary-7: 255, 130, 85;
-  --primary-8: 255, 150, 112;
-  --primary-9: 255, 179, 153;
-  --primary-10: rgb(255, 230, 219);
+  /* Brand / primary actions — sky/cyan (DESIGN.md). */
+  --brand: #38bdf8;
+  --brand-hover: #7dd3fc;
+  --brand-pressed: #0ea5e9;
 
-  --arcoblue-1: 85, 42, 24;
-  --arcoblue-2: 170, 84, 48;
-  --arcoblue-3: 221, 110, 63;
-  --arcoblue-4: 250, 125, 80;
-  --arcoblue-5: 255, 107, 53;
-  --arcoblue-6: 255, 107, 53;
-  --arcoblue-7: 255, 130, 85;
-  --arcoblue-8: 255, 150, 112;
-  --arcoblue-9: 255, 179, 153;
-  --arcoblue-10: rgb(255, 230, 219);
+  /* Arco primary — sky ramp re-tints Buttons, Tabs focus, etc. */
+  --primary-1: 8, 47, 73;
+  --primary-2: 12, 74, 110;
+  --primary-3: 3, 105, 161;
+  --primary-4: 2, 132, 199;
+  --primary-5: 14, 165, 233;
+  --primary-6: 56, 189, 248;
+  --primary-7: 125, 211, 252;
+  --primary-8: 186, 230, 253;
+  --primary-9: 224, 242, 254;
+  --primary-10: rgb(240, 249, 255);
 
-  /* Hybrid C dark canvas (DESIGN.md / stitch Mission Control) */
+  --arcoblue-1: 8, 47, 73;
+  --arcoblue-2: 12, 74, 110;
+  --arcoblue-3: 3, 105, 161;
+  --arcoblue-4: 2, 132, 199;
+  --arcoblue-5: 14, 165, 233;
+  --arcoblue-6: 56, 189, 248;
+  --arcoblue-7: 125, 211, 252;
+  --arcoblue-8: 186, 230, 253;
+  --arcoblue-9: 224, 242, 254;
+  --arcoblue-10: rgb(240, 249, 255);
+
   --bg-base: #090d16;
   --bg-1: #0f172a;
   --bg-2: #161f33;
@@ -179,13 +93,13 @@
   --border-base: #24334c;
   --border-light: #1e293b;
 
-  --brand-soft-bg: rgba(255, 107, 53, 0.06);
-  --brand-soft-border: rgba(255, 107, 53, 0.22);
+  --brand-soft-bg: rgba(56, 189, 248, 0.12);
+  --brand-soft-border: rgba(56, 189, 248, 0.35);
 
-  --primary: #ff6b35;
+  --primary: #38bdf8;
   --success: #34d399;
   --warning: #fbbf24;
-  --danger: #f87171;
+  --danger: #fb7185;
 
   --color-text-1: var(--text-primary);
   --color-text-2: var(--text-secondary);
@@ -209,14 +123,103 @@
   --color-border-4: #64748b;
 
   --surface-card: #161f33;
-  --surface-card-grad-top: rgba(56, 189, 248, 0.04);
+  --surface-card-grad-top: rgba(56, 189, 248, 0.05);
   --surface-card-grad-bottom: rgba(255, 255, 255, 0.01);
-  --surface-row: rgba(255, 255, 255, 0.03);
-  --surface-row-hover: rgba(255, 255, 255, 0.06);
-  --surface-chip: rgba(255, 255, 255, 0.07);
+  --surface-row: rgba(255, 255, 255, 0.04);
+  --surface-row-hover: rgba(255, 255, 255, 0.07);
+  --surface-chip: rgba(255, 255, 255, 0.08);
+  --input-bg: #0b101b;
+  --input-border: #334155;
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-3: 0 12px 36px rgba(0, 0, 0, 0.65);
+}
+
+/* ---- Light (optional via toggle) — orange brand retained ---- */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --brand: #ff6b35;
+  --brand-hover: #ff8255;
+  --brand-pressed: #cc5529;
+
+  --primary-1: 255, 240, 232;
+  --primary-2: 255, 219, 203;
+  --primary-3: 255, 196, 175;
+  --primary-4: 255, 164, 138;
+  --primary-5: 255, 107, 53;
+  --primary-6: rgb(232, 86, 40);
+  --primary-7: rgb(204, 85, 41);
+  --primary-8: rgb(168, 69, 34);
+  --primary-9: rgb(125, 52, 27);
+  --primary-10: rgb(51, 19, 9);
+
+  --arcoblue-1: 255, 240, 232;
+  --arcoblue-2: 255, 219, 203;
+  --arcoblue-3: 255, 196, 175;
+  --arcoblue-4: 255, 164, 138;
+  --arcoblue-5: 255, 107, 53;
+  --arcoblue-6: rgb(232, 86, 40);
+  --arcoblue-7: rgb(204, 85, 41);
+  --arcoblue-8: rgb(168, 69, 34);
+  --arcoblue-9: rgb(125, 52, 27);
+  --arcoblue-10: rgb(51, 19, 9);
+
+  /* Cool gray page — pure white washed everything out. */
+  --bg-base: #e8ecf2;
+  --bg-1: #f4f6f9;
+  --bg-2: #e2e7ef;
+  --bg-3: #d5dbe6;
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-disabled: #94a3b8;
+  --text-muted: #475569;
+  --text-dim: #64748b;
+
+  --border-base: #cbd5e1;
+  --border-light: #e2e8f0;
+
+  --brand-soft-bg: rgba(255, 107, 53, 0.12);
+  --brand-soft-border: rgba(255, 107, 53, 0.4);
+
+  --primary: #ff6b35;
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+
+  --color-text-1: var(--text-primary);
+  --color-text-2: var(--text-secondary);
+  --color-text-3: var(--text-muted);
+  --color-text-4: var(--text-disabled);
+
+  --color-bg-1: #f8fafc;
+  --color-bg-2: #ffffff;
+  --color-bg-3: #f1f5f9;
+  --color-bg-4: #e2e8f0;
+  --color-bg-5: #cbd5e1;
+
+  --color-fill-1: #ffffff;
+  --color-fill-2: #f1f5f9;
+  --color-fill-3: #e2e8f0;
+  --color-fill-4: #cbd5e1;
+
+  --color-border-1: #e2e8f0;
+  --color-border-2: #cbd5e1;
+  --color-border-3: #94a3b8;
+  --color-border-4: #64748b;
+
+  --surface-card: #ffffff;
+  --surface-card-grad-top: rgba(15, 23, 42, 0.03);
+  --surface-card-grad-bottom: rgba(15, 23, 42, 0.01);
+  --surface-row: #f1f5f9;
+  --surface-row-hover: #e2e8f0;
+  --surface-chip: rgba(15, 23, 42, 0.07);
+  --input-bg: #ffffff;
+  --input-border: #94a3b8;
+  --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --shadow-2: 0 4px 16px rgba(15, 23, 42, 0.1);
+  --shadow-3: 0 12px 36px rgba(15, 23, 42, 0.14);
 }
 
 /* ---- Base ---- */
@@ -225,4 +228,36 @@ body {
   margin: 0;
   color: var(--text-primary);
   background: var(--bg-base);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Global Arco form controls — keep inputs on-theme in both modes. */
+.arco-textarea-wrapper,
+.arco-input-wrapper,
+.arco-input,
+.arco-textarea,
+.arco-select-view {
+  background-color: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-primary) !important;
+}
+
+.arco-textarea::placeholder,
+.arco-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.arco-textarea-wrapper:focus-within,
+.arco-input-wrapper:focus-within,
+.arco-select-view:focus-within,
+.arco-input:focus,
+.arco-textarea:focus {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 2px var(--brand-soft-bg) !important;
+}
+
+.arco-select-view-value,
+.arco-select-view-input {
+  color: var(--text-primary) !important;
 }

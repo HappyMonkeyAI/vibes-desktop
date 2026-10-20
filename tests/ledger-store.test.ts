@@ -148,13 +148,21 @@ describe('LedgerStore (T5)', () => {
     await store.recordMissionEvent('Do the thing', 'running', dir, missionId);
     await store.seedPlannedTasks(['A', 'B'], dir, missionId);
     await store.recordTaskStatus({ name: 'A', status: 'in-progress' }, dir, missionId);
+    await store.recordTaskStatus(
+      { name: 'Mission Scheduler', status: 'failed', detail: 'Scheduler deadlock: circular depends_on' },
+      dir,
+      missionId,
+    );
 
-    const count = await store.markOpenTasksFailed(missionId, 'Mission failed. Completed 0/2 tasks.');
+    const count = await store.markOpenTasksFailed(missionId);
     expect(count).toBe(2);
 
     const snap = await store.snapshot();
     expect(snap.entries.find((e) => e.title === 'A')!.status).toBe('failed');
-    expect(snap.entries.find((e) => e.title === 'B')!.status).toBe('failed');
+    expect(snap.entries.find((e) => e.title === 'A')!.detail).toBe('Left incomplete when the mission ended.');
+    expect(snap.entries.find((e) => e.title === 'B')!.detail).toContain('Left pending');
+    // Must not overwrite the scheduler's real error with the mission summary.
+    expect(snap.entries.find((e) => e.title === 'Mission Scheduler')!.detail).toContain('Scheduler deadlock');
     expect(snap.entries.find((e) => e.kind === 'mission')!.status).toBe('running'); // caller updates mission separately
     rmSync(dir, { recursive: true, force: true });
   });

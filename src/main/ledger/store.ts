@@ -191,8 +191,10 @@ export class LedgerStore extends EventEmitter {
     });
   }
 
-  /** When a mission fails, leave no checklist row stuck on EXECUTING / PENDING. */
-  async markOpenTasksFailed(missionId: string, detail?: string): Promise<number> {
+  /** When a mission fails, leave no checklist row stuck on EXECUTING / PENDING.
+   *  Preserves any richer step/system detail already on the row; does not stamp
+   *  the mission summary onto every incomplete step. */
+  async markOpenTasksFailed(missionId: string): Promise<number> {
     return this.enqueue(async () => {
       await this.ready;
       let count = 0;
@@ -205,7 +207,11 @@ export class LedgerStore extends EventEmitter {
           ...entry,
           status: 'failed',
           group: classify({ status: 'failed', needsHuman: false }),
-          detail: detail ?? entry.detail,
+          detail:
+            entry.detail
+            || (entry.status === 'pending'
+              ? 'Left pending when the mission ended (dependency never became runnable).'
+              : 'Left incomplete when the mission ended.'),
           updatedAt: Date.now(),
         };
         await this.append(failed);

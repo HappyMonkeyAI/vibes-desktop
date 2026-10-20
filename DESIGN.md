@@ -1,6 +1,6 @@
 # DESIGN.md — Vibes Desktop Mission Control (Hybrid C)
 
-Last locked: 2026-10-20. Visual target: dark Mission Control (stitch HTML #2) + existing card workflow. TUI informs *what* to surface; desktop does not embed the TUI.
+Last locked: 2026-10-20. Visual target: dark Mission Control palette/typography from Stitch + Hybrid C card workflow (not Stitch’s list-only / Entry Details modal layout). TUI informs *what* to surface; desktop does not embed the TUI.
 
 ## Direction
 
@@ -32,9 +32,9 @@ Empty state stays ADR-0003: **"All quiet"**, never an incomplete-source error.
 
 ## Visual contract
 
-- **Theme default:** dark canvas (`#090D16` / surface `#0F172A` family) aligned with stitch dark Mission Control; light theme tokens remain via existing `theme.css`.
-- **Accent:** sky/cyan for primary actions and active borders; rose for failed/needs-you; amber for blocked; emerald for done/live.
-- **Type:** UI sans from current stack; mono (JetBrains Mono or system mono) for paths, IDs, logs, diagnostics.
+- **Theme default:** dark canvas (`#090D16` / surface `#0F172A` family) aligned with Stitch Mission Control; light remains via header toggle (orange brand in light).
+- **Accent (dark):** sky/cyan `#38bdf8` for primary actions / Arco primary; rose for failed/needs-you; amber for blocked; emerald for done/live.
+- **Type:** IBM Plex Sans + IBM Plex Mono (Stitch / Hybrid C mock). Layout stays Hybrid C (cards + depth) — not a 1:1 clone of Stitch list + Entry Details modal.
 - **Cards:** interaction containers only (mission tiles + Launch). No decorative card chrome in the header/hero.
 - **Density:** TUI-inspired *information*, not TUI chrome (no Alt+ shortcut maze in v1 of this pass).
 
@@ -44,7 +44,7 @@ Empty state stays ADR-0003: **"All quiet"**, never an incomplete-source error.
 2. **Direct Start:** dispatch Start without Review when user chooses “Start mission” (plan+execute); Review remains available via Generate Tasks / Launch modal.
 3. **Select card:** opens depth panel (prefer sticky split over full-screen modal when width allows; modal fallback on narrow).
 4. **Active mission:** depth panel auto-focuses the running card; checklist + logs update from ledger subscription (no fake streams).
-5. **Failure:** show `detail` / diagnostic text in the depth panel terminal block; Retry / Archive actions stay in the panel footer.
+5. **Failure:** expandable **Why this failed** in the depth panel (mission summary + system rows + failed steps); each failed step expands for its own error text. Retry / Archive stay in the action bar.
 6. **Viewport:** tab pane scrolls the Operations page; card grid must not sit in a flex-shrunk strip. Depth actions (Retry / Archive / Terminate) sit under the panel header; panel body scrolls under a viewport `max-height`.
 
 ## Must surface (parity with TUI intent)

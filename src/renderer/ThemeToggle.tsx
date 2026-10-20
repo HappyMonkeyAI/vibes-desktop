@@ -4,10 +4,8 @@ import { Sun, Moon } from '@icon-park/react';
 
 /**
  * Theme toggle for the mission-control shell. Flips `data-theme` on <html>
- * (zerogterm pattern: light is the default, dark is retained behind the
- * attribute) and keeps `arco-theme` in sync so Arco re-tints with the same
- * brand-orange ramp. The choice persists in localStorage so a restart keeps
- * the user's mode.
+ * and keeps `arco-theme` in sync. Dark Mission Control (Stitch) is the default;
+ * light remains available. Choice persists in localStorage.
  */
 
 type ThemeMode = 'light' | 'dark';
@@ -15,10 +13,11 @@ type ThemeMode = 'light' | 'dark';
 function readStoredTheme(): ThemeMode {
   try {
     const stored = window.localStorage.getItem('vibes-theme');
-    return stored === 'dark' ? 'dark' : 'light';
+    if (stored === 'light' || stored === 'dark') return stored;
   } catch {
-    return 'light';
+    // ignore
   }
+  return 'dark';
 }
 
 function applyTheme(mode: ThemeMode): void {
@@ -34,8 +33,7 @@ export const ThemeToggle: React.FC = () => {
     try {
       window.localStorage.setItem('vibes-theme', mode);
     } catch {
-      // localStorage unavailable (e.g. a sandboxed context) — the attribute
-      // still flips for the session.
+      // localStorage unavailable — the attribute still flips for the session.
     }
   }, [mode]);
 

@@ -157,7 +157,13 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
   /** Wire a bridge's live task lifecycle events into the ledger, scoped to one mission. */
   const wireLedger = (mission: MissionBridge, workspaceRoot: string, missionId: string): void => {
     mission.on('task-status', (event) => {
-      void store.recordTaskStatus(event, workspaceRoot, missionId).catch(() => undefined);
+      void store
+        .recordTaskStatus(
+          { name: event.name, status: event.status, detail: event.detail },
+          workspaceRoot,
+          missionId,
+        )
+        .catch(() => undefined);
     });
   };
 
@@ -177,7 +183,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
             // explicit completed mission is recorded done.
             const outcome = missionOutcomeFrom(result);
             if (outcome.status === 'failed') {
-              await store.markOpenTasksFailed(missionId, outcome.detail).catch(() => undefined);
+              await store.markOpenTasksFailed(missionId).catch(() => undefined);
             }
             return store.recordMissionEvent(request, outcome.status, root, missionId, outcome.detail).catch(() => undefined);
           }
@@ -188,7 +194,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
           // stop — already reflected as blocked rows, not a new failure.
           if (!stopRequested && gen === generation) {
             const detail = error instanceof Error ? error.message : String(error);
-            await store.markOpenTasksFailed(missionId, detail).catch(() => undefined);
+            await store.markOpenTasksFailed(missionId).catch(() => undefined);
             return store.recordMissionEvent(request, 'failed', root, missionId, detail).catch(() => undefined);
           }
           return undefined;
