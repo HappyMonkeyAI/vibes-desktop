@@ -2,6 +2,69 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-20 (milestone) — Commit Hybrid C + voice + plan-seed; MCP roadmap
+
+**Done:** Parked a good stopping point. TASKS P7/T26 = external MCP registration for missions (prompt path ≠ wired tools). T24 TTS still later; T21 V3 live pass still owed.
+
+**What's next:** Commit on `ag/ledger-ux-theme-audit`; then T26 design or V3 live verify.
+
+## 2026-10-20 (mission UX) — Plan showed 6 steps; card showed 0/2 then failed 1/5
+
+**Symptom:** Launch Agent review listed ~6 tasks; live card showed 0/2 (then 0/2 with Mission Scheduler). Diagnostics: `Mission failed. Completed 1/5 tasks.` First task stuck EXECUTING.
+
+**Cause:** Checklist only lists ledger rows from `[TASK_STATUS]` events — planned tasks were never seeded. Child completed 1/5 then dependency-deadlocked (`Mission Scheduler` synthetic failure). Asking for an MCP path in the prompt does not register that server with the vibes child.
+
+**Fix:** `seedPlannedTasks` on start (incl. acceptPlan); `markOpenTasksFailed` on mission failure; hide `Mission Scheduler` from progress/checklist.
+
+**Evidence:** new mission-service + ledger-store tests; `npm test` / typecheck.
+
+## 2026-10-20 (UI) — Depth panel / ops layout on short screens
+
+**Done:** Retry moved under depth header. Mid fix over-constrained ops (`max-height` + flex-shrunk `.split`) → cards only in a tiny top strip with empty white below. Reset: ops grows naturally; tab pane scrolls; split `flex: 0 0 auto`. Rebuilt.
+
+**Evidence:** `npm test` 104; `npm run build` ok.
+
+**What's next:** Restart app — full card grid should fill the pane again; open a failed mission for Retry under the title.
+
+## 2026-10-20 (voice fix) — Builtin Whisper default; stale out/ was still yapsnap
+
+**Done:** Default STT is in-app Whisper ONNX (download on first hold-to-talk, ZeroG-style). Soft-migrate `yapsnap` → `builtin` on boot. User still saw yapsnap install hint because **`out/` was stale** (`DEFAULT_SETTINGS.speechEngine: "yapsnap"`, `asEngine` fell back to yapsnap when `settings.json` had no `speechEngine`). Rebuilt; bundle includes `voice-worker` + WASM.
+
+**Evidence:** `npm run build` → voice-worker + ort-wasm assets. `npm test` → 104 passed. Source `settings.json` has no speechEngine → new `asEngine` → `builtin`.
+
+**What's next:** Restart app (`npm start` or `npm run dev`), hold-to-talk — expect “Downloading speech model …%” then transcript. T24 Agent Voice TTS later.
+
+## 2026-10-20 (voice) — Settings → Voice: yapsnap + optional qwen3-asr server
+
+**Done:** Locked STT path A (yapsnap) plus optional OpenAI-compatible server (same shape as ZeroG / qwen3-asr-server). Settings gains General | Voice tabs: engine pick, language, doctor + **Download / warm models**, server URL/model/encrypted key + Test. `voice:transcribe` routes by engine. ADR-0002 amended; TTS announce deferred (T24).
+
+**Evidence:** `npm test` → **104/104** (+ speech-server + settings-voice). Typecheck clean.
+
+**What's next:** Point Voice → Server at your qwen3-asr URL/key and Test; warm yapsnap if staying local. T24 Agent Voice TTS later.
+
+## 2026-10-20 (later) — Hybrid C UI implemented (T16–T20)
+
+**Done:** Built Hybrid C Operations shell per `DESIGN.md` + mock at `.planning/hybrid-c/mockups/hybrid-c/`.
+- Always-on dispatch (Start direct; Review plan… optional; Launch modal + Accept & Launch unchanged)
+- Metric strip from `classify()` (Needs you / Running / Upcoming / Recent) with click-to-filter
+- Card grid retained; selecting a card (auto-select running) opens sticky depth panel: diagnostics from `LedgerEntry.detail`, live checklist, ledger-derived live logs, Retry/Terminate/Archive
+- App header LIVE / voice pills; footer engine line; dark theme tokens shifted to Mission Control navy canvas
+- Wayland Mission Control path noted as pattern source (not engine)
+
+**Evidence:** `npm test` → **99/99 passed** (3 skipped). `npm run typecheck` clean. Mock still at http://localhost:5179 if serve is up.
+
+**What's next:** T21 V3 — run a live mission and confirm checklist + logs + failure `detail` without DevTools.
+
+**Open questions:** Wire real model/context into footer when the child exposes it.
+
+## 2026-10-20 — UI direction locked: Hybrid C (cards + Mission Control depth)
+
+**Done:** Compared TUI screenshots, stitch card mockups, and Mission Control HTML against current OperationsView. Locked **Hybrid C** in `DESIGN.md`. Added P5 tasks T16–T21.
+
+**Evidence:** Design contract + HTML mockup.
+
+**What's next:** Implement (done in later entry).
+
 ## 2026-10-19 (later) — False-done mission bug: root-caused across both processes, fixed + V3 verified against real LLMs
 
 **Symptom:** a live mission ("Update index.html to have a bootstrap enabled via CDN") reported **done in ~36 ms** with zero tasks executed and the target file untouched.

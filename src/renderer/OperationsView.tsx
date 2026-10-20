@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import type { LedgerEntry, LedgerSnapshot, WorkspaceHistoryEntry } from '@shared/channels';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { ActivityGroup, LedgerEntry, LedgerSnapshot, WorkspaceHistoryEntry } from '@shared/channels';
+import { classify } from '@shared/classify';
 import { Button, Input, Modal, Message, Select } from '@arco-design/web-react';
 import { Plus, Close } from '@icon-park/react';
 import VoiceInput from './VoiceInput';
@@ -7,18 +8,17 @@ import styles from './OperationsView.module.css';
 
 /** Accent color per status — ported from the fork's mission-control page. */
 const STATUS_ACCENT: Record<string, string> = {
-  running: '#ff6b35',
+  running: '#38bdf8',
   verifying: '#b07bff',
-  failed: '#ff4d4f',
+  failed: '#fb7185',
   zombie: '#c0392b',
-  blocked: '#ff9f43',
+  blocked: '#fbbf24',
   pending: '#5b8def',
-  done: '#2ec27e',
+  done: '#34d399',
   idle: '#7a818c',
   archived: '#b0b0b0',
 };
 
-/** Status badge labels for the card view */
 const STATUS_LABELS: Record<string, string> = {
   running: 'EXECUTING',
   verifying: 'VERIFYING',
@@ -31,31 +31,38 @@ const STATUS_LABELS: Record<string, string> = {
   archived: 'ARCHIVED',
 };
 
-/** Checklist icons for the detail modal's live task list. */
 const TASK_ICONS: Record<string, string> = {
   running: '⏳',
   verifying: '🔍',
-  done: '✅',
-  failed: '❌',
+  done: '✓',
+  failed: '✕',
   blocked: '⛔',
   zombie: '💀',
-  pending: '◻️',
+  pending: '·',
   idle: '·',
 };
 
-/** A mission card: one per mission row, carrying that mission's task rows
- *  (matched by missionId, never by a global title or workspace collision). */
+const METRIC_DEFS: Array<{ group: ActivityGroup; label: string; hint: string; accent: string }> = [
+  { group: 'needs-you', label: 'Needs you', hint: 'Failed / intervention', accent: '#fb7185' },
+  { group: 'running', label: 'Running', hint: 'Agents executing', accent: '#38bdf8' },
+  { group: 'upcoming', label: 'Upcoming', hint: 'Queued', accent: '#64748b' },
+  { group: 'recent', label: 'Recent', hint: 'Delivered', accent: '#34d399' },
+];
+
 type MissionCard = {
   id: string;
   missionId?: string;
   title: string;
   status: LedgerEntry['status'];
+  group: ActivityGroup;
   workspaceRoot?: string;
   updatedAt: number;
+  detail?: string;
   tasks: LedgerEntry[];
 };
 
-/** Format timestamp to readable date string */
+type LogLine = { at: number; text: string };
+
 const formatDate = (timestamp: number): string => {
   const date = new Date(timestamp);
   return date.toLocaleDateString('en-US', {
@@ -66,10 +73,27 @@ const formatDate = (timestamp: number): string => {
   });
 };
 
+const formatLogTime = (timestamp: number): string =>
+  new Date(timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+/** Internal scheduler rows are not plan steps — exclude from progress/checklist. */
+const isPlanTask = (entry: LedgerEntry) => entry.title !== 'Mission Scheduler';
+
+const progressOf = (tasks: LedgerEntry[]) => {
+  const planTasks = tasks.filter(isPlanTask);
+  const done = planTasks.filter((t) => t.status === 'done').length;
+  return { done, total: planTasks.length };
+};
+
+const logTextFor = (entry: LedgerEntry): string => {
+  const kind = entry.kind === 'mission' ? 'MISSION' : 'TASK';
+  const base = `[${kind}] ${entry.status.toUpperCase()} — ${entry.title}`;
+  return entry.detail ? `${base} — ${entry.detail}` : base;
+};
+
 /**
- * OperationsView — the card-based Operations canvas with modal workflow.
- * One card per mission (mission-level ledger row); task rows group under their
- * own mission via missionId.
+ * OperationsView — Hybrid C: always-on dispatch, classify() metrics, card grid,
+ * and a live depth panel (checklist + detail + ledger-derived logs).
  */
 const OperationsView: React.FC = () => {
   const [snapshot, setSnapshot] = useState<LedgerSnapshot | null>(null);
@@ -79,21 +103,20 @@ const OperationsView: React.FC = () => {
   const [workspaceHistory, setWorkspaceHistory] = useState<WorkspaceHistoryEntry[]>([]);
   const [voiceReady, setVoiceReady] = useState<boolean | null>(null);
 
-  // Modal state
   const [launchModalVisible, setLaunchModalVisible] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<MissionCard | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [groupFilter, setGroupFilter] = useState<ActivityGroup | 'all'>('all');
   const [missionPrompt, setMissionPrompt] = useState('');
   const [proposedTasks, setProposedTasks] = useState<string[]>([]);
   const [planning, setPlanning] = useState(false);
+  const [logsByMission, setLogsByMission] = useState<Record<string, LogLine[]>>({});
 
-  // Recent working directories for the picker.
   const refreshHistory = async () => {
     try {
       setWorkspaceHistory(await window.vibesDesktop.workspace.history.get());
     } catch {
-      // History failing is non-fatal — the picker still offers Choose…
+      // History failing is non-fatal
     }
   };
 
@@ -101,7 +124,6 @@ const OperationsView: React.FC = () => {
     void refreshHistory();
   }, []);
 
-  // Handle workspace selection via the native dialog.
   const handleSelectWorkspace = async () => {
     try {
       const res = await window.vibesDesktop.workspace.select();
@@ -114,7 +136,6 @@ const OperationsView: React.FC = () => {
     }
   };
 
-  // Handle workspace selection from the recent-directories dropdown.
   const handlePickRecent = (path: string) => {
     setWorkspaceRoot(path);
     void window.vibesDesktop.workspace.history.save(path).then(refreshHistory).catch(() => {});
@@ -129,19 +150,51 @@ const OperationsView: React.FC = () => {
     }
   };
 
-  // Voice doctor on mount
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
+        const settings = await window.vibesDesktop.settings.get();
+        if (settings.speechEngine === 'builtin' || settings.speechEngine === 'server') {
+          if (!cancelled) setVoiceReady(true);
+          return;
+        }
         const result = await window.vibesDesktop.voice.doctor();
         if (!cancelled) setVoiceReady(result.ready);
       } catch {
-        // Doctor failing is non-fatal
+        if (!cancelled) setVoiceReady(true);
       }
     })();
     return () => { cancelled = true; };
   }, []);
+
+  const appendLog = (missionId: string | undefined, entry: LedgerEntry) => {
+    if (!missionId) return;
+    const text = logTextFor(entry);
+    setLogsByMission((prev) => {
+      const existing = prev[missionId] ?? [];
+      const last = existing[existing.length - 1];
+      if (last && last.text === text) return prev;
+      return {
+        ...prev,
+        [missionId]: [...existing, { at: entry.updatedAt || Date.now(), text }].slice(-120),
+      };
+    });
+  };
+
+  const seedLogsFromEntries = (entries: LedgerEntry[]) => {
+    const next: Record<string, LogLine[]> = {};
+    const ordered = [...entries].sort((a, b) => a.updatedAt - b.updatedAt);
+    for (const entry of ordered) {
+      const mid = entry.missionId;
+      if (!mid) continue;
+      const text = logTextFor(entry);
+      const bucket = next[mid] ?? (next[mid] = []);
+      const last = bucket[bucket.length - 1];
+      if (!last || last.text !== text) bucket.push({ at: entry.updatedAt, text });
+    }
+    setLogsByMission(next);
+  };
 
   const handleStartMission = async () => {
     const request = missionRequest.trim();
@@ -156,8 +209,6 @@ const OperationsView: React.FC = () => {
       if (result.alreadyRunning) Message.warning('A mission is already running.');
       else if (!result.started && result.error) Message.error(result.error);
       else if (result.started) {
-        // The service resolves as soon as the mission is dispatched — the
-        // ledger streams live task updates from here on.
         Message.success('Mission started');
         setMissionRequest('');
       }
@@ -168,7 +219,6 @@ const OperationsView: React.FC = () => {
     }
   };
 
-  // Launch New Agent Modal handlers
   const handleLaunchModalOpen = () => setLaunchModalVisible(true);
   const handleLaunchModalClose = () => setLaunchModalVisible(false);
 
@@ -201,8 +251,10 @@ const OperationsView: React.FC = () => {
     }
   };
 
-  // Review Modal handlers — Accept launches the SAME plan the user reviewed
-  // (the planning child is kept alive by the service until accept or decline).
+  const handleOpenReviewFromDispatch = () => {
+    void handleGenerateTasks();
+  };
+
   const handleReviewAccept = async () => {
     if (starting) return;
     setStarting(true);
@@ -231,7 +283,6 @@ const OperationsView: React.FC = () => {
   const handleReviewDecline = () => {
     setReviewModalVisible(false);
     setProposedTasks([]);
-    // Discard the reviewed plan so its child doesn't linger.
     void window.vibesDesktop.mission.cancelPlan().catch(() => {});
   };
 
@@ -252,25 +303,13 @@ const OperationsView: React.FC = () => {
     }
   };
 
-  // Detail Modal handlers
-  const handleRowClick = (card: MissionCard) => {
-    setSelectedCard(card);
-    setDetailModalVisible(true);
-  };
-  const handleCloseDetailModal = () => {
-    setDetailModalVisible(false);
-    setSelectedCard(null);
-  };
-
-  // Archive entry handler — archives the mission card row plus its task rows.
   const handleArchiveEntry = async (card: MissionCard) => {
     try {
       const ids = [card.id, ...card.tasks.map((t) => t.id)];
       const result = await window.vibesDesktop.ledger.archive(ids);
       if (result.ok) {
-        // The ledger subscription will update the snapshot with the archived
-        // entries and they drop out of the active view.
         Message.success('Mission archived');
+        if (selectedCardId === card.id) setSelectedCardId(null);
       } else {
         Message.error(result.error || 'Failed to archive mission');
       }
@@ -279,22 +318,17 @@ const OperationsView: React.FC = () => {
     }
   };
 
-  // Retry mission handler — the card title IS the original request, so a retry
-  // re-runs exactly what the user asked for.
-  const handleRetryMission = async () => {
-    if (!selectedCard || starting) return;
+  const handleRetryMission = async (card: MissionCard) => {
+    if (starting) return;
     setStarting(true);
     try {
       const result = await window.vibesDesktop.mission.start({
-        request: selectedCard.title,
-        workspaceRoot: selectedCard.workspaceRoot || workspaceRoot || undefined,
+        request: card.title,
+        workspaceRoot: card.workspaceRoot || workspaceRoot || undefined,
       });
       if (result.alreadyRunning) Message.warning('A mission is already running.');
       else if (!result.started && result.error) Message.error(result.error);
-      else if (result.started) {
-        Message.success('Mission restarted');
-        handleCloseDetailModal();
-      }
+      else if (result.started) Message.success('Mission restarted');
     } catch (error) {
       Message.error(error instanceof Error ? error.message : String(error));
     } finally {
@@ -302,24 +336,15 @@ const OperationsView: React.FC = () => {
     }
   };
 
-  // Terminate mission handler — only meaningful while a mission runs; the
-  // service records the stop itself (blocked rows), one toast here, no more.
   const handleTerminateMission = async () => {
-    if (!selectedCard) return;
-    if (selectedCard.status === 'running' || selectedCard.status === 'verifying') {
-      try {
-        await window.vibesDesktop.mission.stop();
-        Message.success('Mission terminated');
-        handleCloseDetailModal();
-      } catch (error) {
-        Message.error(error instanceof Error ? error.message : 'Failed to terminate mission');
-      }
-    } else {
-      Message.info('Mission is not currently running');
+    try {
+      await window.vibesDesktop.mission.stop();
+      Message.success('Mission terminated');
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Failed to terminate mission');
     }
   };
 
-  // Live stop from the toolbar.
   const handleStopMission = async () => {
     try {
       await window.vibesDesktop.mission.stop();
@@ -329,63 +354,81 @@ const OperationsView: React.FC = () => {
     }
   };
 
-  // Ledger data filtered to non-archived entries.
-  const [filteredSnapshot, setFilteredSnapshot] = useState<LedgerSnapshot | null>(null);
-
-  useEffect(() => {
-    if (!snapshot) {
-      setFilteredSnapshot(null);
-      return;
-    }
-    const activeEntries = snapshot.entries.filter((e) => e.status !== 'archived');
-    setFilteredSnapshot({
-      ...snapshot,
-      entries: activeEntries,
-    });
+  const entries = useMemo(() => {
+    const all = snapshot?.entries ?? [];
+    return all.filter((e) => e.status !== 'archived');
   }, [snapshot]);
 
-  const entries = filteredSnapshot?.entries ?? snapshot?.entries ?? [];
+  const cards: MissionCard[] = useMemo(() => {
+    const result: MissionCard[] = [];
+    for (const entry of entries) {
+      if (entry.kind !== 'mission') continue;
+      result.push({
+        id: entry.id,
+        missionId: entry.missionId,
+        title: entry.title,
+        status: entry.status,
+        group: classify(entry),
+        workspaceRoot: entry.workspaceRoot,
+        updatedAt: entry.updatedAt,
+        detail: entry.detail,
+        tasks: entry.missionId
+          ? entries.filter((e) => e.kind !== 'mission' && e.missionId === entry.missionId && isPlanTask(e))
+          : [],
+      });
+    }
+    return result;
+  }, [entries]);
 
-  /** Group ledger rows into mission cards: one card per mission-level row,
-   *  carrying that mission's task rows (matched by missionId). */
-  const cards: MissionCard[] = [];
-  for (const entry of entries) {
-    if (entry.kind !== 'mission') continue;
-    cards.push({
-      id: entry.id,
-      missionId: entry.missionId,
-      title: entry.title,
-      status: entry.status,
-      workspaceRoot: entry.workspaceRoot,
-      updatedAt: entry.updatedAt,
-      tasks: entry.missionId
-        ? entries.filter((e) => e.kind !== 'mission' && e.missionId === entry.missionId)
-        : [],
-    });
-  }
+  const metricCounts = useMemo(() => {
+    const counts: Record<ActivityGroup, number> = {
+      'needs-you': 0,
+      running: 0,
+      upcoming: 0,
+      recent: 0,
+    };
+    for (const card of cards) counts[card.group] += 1;
+    return counts;
+  }, [cards]);
+
+  const visibleCards = useMemo(
+    () => (groupFilter === 'all' ? cards : cards.filter((c) => c.group === groupFilter)),
+    [cards, groupFilter],
+  );
+
+  const selectedCard = useMemo(
+    () => cards.find((c) => c.id === selectedCardId) ?? null,
+    [cards, selectedCardId],
+  );
+
+  // Keep selection on a live mission; clear if the card vanished.
+  useEffect(() => {
+    if (selectedCardId && !cards.some((c) => c.id === selectedCardId)) {
+      setSelectedCardId(null);
+      return;
+    }
+    if (!selectedCardId) {
+      const running = cards.find((c) => c.status === 'running' || c.status === 'verifying');
+      if (running) setSelectedCardId(running.id);
+    }
+  }, [cards, selectedCardId]);
 
   const hasRunning = cards.some((c) => c.status === 'running' || c.status === 'verifying');
 
-  /** Progress for a card's task rows. */
-  const progressOf = (tasks: LedgerEntry[]) => {
-    const done = tasks.filter((t) => t.status === 'done').length;
-    return { done, total: tasks.length };
-  };
-
-  // Ledger subscription.
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     void (async () => {
       try {
         const snap = (await window.vibesDesktop.ledger.get()) as LedgerSnapshot;
         setSnapshot(snap);
+        seedLogsFromEntries(snap.entries.filter((e) => e.status !== 'archived'));
         unsubscribe = window.vibesDesktop.ledger.onNewEntry(({ entry }) => {
           setSnapshot((prev) => {
             if (!prev) return prev;
             const rest = prev.entries.filter((e) => e.id !== entry.id);
-            const entries = [...rest, entry];
-            return { entries, groupCounts: prev.groupCounts };
+            return { entries: [...rest, entry], groupCounts: prev.groupCounts };
           });
+          appendLog(entry.missionId, entry);
         });
       } catch (error) {
         Message.error(error instanceof Error ? error.message : 'Failed to load the activity ledger.');
@@ -394,149 +437,278 @@ const OperationsView: React.FC = () => {
     return () => unsubscribe?.();
   }, []);
 
-  // Compute summary metrics from the grouped cards.
-  const activeCount = cards.filter((c) => c.status === 'running' || c.status === 'verifying').length;
-  const completedCount = cards.filter((c) => c.status === 'done').length;
-  const tasksDoneCount = cards.reduce((sum, c) => sum + progressOf(c.tasks).done, 0);
+  const selectedLogs = selectedCard?.missionId ? (logsByMission[selectedCard.missionId] ?? []) : [];
+  const selectedProgress = selectedCard ? progressOf(selectedCard.tasks) : { done: 0, total: 0 };
+  const selectedPct =
+    selectedProgress.total > 0
+      ? Math.round((selectedProgress.done / selectedProgress.total) * 100)
+      : selectedCard?.status === 'done'
+        ? 100
+        : 0;
+
+  const taskFailureDetail = selectedCard?.tasks
+    .filter((t) => t.status === 'failed' && t.detail)
+    .map((t) => t.detail)
+    .join('\n');
+  const diagnostics = selectedCard?.detail || taskFailureDetail || '';
 
   return (
     <div className={styles.ops}>
-      {/* Summary Bar */}
-      <div className={styles.summaryBar}>
-        <div className={`${styles.metricCard} ${styles.metricActive}`}>
-          <div className={styles.metricValue}>{activeCount}</div>
-          <div className={styles.metricLabel}>ACTIVE</div>
-        </div>
-        <div className={`${styles.metricCard} ${styles.metricCompleted}`}>
-          <div className={styles.metricValue}>{completedCount}</div>
-          <div className={styles.metricLabel}>COMPLETED</div>
-        </div>
-        <div className={`${styles.metricCard} ${styles.metricTasks}`}>
-          <div className={styles.metricValue}>{tasksDoneCount}</div>
-          <div className={styles.metricLabel}>TASKS DONE</div>
-        </div>
-      </div>
-
-      {/* Launch New Agent Card + Mission Cards Grid — the Launch card is always
-          reachable, including the first-launch empty state. */}
-      {cards.length === 0 ? (
-        <>
-          {/* ADR-0003: first launch is clean — "All quiet", never an error banner. */}
-          <div className={styles.empty}>
-            <span className={styles.emptyTitle}>All quiet</span>
-            <span className={styles.emptyHint}>No missions yet. Launch a new agent to get started.</span>
+      {/* T16 — Always-on dispatch */}
+      <section className={styles.dispatch} aria-label="Dispatch">
+        <div className={styles.dispatchRow}>
+          <div className={styles.missionInput}>
+            <Input.TextArea
+              placeholder="Describe the mission — type it or hold-to-talk."
+              value={missionRequest}
+              onChange={(v) => setMissionRequest(v)}
+              autoSize={{ minRows: 2, maxRows: 5 }}
+            />
           </div>
-          <div className={styles.cardGrid}>
-            <button className={styles.launchCard} onClick={handleLaunchModalOpen}>
-              <Plus size={32} className={styles.launchIcon} />
-              <span className={styles.launchLabel}>Launch New Agent</span>
+          <div className={styles.dispatchActions}>
+            <VoiceInput onTranscript={(text) => setMissionRequest((prev) => (prev ? `${prev} ${text}` : text))} />
+            <Button
+              type="primary"
+              loading={starting}
+              disabled={!missionRequest.trim() || !workspaceRoot}
+              title={!workspaceRoot ? 'Choose a working directory first' : undefined}
+              onClick={() => void handleStartMission()}
+            >
+              Start mission
+            </Button>
+            {hasRunning && (
+              <Button status="danger" onClick={() => void handleStopMission()}>
+                Stop
+              </Button>
+            )}
+            <Button
+              type="outline"
+              loading={planning}
+              disabled={!missionRequest.trim() || !workspaceRoot || planning}
+              onClick={() => void handleOpenReviewFromDispatch()}
+            >
+              Review plan…
+            </Button>
+          </div>
+        </div>
+        <div className={styles.workspaceBar}>
+          <span className={styles.workspaceLabel}>Working directory</span>
+          <div className={styles.workspaceControls}>
+            <Select
+              placeholder="Select a directory…"
+              value={workspaceRoot || undefined}
+              onChange={(v) => handlePickRecent(String(v))}
+              allowClear
+              style={{ minWidth: 220, flex: 1 }}
+              triggerProps={{ autoAlignPopupWidth: true }}
+            >
+              {workspaceHistory.map((h) => (
+                <Select.Option key={h.path} value={h.path}>{h.path}</Select.Option>
+              ))}
+            </Select>
+            <Button size="small" type="outline" onClick={handleSelectWorkspace}>Choose…</Button>
+            {workspaceHistory.length > 0 && (
+              <Button size="small" type="text" onClick={() => void handleClearHistory()}>Clear</Button>
+            )}
+          </div>
+          {voiceReady === false && <span className={styles.voiceNotReady}>voice not ready</span>}
+        </div>
+      </section>
+
+      {/* T17 — Metric strip */}
+      <section className={styles.metrics} aria-label="Status metrics">
+        {METRIC_DEFS.map((m) => {
+          const active = groupFilter === m.group;
+          return (
+            <button
+              key={m.group}
+              type="button"
+              className={`${styles.metric} ${active ? styles.metricActive : ''}`}
+              style={{ ['--accent' as string]: m.accent }}
+              onClick={() => setGroupFilter(active ? 'all' : m.group)}
+            >
+              <div className={styles.metricValue}>{metricCounts[m.group]}</div>
+              <div className={styles.metricLabel}>{m.label}</div>
+              <div className={styles.metricHint}>{m.hint}</div>
             </button>
-          </div>
-        </>
-      ) : (
-        <div className={styles.cardGrid}>
-          {/* Launch New Agent Card */}
-          <button className={styles.launchCard} onClick={handleLaunchModalOpen}>
-            <Plus size={32} className={styles.launchIcon} />
-            <span className={styles.launchLabel}>Launch New Agent</span>
-          </button>
+          );
+        })}
+      </section>
 
-          {/* Mission Status Cards */}
-          {cards.map((card) => {
-            const progress = progressOf(card.tasks);
-            const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : (card.status === 'done' ? 100 : 0);
-            return (
-              <div
-                key={card.id}
-                className={`${styles.missionCard} ${card.status === 'running' || card.status === 'verifying' ? styles.runningMission : ''}`}
-                onClick={() => handleRowClick(card)}
-              >
-                <div className={styles.cardHeader}>
-                  <span className={styles.cardTitle}>{card.title}</span>
-                  <button className={styles.closeBtn} title="Archive mission" onClick={(e) => { e.stopPropagation(); void handleArchiveEntry(card); }}>
-                    <Close size={14} />
-                  </button>
-                </div>
-                <div className={styles.statusBadge} style={{ '--accent': STATUS_ACCENT[card.status] ?? '#7a818c' } as any}>
-                  {STATUS_LABELS[card.status] || card.status.toUpperCase()}
-                </div>
-                <div className={styles.workingDir}>
-                  {card.workspaceRoot || 'App default'}
-                </div>
-                <div className={styles.progressTracker}>
-                  <div className={styles.progressBar}>
-                    <div className={styles.progressFill} style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className={styles.progressText}>
-                    {progress.total > 0 ? `${progress.done} / ${progress.total} tasks (${pct}%)` : 'no task activity yet'}
-                  </span>
-                </div>
-                <div className={styles.missionDate}>
-                  {formatDate(card.updatedAt)}
-                </div>
+      {/* Cards + depth */}
+      <section className={`${styles.split} ${selectedCard ? styles.splitOpen : ''}`}>
+        <div className={styles.cardsCol}>
+          {cards.length === 0 ? (
+            <>
+              <div className={styles.empty}>
+                <span className={styles.emptyTitle}>All quiet</span>
+                <span className={styles.emptyHint}>No missions yet. Launch a new agent or start from the dispatch bar.</span>
               </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Toolbar */}
-      <div className={styles.opsToolbar}>
-        <span className={styles.live}>
-          <span className={styles.liveDot} />
-          Live
-        </span>
-        {voiceReady === false && (
-          <span className={styles.voiceNotReady}>voice not ready</span>
-        )}
-      </div>
-
-      <div className={styles.workspacePickerRow}>
-        <span className={styles.workspacePickerLabel}>WORKING DIRECTORY</span>
-        <div className={styles.workspacePickerInput}>
-          <Select
-            placeholder="Select a directory..."
-            value={workspaceRoot || undefined}
-            onChange={(v) => handlePickRecent(String(v))}
-            allowClear
-            triggerProps={{ autoAlignPopupWidth: true }}
-          >
-            {workspaceHistory.map((h) => (
-              <Select.Option key={h.path} value={h.path}>{h.path}</Select.Option>
-            ))}
-          </Select>
-          <Button size="small" type="outline" onClick={handleSelectWorkspace}>Choose…</Button>
-          {workspaceHistory.length > 0 && (
-            <Button size="small" type="text" onClick={() => void handleClearHistory()}>Clear</Button>
+              <div className={styles.cardGrid}>
+                <button type="button" className={styles.launchCard} onClick={handleLaunchModalOpen}>
+                  <Plus size={32} className={styles.launchIcon} />
+                  <span className={styles.launchLabel}>Launch New Agent</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className={styles.cardGrid}>
+              <button type="button" className={styles.launchCard} onClick={handleLaunchModalOpen}>
+                <Plus size={32} className={styles.launchIcon} />
+                <span className={styles.launchLabel}>Launch New Agent</span>
+              </button>
+              {visibleCards.map((card) => {
+                const progress = progressOf(card.tasks);
+                const pct = progress.total > 0
+                  ? Math.round((progress.done / progress.total) * 100)
+                  : (card.status === 'done' ? 100 : 0);
+                const selected = card.id === selectedCardId;
+                return (
+                  <div
+                    key={card.id}
+                    role="button"
+                    tabIndex={0}
+                    className={`${styles.missionCard} ${selected ? styles.missionCardSelected : ''} ${card.status === 'running' || card.status === 'verifying' ? styles.runningMission : ''}`}
+                    style={{ ['--accent' as string]: STATUS_ACCENT[card.status] ?? '#7a818c' }}
+                    onClick={() => setSelectedCardId(card.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedCardId(card.id);
+                      }
+                    }}
+                  >
+                    <div className={styles.cardHeader}>
+                      <span className={styles.cardTitle}>{card.title}</span>
+                      <button
+                        type="button"
+                        className={styles.closeBtn}
+                        title="Archive mission"
+                        onClick={(e) => { e.stopPropagation(); void handleArchiveEntry(card); }}
+                      >
+                        <Close size={14} />
+                      </button>
+                    </div>
+                    <div className={styles.statusBadge}>
+                      {STATUS_LABELS[card.status] || card.status.toUpperCase()}
+                    </div>
+                    <div className={styles.workingDir}>{card.workspaceRoot || 'App default'}</div>
+                    <div className={styles.progressTracker}>
+                      <div className={styles.progressBar}>
+                        <div className={styles.progressFill} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className={styles.progressText}>
+                        {progress.total > 0 ? `${progress.done} / ${progress.total} tasks (${pct}%)` : 'no task activity yet'}
+                      </span>
+                    </div>
+                    <div className={styles.missionDate}>{formatDate(card.updatedAt)}</div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
-      </div>
 
-      <div className={styles.composerRow}>
-        <div className={styles.missionInput}>
-          <Input.TextArea
-            placeholder="Describe the mission — type it or hold-to-talk."
-            value={missionRequest}
-            onChange={(v) => setMissionRequest(v)}
-            autoSize={{ minRows: 2, maxRows: 6 }}
-          />
-        </div>
-        <VoiceInput onTranscript={(text) => setMissionRequest((prev) => (prev ? `${prev} ${text}` : text))} />
-        <Button
-          type="primary"
-          loading={starting}
-          disabled={!missionRequest.trim() || !workspaceRoot}
-          title={!workspaceRoot ? 'Choose a working directory first' : undefined}
-          onClick={() => void handleStartMission()}
-        >
-          Start mission
-        </Button>
-        {hasRunning && (
-          <Button status="warning" onClick={() => void handleStopMission()}>
-            Stop mission
-          </Button>
+        {/* T18 / T19 — Depth panel */}
+        {selectedCard && (
+          <aside className={styles.depth} aria-label="Mission depth">
+            <div className={styles.depthHead}>
+              <div className={styles.depthHeadMain}>
+                <h3 className={styles.depthTitle}>{selectedCard.title}</h3>
+                <div
+                  className={styles.depthStatus}
+                  style={{ color: STATUS_ACCENT[selectedCard.status] }}
+                >
+                  <span className={styles.depthStatusDot} style={{ background: STATUS_ACCENT[selectedCard.status] }} />
+                  {STATUS_LABELS[selectedCard.status] || selectedCard.status.toUpperCase()}
+                </div>
+              </div>
+              <button type="button" className={styles.closeBtn} title="Close panel" onClick={() => setSelectedCardId(null)}>
+                <Close size={16} />
+              </button>
+            </div>
+
+            {/* Actions stay above the fold on short screens — body may scroll. */}
+            <div className={styles.depthActions}>
+              {(selectedCard.status === 'running' || selectedCard.status === 'verifying') && (
+                <Button status="danger" size="small" onClick={() => void handleTerminateMission()}>
+                  Terminate
+                </Button>
+              )}
+              <div className={styles.depthActionsRight}>
+                <Button size="small" type="outline" onClick={() => void handleArchiveEntry(selectedCard)}>
+                  Archive
+                </Button>
+                <Button size="small" type="primary" loading={starting} onClick={() => void handleRetryMission(selectedCard)}>
+                  Retry
+                </Button>
+              </div>
+            </div>
+
+            <div className={styles.depthBody}>
+              <div className={styles.depthMeta}>
+                <div>
+                  <div className={styles.fieldLabel}>Working directory</div>
+                  <div className={styles.workingDir}>{selectedCard.workspaceRoot || workspaceRoot || 'App default'}</div>
+                </div>
+                <div>
+                  <div className={styles.fieldLabel}>Progress</div>
+                  <div>
+                    {selectedProgress.total > 0
+                      ? `${selectedProgress.done} / ${selectedProgress.total} tasks · ${selectedPct}%`
+                      : '—'}
+                  </div>
+                </div>
+              </div>
+
+              {diagnostics ? (
+                <div>
+                  <div className={styles.fieldLabel}>Diagnostics</div>
+                  <pre className={styles.diag}>{diagnostics}</pre>
+                </div>
+              ) : null}
+
+              <div>
+                <div className={styles.fieldLabel}>Tasks</div>
+                <div className={styles.taskChecklistItems}>
+                  {selectedCard.tasks.length > 0 ? (
+                    selectedCard.tasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className={`${styles.checklistItem} ${task.status === 'running' || task.status === 'verifying' ? styles.checklistActive : ''}`}
+                      >
+                        <span className={styles.checklistIcon}>{TASK_ICONS[task.status] ?? '·'}</span>
+                        <span className={styles.checklistTitle}>{task.title}</span>
+                        <span className={styles.checklistStatus}>{STATUS_LABELS[task.status] || task.status.toUpperCase()}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className={styles.emptyState}>
+                      <span className={styles.emptyStateText}>No task activity recorded yet.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div className={styles.fieldLabel}>Live logs</div>
+                <div className={styles.logs}>
+                  {selectedLogs.length > 0 ? (
+                    selectedLogs.map((line, i) => (
+                      <div key={`${line.at}-${i}`} className={styles.logLine}>
+                        <span className={styles.logTs}>{formatLogTime(line.at)}</span>
+                        <span>{line.text}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className={styles.logsEmpty}>No ledger events for this mission yet.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </aside>
         )}
-      </div>
+      </section>
 
       {/* Modal 1: Launch New Agent */}
       <Modal
@@ -604,84 +776,6 @@ const OperationsView: React.FC = () => {
             )}
           </div>
         </div>
-      </Modal>
-
-      {/* Modal 3: Work-In-Progress & Execution Details */}
-      <Modal
-        visible={detailModalVisible}
-        onCancel={handleCloseDetailModal}
-        footer={[
-          <Button key="close" onClick={handleCloseDetailModal}>Close</Button>,
-          <Button key="retry" loading={starting} onClick={() => void handleRetryMission()}>Retry Mission</Button>,
-          ...(selectedCard && (selectedCard.status === 'running' || selectedCard.status === 'verifying')
-            ? [<Button key="terminate" status="warning" onClick={() => void handleTerminateMission()}>Terminate</Button>]
-            : []),
-        ]}
-        style={{ top: 40, width: 700 }}
-      >
-        {selectedCard && (
-          <div className={styles.detailModal}>
-            {/* Header Navigation */}
-            <div className={styles.detailHeader}>
-              <button className={styles.backBtn} onClick={handleCloseDetailModal}>
-                <Close size={18} />
-              </button>
-              <h3 className={styles.detailTitle}>{selectedCard.title}</h3>
-            </div>
-
-            {/* Stats Strip */}
-            <div className={styles.statsStrip}>
-              <div className={styles.statBox}>
-                <div className={styles.statBoxLabel}>STATUS</div>
-                <div className={styles.statBoxValue} style={{ color: STATUS_ACCENT[selectedCard.status] }}>
-                  {selectedCard.status.toUpperCase()}
-                </div>
-              </div>
-              <div className={styles.statBox}>
-                <div className={styles.statBoxLabel}>PROGRESS</div>
-                <div className={styles.statBoxValue}>
-                  {progressOf(selectedCard.tasks).total > 0
-                    ? `${Math.round((progressOf(selectedCard.tasks).done / progressOf(selectedCard.tasks).total) * 100)}%`
-                    : '—'}
-                </div>
-              </div>
-              <div className={styles.statBox}>
-                <div className={styles.statBoxLabel}>WORKING DIRECTORY</div>
-                <div className={styles.statBoxValue}>{selectedCard.workspaceRoot || workspaceRoot || 'App default'}</div>
-              </div>
-              <div className={styles.statBox}>
-                <div className={styles.statBoxLabel}>LAST UPDATED</div>
-                <div className={styles.statBoxValue}>{formatDate(selectedCard.updatedAt)}</div>
-              </div>
-            </div>
-
-            {/* Goal Box */}
-            <div className={styles.goalBox}>
-              <div className={styles.goalBoxLabel}>GOAL</div>
-              <div className={styles.goalBoxContent}>{selectedCard.title}</div>
-            </div>
-
-            {/* Live Task Checklist — real task rows from the ledger */}
-            <div className={styles.taskChecklist}>
-              <div className={styles.taskChecklistLabel}>TASKS</div>
-              <div className={styles.taskChecklistItems}>
-                {selectedCard.tasks.length > 0 ? (
-                  selectedCard.tasks.map((task) => (
-                    <div className={styles.checklistItem} key={task.id}>
-                      <span className={styles.checklistIcon}>{TASK_ICONS[task.status] ?? '·'}</span>
-                      <span className={styles.checklistTitle}>{task.title}</span>
-                      <span className={styles.checklistStatus}>{STATUS_LABELS[task.status] || task.status.toUpperCase()}</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className={styles.emptyState}>
-                    <span className={styles.emptyStateText}>No task activity recorded yet.</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </Modal>
     </div>
   );

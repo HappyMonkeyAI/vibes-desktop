@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Input, Switch, Message } from '@arco-design/web-react';
+import { Button, Input, Message, Select, Switch, Tabs, Tag } from '@arco-design/web-react';
+import type { AppSettings, SpeechEngine, VoiceDoctorResult } from '@shared/channels';
+import { DEFAULT_SPEECH_MODEL, DEFAULT_SPEECH_PRECISION, SPEECH_MODELS, describeDownload, type SpeechPrecision } from './speech/speech-models';
+import styles from './SettingsTab.module.css';
 
 /**
- * Settings tab for configuring app behavior, context, and memory options.
+ * Settings — General (paths / prefs) and Voice (builtin Whisper + optional
+ * OpenAI-compatible server / legacy yapsnap).
  */
 
 const SettingsTab: React.FC = () => {
@@ -11,29 +15,60 @@ const SettingsTab: React.FC = () => {
   const [memoryPath, setMemoryPath] = useState('');
   const [autoSave, setAutoSave] = useState(true);
   const [verboseLogging, setVerboseLogging] = useState(false);
+  const [speechEngine, setSpeechEngine] = useState<SpeechEngine>('builtin');
+  const [speechModel, setSpeechModel] = useState(DEFAULT_SPEECH_MODEL);
+  const [speechPrecision, setSpeechPrecision] = useState<SpeechPrecision>(DEFAULT_SPEECH_PRECISION);
+  const [speechLang, setSpeechLang] = useState('auto');
+  const [speechServerUrl, setSpeechServerUrl] = useState('');
+  const [speechServerModel, setSpeechServerModel] = useState('');
+  const [speechServerApiKey, setSpeechServerApiKey] = useState('');
+  const [speechServerHasKey, setSpeechServerHasKey] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [doctor, setDoctor] = useState<VoiceDoctorResult | null>(null);
+  const [warming, setWarming] = useState(false);
+  const [testingServer, setTestingServer] = useState(false);
+
+  const refreshDoctor = async () => {
+    try {
+      setDoctor(await window.vibesDesktop.voice.doctor());
+    } catch {
+      setDoctor(null);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
         const settings = await window.vibesDesktop.settings.get();
-        if (!cancelled) {
-          setVibesPath(settings.vibesPath);
-          setContextPath(settings.contextPath);
-          setMemoryPath(settings.memoryPath);
-          setAutoSave(settings.autoSave);
-          setVerboseLogging(settings.verboseLogging);
-        }
+        if (!cancelled) applySettings(settings);
       } catch {
-        // If settings store isn't available, keep defaults
+        // keep defaults
       } finally {
         if (!cancelled) setLoading(false);
       }
+      if (!cancelled) await refreshDoctor();
     })();
     return () => { cancelled = true; };
   }, []);
+
+  const applySettings = (settings: AppSettings) => {
+    setVibesPath(settings.vibesPath);
+    setContextPath(settings.contextPath);
+    setMemoryPath(settings.memoryPath);
+    setAutoSave(settings.autoSave);
+    setVerboseLogging(settings.verboseLogging);
+    setSpeechEngine(settings.speechEngine ?? 'builtin');
+    setSpeechModel(settings.speechModel || DEFAULT_SPEECH_MODEL);
+    setSpeechPrecision((settings.speechPrecision as SpeechPrecision) || DEFAULT_SPEECH_PRECISION);
+    setSpeechLang(settings.speechLang || 'auto');
+    setSpeechServerUrl(settings.speechServerUrl || '');
+    setSpeechServerModel(settings.speechServerModel || '');
+    setSpeechServerHasKey(Boolean(settings.speechServerHasKey));
+    setSpeechServerApiKey('');
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -44,9 +79,19 @@ const SettingsTab: React.FC = () => {
         memoryPath,
         autoSave,
         verboseLogging,
+        speechEngine,
+        speechModel,
+        speechPrecision,
+        speechLang,
+        speechServerUrl,
+        speechServerModel,
+        speechServerApiKey: speechServerApiKey || undefined,
       });
       if (result.ok) {
         Message.success('Settings saved.');
+        setSpeechServerApiKey('');
+        const refreshed = await window.vibesDesktop.settings.get();
+        applySettings(refreshed);
       } else {
         Message.error('Failed to save settings.');
       }
@@ -57,58 +102,227 @@ const SettingsTab: React.FC = () => {
     }
   };
 
+  const handleWarm = async () => {
+    setWarming(true);
+    try {
+      const result = await window.vibesDesktop.voice.warm();
+      if (result.ok) Message.success(result.detail || 'Models ready.');
+      else Message.error(result.error || 'Warm failed.');
+      await refreshDoctor();
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Warm failed.');
+    } finally {
+      setWarming(false);
+    }
+  };
+
+  const handleTestServer = async () => {
+    setTestingServer(true);
+    try {
+      // Persist current URL/model first so the probe uses what the user typed.
+      await window.vibesDesktop.settings.save({
+        speechServerUrl,
+        speechServerModel,
+        speechServerApiKey: speechServerApiKey || undefined,
+      });
+      const result = await window.vibesDesktop.voice.testServer();
+      if (result.ok) Message.success('Speech server reachable.');
+      else Message.error(result.error || 'Server probe failed.');
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Server probe failed.');
+    } finally {
+      setTestingServer(false);
+    }
+  };
+
   return (
-    <div style={{ padding: '20px', maxWidth: '600px' }}>
-      <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 700 }}>Settings</h2>
+    <div className={styles.page}>
+      <h2 className={styles.title}>Settings</h2>
+      <Tabs defaultActiveTab="general">
+        <Tabs.TabPane key="general" title="General">
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Vibes Repo</h3>
+            <div className={styles.field}>
+              <label className={styles.label}>Vibes Checkout Path</label>
+              <Input placeholder="C:/path/to/vibes-repo" value={vibesPath} onChange={setVibesPath} size="small" />
+            </div>
+          </div>
 
-      <div style={{ marginBottom: '24px' }}>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}>Vibes Repo</h3>
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text-dim)', marginBottom: '4px' }}>Vibes Checkout Path</label>
-          <Input
-            placeholder="C:/path/to/vibes-repo"
-            value={vibesPath}
-            onChange={setVibesPath}
-            size="small"
-          />
-        </div>
-      </div>
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Context & Memory</h3>
+            <div className={styles.field}>
+              <label className={styles.label}>Context File Path</label>
+              <Input placeholder="path/to/context.md" value={contextPath} onChange={setContextPath} size="small" />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Memory File Path</label>
+              <Input placeholder="path/to/memory.json" value={memoryPath} onChange={setMemoryPath} size="small" />
+            </div>
+          </div>
 
-      <div style={{ marginBottom: '24px' }}>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}>Context & Memory</h3>
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text-dim)', marginBottom: '4px' }}>Context File Path</label>
-          <Input
-            placeholder="path/to/context.md"
-            value={contextPath}
-            onChange={setContextPath}
-            size="small"
-          />
-        </div>
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text-dim)', marginBottom: '4px' }}>Memory File Path</label>
-          <Input
-            placeholder="path/to/memory.json"
-            value={memoryPath}
-            onChange={setMemoryPath}
-            size="small"
-          />
-        </div>
-      </div>
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Preferences</h3>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Auto-save settings</span>
+              <Switch checked={autoSave} onChange={setAutoSave} size="small" />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Verbose logging</span>
+              <Switch checked={verboseLogging} onChange={setVerboseLogging} size="small" />
+            </div>
+          </div>
 
-      <div style={{ marginBottom: '24px' }}>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}>Preferences</h3>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <span style={{ fontSize: '13px' }}>Auto-save settings</span>
-          <Switch checked={autoSave} onChange={setAutoSave} size="small" />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '13px' }}>Verbose logging</span>
-          <Switch checked={verboseLogging} onChange={setVerboseLogging} size="small" />
-        </div>
-      </div>
+          <Button type="primary" onClick={() => void handleSave()} loading={loading || saving} size="large" disabled={loading}>
+            Save Settings
+          </Button>
+        </Tabs.TabPane>
 
-      <Button type="primary" onClick={() => void handleSave()} loading={loading || saving} size="large" disabled={loading}>Save Settings</Button>
+        <Tabs.TabPane key="voice" title="Voice">
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Speech engine</h3>
+            <div className={styles.enginePick} role="radiogroup" aria-label="Speech engine">
+              <button
+                type="button"
+                className={`${styles.engineOption} ${speechEngine === 'builtin' ? styles.engineOptionActive : ''}`}
+                onClick={() => setSpeechEngine('builtin')}
+              >
+                <div>
+                  <div className={styles.engineTitle}>Local · Whisper (in-app)</div>
+                  <div className={styles.engineDetail}>
+                    Downloads the ONNX model on first hold-to-talk and caches it — same flow as ZeroG Terminal. No pip install.
+                  </div>
+                </div>
+              </button>
+              <button
+                type="button"
+                className={`${styles.engineOption} ${speechEngine === 'server' ? styles.engineOptionActive : ''}`}
+                onClick={() => setSpeechEngine('server')}
+              >
+                <div>
+                  <div className={styles.engineTitle}>Server · OpenAI-compatible</div>
+                  <div className={styles.engineDetail}>
+                    POST to /v1/audio/transcriptions — e.g. local qwen3-asr-server on port 8765.
+                  </div>
+                </div>
+              </button>
+              <button
+                type="button"
+                className={`${styles.engineOption} ${speechEngine === 'yapsnap' ? styles.engineOptionActive : ''}`}
+                onClick={() => setSpeechEngine('yapsnap')}
+              >
+                <div>
+                  <div className={styles.engineTitle}>Local · yapsnap (CLI)</div>
+                  <div className={styles.engineDetail}>
+                    Legacy: requires `pip install yapsnap` and ffmpeg on PATH.
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>Language</label>
+              <Input placeholder="auto" value={speechLang} onChange={setSpeechLang} size="small" />
+              <p className={styles.hint}>Use auto unless you want a fixed language code (multilingual models / server).</p>
+            </div>
+          </div>
+
+          {speechEngine === 'builtin' && (
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>Built-in model</h3>
+              <div className={styles.field}>
+                <label className={styles.label}>Whisper model</label>
+                <Select value={speechModel} onChange={(v) => setSpeechModel(String(v))} size="small">
+                  {SPEECH_MODELS.map((m) => (
+                    <Select.Option key={m.id} value={m.id}>{m.label}</Select.Option>
+                  ))}
+                </Select>
+                <p className={styles.hint}>{describeDownload(speechModel, speechPrecision)}</p>
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Precision</label>
+                <Select value={speechPrecision} onChange={(v) => setSpeechPrecision(v as SpeechPrecision)} size="small">
+                  <Select.Option value="q8">q8 · quantized (recommended)</Select.Option>
+                  <Select.Option value="q4">q4</Select.Option>
+                  <Select.Option value="fp16">fp16</Select.Option>
+                  <Select.Option value="fp32">fp32 · full</Select.Option>
+                </Select>
+              </div>
+              <p className={styles.hint}>
+                Hold to talk on Operations — the first release downloads the model (progress shows on the button). Later utterances use the cache.
+              </p>
+            </div>
+          )}
+
+          {speechEngine === 'yapsnap' && (
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>Local readiness</h3>
+              <div className={styles.statusList}>
+                <div className={doctor?.ffmpegAvailable ? styles.statusOk : styles.statusBad}>
+                  ffmpeg: {doctor?.ffmpegAvailable ? 'available' : 'missing'}
+                  {!doctor?.ffmpegAvailable && doctor?.ffmpegHint ? ` — ${doctor.ffmpegHint}` : ''}
+                </div>
+                <div className={doctor?.yapsnapAvailable ? styles.statusOk : styles.statusBad}>
+                  yapsnap: {doctor?.yapsnapAvailable ? 'available' : 'missing'}
+                  {!doctor?.yapsnapAvailable && doctor?.yapsnapHint ? ` — ${doctor.yapsnapHint}` : ''}
+                </div>
+                <div>
+                  Overall:{' '}
+                  {doctor?.ready ? <Tag color="green" size="small">ready</Tag> : <Tag color="orangered" size="small">not ready</Tag>}
+                </div>
+              </div>
+              <div className={styles.actions}>
+                <Button size="small" onClick={() => void refreshDoctor()}>Refresh status</Button>
+                <Button type="primary" size="small" loading={warming} disabled={!doctor?.yapsnapAvailable} onClick={() => void handleWarm()}>
+                  Download / warm models
+                </Button>
+              </div>
+              <p className={styles.hint}>
+                Warm runs a short silent clip through yapsnap so the model cache is populated before you hold-to-talk on a mission.
+              </p>
+            </div>
+          )}
+
+          {speechEngine === 'server' && (
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>Speech server</h3>
+              <div className={styles.field}>
+                <label className={styles.label}>Transcriptions URL</label>
+                <Input
+                  placeholder="http://127.0.0.1:8765/v1/audio/transcriptions"
+                  value={speechServerUrl}
+                  onChange={setSpeechServerUrl}
+                  size="small"
+                />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Model</label>
+                <Input placeholder="qwen3-asr-0.6b-q8-0" value={speechServerModel} onChange={setSpeechServerModel} size="small" />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>API key {speechServerHasKey && <Tag color="green" size="small">key stored</Tag>}</label>
+                <Input.Password
+                  placeholder={speechServerHasKey ? 'Leave blank to keep stored key' : 'Bearer token if the server requires one'}
+                  value={speechServerApiKey}
+                  onChange={setSpeechServerApiKey}
+                  size="small"
+                />
+              </div>
+              <div className={styles.actions}>
+                <Button size="small" type="outline" loading={testingServer} onClick={() => void handleTestServer()}>
+                  Test server
+                </Button>
+              </div>
+              <p className={styles.hint}>
+                Matches ZeroG Terminal’s server engine. For qwen3-asr-server: URL …/v1/audio/transcriptions, model qwen3-asr-0.6b-q8-0, key from that project’s .env.
+              </p>
+            </div>
+          )}
+
+          <Button type="primary" onClick={() => void handleSave()} loading={loading || saving} size="large" disabled={loading}>
+            Save Settings
+          </Button>
+        </Tabs.TabPane>
+      </Tabs>
     </div>
   );
 };

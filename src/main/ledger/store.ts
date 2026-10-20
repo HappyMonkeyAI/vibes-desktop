@@ -16,10 +16,12 @@ import type { ActivityGroup, LedgerEntry, LedgerSnapshot } from '@shared/channel
 
 export interface TaskStatusInput {
   name: string;
-  status: 'in-progress' | 'complete' | 'failed';
+  status: 'pending' | 'in-progress' | 'complete' | 'failed';
+  detail?: string;
 }
 
 const STATUS_MAP = {
+  pending: 'pending',
   'in-progress': 'running',
   complete: 'done',
   failed: 'failed',
@@ -93,18 +95,33 @@ export class LedgerStore extends EventEmitter {
       const existing = [...this.entries.values()].find(
         (e) => e.source === 'vibes-mission' && e.title === input.name && e.missionId === missionId,
       );
+      // Never downgrade a terminal/live status back to pending (plan seed vs late events).
+      if (existing && input.status === 'pending' && existing.status !== 'pending') {
+        return existing;
+      }
       const entry: LedgerEntry = {
         id: existing?.id ?? crypto.randomUUID(),
         group: classify({ status, needsHuman: false }),
         status,
         source: 'vibes-mission',
         title: input.name,
+        detail: input.detail ?? existing?.detail,
         missionId,
         workspaceRoot: workspaceRoot || existing?.workspaceRoot,
         updatedAt: Date.now(),
       };
       return this.append(entry);
     });
+  }
+
+  /** Seed the reviewed/planned task names as pending rows so the UI shows 0/N
+   *  before any task-status events arrive (Accept & Launch path). */
+  async seedPlannedTasks(names: string[], workspaceRoot: string, missionId: string): Promise<void> {
+    for (const name of names) {
+      const trimmed = name.trim();
+      if (!trimmed) continue;
+      await this.recordTaskStatus({ name: trimmed, status: 'pending' }, workspaceRoot, missionId);
+    }
   }
 
   /** Record a mission-level event as a ledger entry. One mission = one row:
@@ -168,6 +185,30 @@ export class LedgerStore extends EventEmitter {
           updatedAt: Date.now(),
         };
         await this.append(blocked);
+        count += 1;
+      }
+      return count;
+    });
+  }
+
+  /** When a mission fails, leave no checklist row stuck on EXECUTING / PENDING. */
+  async markOpenTasksFailed(missionId: string, detail?: string): Promise<number> {
+    return this.enqueue(async () => {
+      await this.ready;
+      let count = 0;
+      for (const entry of [...this.entries.values()]) {
+        if (entry.source !== 'vibes-mission') continue;
+        if (entry.kind === 'mission') continue;
+        if (entry.missionId !== missionId) continue;
+        if (entry.status !== 'running' && entry.status !== 'verifying' && entry.status !== 'pending') continue;
+        const failed: LedgerEntry = {
+          ...entry,
+          status: 'failed',
+          group: classify({ status: 'failed', needsHuman: false }),
+          detail: detail ?? entry.detail,
+          updatedAt: Date.now(),
+        };
+        await this.append(failed);
         count += 1;
       }
       return count;

@@ -1,39 +1,53 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Message } from '@arco-design/web-react';
-import type { VoiceDoctorResult } from '@shared/channels';
+import type { AppSettings, SpeechEngine, VoiceDoctorResult } from '@shared/channels';
+import { getSpeechClient } from './speech/speech-client';
+import { DEFAULT_SPEECH_MODEL, DEFAULT_SPEECH_PRECISION } from './speech/speech-models';
+import { decodeToWhisperInput } from './speech/voice-audio';
 
 /**
- * T10 — push-to-talk voice input. Press-and-hold the button to record mic audio
- * (MediaRecorder → webm/opus); on release the buffer is base64-encoded and sent
- * to main for transcription, whose text lands in the mission request field via
- * `onTranscript`. The doctor check runs before first capture so a missing ffmpeg
- * or yapsnap produces an actionable hint, not a crash (SPEC S5).
+ * Push-to-talk voice input.
+ * - builtin (default): Whisper ONNX in a worker — downloads the model on first
+ *   release of the mic button (ZeroG Terminal behaviour).
+ * - server: OpenAI-compatible transcriptions via main process.
+ * - yapsnap: legacy CLI path (requires pip install).
  */
 
 type VoiceState = 'idle' | 'recording' | 'transcribing';
 
 const VoiceInput: React.FC<{ onTranscript: (text: string) => void }> = ({ onTranscript }) => {
   const [state, setState] = useState<VoiceState>('idle');
+  const [statusHint, setStatusHint] = useState<string | null>(null);
   const [doctor, setDoctor] = useState<VoiceDoctorResult | null>(null);
+  const [engine, setEngine] = useState<SpeechEngine>('builtin');
+  const settingsRef = useRef<AppSettings | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
 
-  // Run the doctor once on mount so capture is blocked with a clear hint if not ready.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
+        const settings = await window.vibesDesktop.settings.get();
+        if (cancelled) return;
+        settingsRef.current = settings;
+        setEngine(settings.speechEngine ?? 'builtin');
+      } catch {
+        // defaults
+      }
+      try {
         const result = await window.vibesDesktop.voice.doctor();
         if (!cancelled) setDoctor(result);
       } catch {
-        // Doctor itself failing is non-fatal; capture will surface its own error.
+        // non-fatal
       }
     })();
     return () => { cancelled = true; };
   }, []);
 
   const startRecording = useCallback(async () => {
-    if (doctor && !doctor.ready) {
+    const currentEngine = settingsRef.current?.speechEngine ?? engine;
+    if (currentEngine === 'yapsnap' && doctor && !doctor.ready) {
       Message.warning(doctor.ffmpegHint ?? doctor.yapsnapHint ?? 'Voice input is not ready.');
       return;
     }
@@ -48,20 +62,18 @@ const VoiceInput: React.FC<{ onTranscript: (text: string) => void }> = ({ onTran
       recorder.start();
       recorderRef.current = recorder;
       setState('recording');
+      setStatusHint(null);
     } catch (error) {
       Message.error(`Microphone unavailable: ${error instanceof Error ? error.message : String(error)}`);
     }
-  }, [doctor]);
+  }, [doctor, engine]);
 
   const stopRecording = useCallback(async () => {
     const recorder = recorderRef.current;
     if (!recorder || recorder.state === 'inactive') return;
     recorderRef.current = null;
     setState('transcribing');
-    // Per the MediaRecorder spec, a recorder started WITHOUT a timeslice delivers
-    // its (only) chunk in a final dataavailable that fires asynchronously AFTER
-    // stop() returns. Support both callback-style (tests) and addEventListener
-    // style (real browsers).
+
     const finalChunk = new Promise<void>((resolve) => {
       let resolved = false;
       const resolveOnce = () => {
@@ -69,31 +81,69 @@ const VoiceInput: React.FC<{ onTranscript: (text: string) => void }> = ({ onTran
         resolved = true;
         resolve();
       };
-      if (typeof (recorder as any).addEventListener === 'function') {
-        (recorder as any).addEventListener('dataavailable', resolveOnce, { once: true });
-        (recorder as any).addEventListener('stop', resolveOnce, { once: true });
+      if (typeof (recorder as MediaRecorder & { addEventListener?: Function }).addEventListener === 'function') {
+        recorder.addEventListener('dataavailable', resolveOnce, { once: true });
+        recorder.addEventListener('stop', resolveOnce, { once: true });
       } else {
-        // callback form (test mocks)
-        const origData = (recorder as any).ondataavailable;
-        (recorder as any).ondataavailable = (e: any) => {
-          try { origData?.(e); } catch {}
+        const origData = recorder.ondataavailable;
+        recorder.ondataavailable = (e: BlobEvent) => {
+          try { origData?.call(recorder, e); } catch { /* ignore */ }
           resolveOnce();
         };
-        const origStop = (recorder as any).onstop;
-        (recorder as any).onstop = () => {
-          try { origStop?.(); } catch {}
+        const origStop = recorder.onstop;
+        recorder.onstop = ((ev: Event) => {
+          try { origStop?.call(recorder, ev); } catch { /* ignore */ }
           resolveOnce();
-        };
+        }) as MediaRecorder['onstop'];
       }
     });
     recorder.stop();
     await finalChunk;
+
     try {
       const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
       if (blob.size === 0) {
         Message.error('Recording captured no audio — held too briefly?');
         return;
       }
+
+      // Refresh settings in case the user changed engine in another tab.
+      let settings = settingsRef.current;
+      try {
+        settings = await window.vibesDesktop.settings.get();
+        settingsRef.current = settings;
+        setEngine(settings.speechEngine);
+      } catch {
+        // keep cached
+      }
+      const currentEngine = settings?.speechEngine ?? 'builtin';
+
+      if (currentEngine === 'builtin') {
+        setStatusHint('Loading speech model…');
+        const samples = await decodeToWhisperInput(blob);
+        const result = await getSpeechClient().transcribe(
+          samples,
+          {
+            model: settings?.speechModel || DEFAULT_SPEECH_MODEL,
+            precision: settings?.speechPrecision || DEFAULT_SPEECH_PRECISION,
+            language: settings?.speechLang || 'auto',
+            device: 'wasm',
+          },
+          (progress) => {
+            if (progress.kind === 'loading') {
+              const pct = progress.progress != null ? `${Math.round(progress.progress)}%` : '…';
+              setStatusHint(`Downloading speech model ${pct}`);
+            } else if (progress.kind === 'notice') {
+              setStatusHint(progress.message);
+            }
+          },
+        );
+        setStatusHint(null);
+        if (result.text) onTranscript(result.text);
+        else Message.error('Transcription produced no text (silent or too-short audio).');
+        return;
+      }
+
       const audioBase64 = await blobToBase64(blob);
       const result = await window.vibesDesktop.voice.transcribe({ audioBase64, mime: blob.type });
       if (result.ok && result.text) onTranscript(result.text);
@@ -101,22 +151,31 @@ const VoiceInput: React.FC<{ onTranscript: (text: string) => void }> = ({ onTran
     } catch (error) {
       Message.error(error instanceof Error ? error.message : 'Transcription failed.');
     } finally {
+      setStatusHint(null);
       setState('idle');
     }
   }, [onTranscript]);
 
-  const notReady = doctor && !doctor.ready;
+  const yapsnapBlocked = engine === 'yapsnap' && doctor && !doctor.ready;
+  const label =
+    state === 'recording'
+      ? 'Recording… release to send'
+      : state === 'transcribing'
+        ? (statusHint ?? 'Transcribing…')
+        : 'Hold to talk';
+
   return (
     <Button
       long={false}
       type={state === 'recording' ? 'primary' : 'default'}
-      status={notReady ? 'warning' : undefined}
+      status={yapsnapBlocked ? 'warning' : undefined}
       loading={state === 'transcribing'}
+      title={statusHint ?? undefined}
       onMouseDown={() => void startRecording()}
       onMouseUp={() => void stopRecording()}
       onMouseLeave={() => { if (state === 'recording') void stopRecording(); }}
     >
-      {state === 'recording' ? 'Recording… release to send' : state === 'transcribing' ? 'Transcribing…' : 'Hold to talk'}
+      {label}
     </Button>
   );
 };

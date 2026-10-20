@@ -1,17 +1,19 @@
 import { ipcMain } from 'electron';
 import type { WebContents } from 'electron';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { channels, type AppSettings, type ChannelName, type LedgerSnapshot, type MissionPlanRequest, type MissionStartRequest, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult, type WorkspaceSelectResult } from '@shared/channels';
+import { channels, type AppSettings, type AppSettingsSaveInput, type ChannelName, type LedgerSnapshot, type MissionPlanRequest, type MissionStartRequest, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult, type WorkspaceSelectResult } from '@shared/channels';
 import type { LedgerStore } from '../ledger/store';
 import type { RolesStore } from '../roles/store';
 import type { MissionService } from '../mission/service';
 import { testConnection } from '../roles/test-connection';
 import { runVoiceDoctor } from '../voice/doctor';
-import { transcribeFile, voiceTempDir } from '../voice/transcribe';
+import { spawnYapsnap, transcribeFile, voiceTempDir } from '../voice/transcribe';
+import { transcribeViaServer, probeSpeechServer } from '../voice/speech-server';
+import { warmYapsnapModels } from '../voice/warm';
 import type { WorkspaceHistoryStore } from '../workspace/history';
-import type { SettingsStore } from '../settings/store';
+import { DEFAULT_SETTINGS, type SettingsStore } from '../settings/store';
 
 /**
  * Handler table: one entry per channel in the shared map. T5 wires the ledger
@@ -81,18 +83,46 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
     },
     // T12 — presence check before any capture attempt.
     [channels.voiceDoctor]: async (): Promise<VoiceDoctorResult> => runVoiceDoctor(),
-    // T10/T11 — write the captured buffer to a temp file and transcribe it.
+    // Pre-fetch local yapsnap models (ADR-0002 doctor screen).
+    [channels.voiceWarm]: async () => {
+      const settings = settingsStore?.get() ?? DEFAULT_SETTINGS;
+      return warmYapsnapModels(settings.speechLang || 'auto');
+    },
+    // Probe the configured OpenAI-compatible speech server (e.g. qwen3-asr).
+    [channels.voiceTestServer]: async () => {
+      const settings = settingsStore?.get() ?? DEFAULT_SETTINGS;
+      const apiKey = settingsStore?.getSpeechServerApiKey();
+      return probeSpeechServer(settings.speechServerUrl, apiKey);
+    },
+    // T10/T11 — write the captured buffer to a temp file and transcribe it
+    // via yapsnap (local) or the configured speech server.
     [channels.voiceTranscribe]: async (_e, req): Promise<VoiceTranscribeResult> => {
       const request = req as VoiceTranscribeRequest;
       if (!request?.audioBase64) return { ok: false, error: 'No audio received.' };
       try {
+        const settings = settingsStore?.get() ?? DEFAULT_SETTINGS;
         const dir = voiceTempDir();
         mkdirSync(dir, { recursive: true });
         const id = randomBytes(8).toString('hex');
         const inputPath = path.join(dir, `${id}.webm`);
         const outPath = path.join(dir, `${id}.txt`);
         writeFileSync(inputPath, Buffer.from(request.audioBase64, 'base64'));
-        return await transcribeFile(inputPath, outPath);
+        if (settings.speechEngine === 'server') {
+          const result = await transcribeViaServer({
+            url: settings.speechServerUrl,
+            model: settings.speechServerModel,
+            language: settings.speechLang,
+            apiKey: settingsStore?.getSpeechServerApiKey(),
+            filePath: inputPath,
+          });
+          try {
+            rmSync(inputPath, { force: true });
+          } catch {
+            // best-effort cleanup
+          }
+          return result;
+        }
+        return await transcribeFile(inputPath, outPath, spawnYapsnap, settings.speechLang || 'auto');
       } catch (error) {
         return { ok: false, error: error instanceof Error ? error.message : String(error) };
       }
@@ -150,10 +180,10 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
     },
     // App settings persistence (Settings tab).
     [channels.settingsGet]: async (): Promise<AppSettings> =>
-      settingsStore ? settingsStore.get() : { vibesPath: '', contextPath: '', memoryPath: '', autoSave: true, verboseLogging: false },
+      settingsStore ? settingsStore.get() : { ...DEFAULT_SETTINGS },
     [channels.settingsSave]: async (_e, input) => {
       if (!settingsStore) return { ok: true }; // parity stub — nothing to persist in tests
-      const ok = settingsStore.save(input as Partial<AppSettings>);
+      const ok = settingsStore.save(input as AppSettingsSaveInput);
       return { ok };
     },
   };

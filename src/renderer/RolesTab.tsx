@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Input, Message, Tag } from '@arco-design/web-react';
+import { Button, Input, Message, Modal, Tag } from '@arco-design/web-react';
+import { FullScreen } from '@icon-park/react';
 import type { RoleEndpointInput, RoleKey, RolesConfigView, TestConnectionResult } from '@shared/channels';
+import styles from './RolesTab.module.css';
 
 /**
  * T7 — per-role endpoint configuration. Five forms (default / planner / executor /
@@ -27,7 +29,8 @@ const ROLE_COLORS: Record<RoleKey, string> = {
   triage: '#ff9f43',
 };
 
-type Draft = Record<RoleKey, { baseUrl: string; model: string; apiKey: string; hasKey: boolean }>;
+type RoleDraft = { baseUrl: string; model: string; apiKey: string; hasKey: boolean };
+type Draft = Record<RoleKey, RoleDraft>;
 
 function toDraft(view: RolesConfigView): Draft {
   const draft = {} as Draft;
@@ -37,11 +40,54 @@ function toDraft(view: RolesConfigView): Draft {
   return draft;
 }
 
+type RoleFieldsProps = {
+  role: RoleKey;
+  draft: RoleDraft;
+  inputSize: 'small' | 'default';
+  fieldsClassName: string;
+  onChange: (field: 'baseUrl' | 'model' | 'apiKey', value: string) => void;
+};
+
+const RoleFields: React.FC<RoleFieldsProps> = ({ draft, inputSize, fieldsClassName, onChange }) => (
+  <div className={fieldsClassName}>
+    <div className={styles.field}>
+      <label className={styles.label}>Base URL</label>
+      <Input
+        placeholder="http://host:11434/v1"
+        value={draft.baseUrl}
+        onChange={(v) => onChange('baseUrl', v)}
+        size={inputSize}
+      />
+    </div>
+    <div className={styles.field}>
+      <label className={styles.label}>Model</label>
+      <Input
+        placeholder="llama3.2"
+        value={draft.model}
+        onChange={(v) => onChange('model', v)}
+        size={inputSize}
+      />
+    </div>
+    <div className={`${styles.field} ${styles.fieldFull}`}>
+      <label className={styles.label}>
+        API Key <span className={styles.labelHint}>(optional)</span>
+      </label>
+      <Input.Password
+        placeholder="Enter API key if required"
+        value={draft.apiKey}
+        onChange={(v) => onChange('apiKey', v)}
+        size={inputSize}
+      />
+    </div>
+  </div>
+);
+
 const RolesTab: React.FC = () => {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testingRole, setTestingRole] = useState<RoleKey | null>(null);
+  const [expandedRole, setExpandedRole] = useState<RoleKey | null>(null);
   const [testResult, setTestResult] = useState<Record<RoleKey, TestConnectionResult | null>>({
     default: null, planner: null, executor: null, reviewer: null, triage: null,
   });
@@ -98,16 +144,13 @@ const RolesTab: React.FC = () => {
       const res = await window.vibesDesktop.roles.save(input);
       if (res.ok) {
         Message.success('Role configuration saved.');
-        // Clear the key fields locally — they're now stored; presence flag is enough.
-        // Also refresh the view so the "key stored" tag reappears when a new key
-        // was just persisted.
+        setExpandedRole(null);
         setDraft((prev) => {
           if (!prev) return prev;
           const cleared = {} as Draft;
           for (const role of ROLE_KEYS) cleared[role] = { ...prev[role], apiKey: '' };
           return cleared;
         });
-        // Refresh from store so hasKey reflects the actual persisted state.
         try {
           const view = await window.vibesDesktop.roles.get();
           setDraft(toDraft(view));
@@ -124,67 +167,118 @@ const RolesTab: React.FC = () => {
     }
   }, [draft]);
 
-  if (loading || !draft) return <div className="roles-loading">Loading role configuration…</div>;
+  if (loading || !draft) return <div className={styles.loading}>Loading role configuration…</div>;
+
+  const expanded = expandedRole ? draft[expandedRole] : null;
+  const expandedTest = expandedRole ? testResult[expandedRole] : null;
 
   return (
-    <div style={{ maxWidth: '800px' }}>
-      <div style={{ marginBottom: '32px' }}>
-        <h2 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 700 }}>Role Endpoints</h2>
-        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '13px' }}>
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <h2 className={styles.title}>Role Endpoints</h2>
+        <p className={styles.subtitle}>
           Configure the base URL, model, and API key for each role. The executor runs on the default endpoint.
+          Use the expand control on a card for a larger editor on small screens.
         </p>
       </div>
 
-      <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
+      <div className={styles.grid}>
         {ROLE_KEYS.map((role) => {
           const d = draft[role];
           const test = testResult[role];
           return (
-            <div
-              key={role}
-              style={{
-                padding: '20px',
-                borderRadius: '12px',
-                background: 'var(--surface-card)',
-                border: '1px solid var(--color-border-2)',
-                boxShadow: 'var(--shadow-1)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: ROLE_COLORS[role] }} />
-                <strong style={{ fontSize: '16px' }}>{ROLE_LABELS[role]}</strong>
+            <div key={role} className={styles.card}>
+              <div className={styles.cardHead}>
+                <div className={styles.roleDot} style={{ background: ROLE_COLORS[role] }} />
+                <strong className={styles.roleName}>{ROLE_LABELS[role]}</strong>
                 {d.hasKey && <Tag color="green" size="small">key stored</Tag>}
                 {!d.hasKey && d.apiKey.length > 0 && <Tag color="orange" size="small">new key</Tag>}
+                <button
+                  type="button"
+                  className={styles.expandBtn}
+                  title={`Expand ${ROLE_LABELS[role]}`}
+                  aria-label={`Expand ${ROLE_LABELS[role]} editor`}
+                  onClick={() => setExpandedRole(role)}
+                >
+                  <FullScreen size={16} />
+                </button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-dim)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Base URL</label>
-                  <Input placeholder="http://host:11434/v1" value={d.baseUrl} onChange={(v) => updateField(role, 'baseUrl', v)} size="small" />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-dim)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Model</label>
-                  <Input placeholder="llama3.2" value={d.model} onChange={(v) => updateField(role, 'model', v)} size="small" />
-                </div>
-              </div>
+              <RoleFields
+                role={role}
+                draft={d}
+                inputSize="small"
+                fieldsClassName={styles.fields}
+                onChange={(field, value) => updateField(role, field, value)}
+              />
 
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-dim)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>API Key <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 'normal', color: 'var(--text-muted)' }}>(optional)</span></label>
-                <Input.Password placeholder="Enter API key if required" value={d.apiKey} onChange={(v) => updateField(role, 'apiKey', v)} size="small" />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className={styles.actions}>
                 <Button size="small" loading={testingRole === role} onClick={() => void handleTest(role)} type="primary">
                   {test?.ok ? '✓ Reachable' : 'Test connection'}
                 </Button>
-                {test && !test.ok && test.error && <span style={{ fontSize: '12px', color: 'rgb(var(--red-6))' }}>{test.error}</span>}
+                {test && !test.ok && test.error && (
+                  <span className={styles.testError}>{test.error}</span>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
-      <Button type="primary" loading={saving} onClick={() => void handleSave()} size="large">Save Configuration</Button>
+      <div className={styles.footer}>
+        <Button type="primary" loading={saving} onClick={() => void handleSave()} size="large">
+          Save Configuration
+        </Button>
+      </div>
+
+      <Modal
+        visible={expandedRole !== null}
+        onCancel={() => setExpandedRole(null)}
+        title={
+          expandedRole ? (
+            <span className={styles.modalTitle}>
+              <span className={styles.roleDot} style={{ background: ROLE_COLORS[expandedRole] }} />
+              {ROLE_LABELS[expandedRole]}
+              {expanded?.hasKey && <Tag color="green" size="small">key stored</Tag>}
+              {expanded && !expanded.hasKey && expanded.apiKey.length > 0 && (
+                <Tag color="orange" size="small">new key</Tag>
+              )}
+            </span>
+          ) : null
+        }
+        footer={[
+          <Button key="close" onClick={() => setExpandedRole(null)}>Close</Button>,
+          expandedRole ? (
+            <Button
+              key="test"
+              type="outline"
+              loading={testingRole === expandedRole}
+              onClick={() => void handleTest(expandedRole)}
+            >
+              {expandedTest?.ok ? '✓ Reachable' : 'Test connection'}
+            </Button>
+          ) : null,
+          <Button key="save" type="primary" loading={saving} onClick={() => void handleSave()}>
+            Save Configuration
+          </Button>,
+        ].filter(Boolean)}
+        style={{ top: 40, width: 'min(560px, calc(100vw - 32px))' }}
+      >
+        {expandedRole && expanded && (
+          <div className={styles.modalBody}>
+            <RoleFields
+              role={expandedRole}
+              draft={expanded}
+              inputSize="default"
+              fieldsClassName={styles.modalFields}
+              onChange={(field, value) => updateField(expandedRole, field, value)}
+            />
+            {expandedTest && !expandedTest.ok && expandedTest.error && (
+              <p className={styles.testError}>{expandedTest.error}</p>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

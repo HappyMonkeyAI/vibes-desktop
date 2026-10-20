@@ -164,19 +164,20 @@
   --arcoblue-9: 255, 179, 153;
   --arcoblue-10: rgb(255, 230, 219);
 
-  --bg-base: #111114;
-  --bg-1: #1a1a1f;
-  --bg-2: #22222a;
-  --bg-3: #2a2a35;
+  /* Hybrid C dark canvas (DESIGN.md / stitch Mission Control) */
+  --bg-base: #090d16;
+  --bg-1: #0f172a;
+  --bg-2: #161f33;
+  --bg-3: #1e293b;
 
-  --text-primary: #e8e8eb;
-  --text-secondary: #b8b8c0;
-  --text-disabled: #555560;
-  --text-muted: #888895;
-  --text-dim: #666670;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-disabled: #475569;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
 
-  --border-base: #3a3a45;
-  --border-light: #2a2a35;
+  --border-base: #24334c;
+  --border-light: #1e293b;
 
   --brand-soft-bg: rgba(255, 107, 53, 0.06);
   --brand-soft-border: rgba(255, 107, 53, 0.22);
@@ -192,27 +193,27 @@
   --color-text-4: var(--text-disabled);
 
   --color-bg-1: var(--bg-base);
-  --color-bg-2: #16161a;
+  --color-bg-2: #0b101b;
   --color-bg-3: var(--bg-1);
   --color-bg-4: var(--bg-2);
   --color-bg-5: var(--bg-3);
 
-  --color-fill-1: #1a1a1f;
+  --color-fill-1: #0f172a;
   --color-fill-2: var(--bg-1);
   --color-fill-3: var(--bg-2);
   --color-fill-4: var(--bg-3);
 
-  --color-border-1: #2a2a35;
-  --color-border-2: #3a3a45;
-  --color-border-3: #4a4a55;
-  --color-border-4: #777785;
+  --color-border-1: #1e293b;
+  --color-border-2: #24334c;
+  --color-border-3: #334155;
+  --color-border-4: #64748b;
 
-  --surface-card: #16161a;
-  --surface-card-grad-top: rgba(255, 255, 255, 0.03);
-  --surface-card-grad-bottom: rgba(255, 255, 255, 0.006);
-  --surface-row: rgba(255, 255, 255, 0.025);
-  --surface-row-hover: rgba(255, 255, 255, 0.05);
-  --surface-chip: rgba(255, 255, 255, 0.06);
+  --surface-card: #161f33;
+  --surface-card-grad-top: rgba(56, 189, 248, 0.04);
+  --surface-card-grad-bottom: rgba(255, 255, 255, 0.01);
+  --surface-row: rgba(255, 255, 255, 0.03);
+  --surface-row-hover: rgba(255, 255, 255, 0.06);
+  --surface-chip: rgba(255, 255, 255, 0.07);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-3: 0 12px 36px rgba(0, 0, 0, 0.65);

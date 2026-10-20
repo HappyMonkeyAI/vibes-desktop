@@ -10,6 +10,22 @@ const renderWithMessages = (ui: React.ReactElement) => render(<>{ui}<Message /><
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Use the main-process (yapsnap/server) path in unit tests — builtin Whisper
+  // needs AudioContext + a worker, which jsdom does not provide.
+  vi.mocked(window.vibesDesktop.settings.get).mockResolvedValue({
+    vibesPath: '',
+    contextPath: '',
+    memoryPath: '',
+    autoSave: true,
+    verboseLogging: false,
+    speechEngine: 'yapsnap',
+    speechModel: 'onnx-community/whisper-tiny.en',
+    speechPrecision: 'q8',
+    speechLang: 'auto',
+    speechServerUrl: 'http://127.0.0.1:8765/v1/audio/transcriptions',
+    speechServerModel: 'qwen3-asr-0.6b-q8-0',
+    speechServerHasKey: false,
+  });
 });
 
 /** A minimal MediaRecorder fake that fires ondataavailable on start and onstop on stop. */

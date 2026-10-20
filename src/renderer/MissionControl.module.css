@@ -38,6 +38,130 @@
   margin-left: auto;
   display: inline-flex;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.livePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+}
+
+.liveDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.voicePill,
+.voicePillReady {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.voicePill {
+  color: #fda4af;
+  background: color-mix(in srgb, #fb7185 12%, transparent);
+  border: 1px solid color-mix(in srgb, #fb7185 30%, transparent);
+}
+
+.voicePillReady {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.tabsWrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tabsWrap :global(.arco-tabs) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tabsWrap :global(.arco-tabs-header) {
+  flex-shrink: 0;
+}
+
+.tabsWrap :global(.arco-tabs-content) {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tabsWrap :global(.arco-tabs-content-inner) {
+  height: 100%;
+  min-height: 0;
+}
+
+.tabsWrap :global(.arco-tabs-content-item),
+.tabsWrap :global(.arco-tabs-pane) {
+  height: 100%;
+  min-height: 0;
+  /* Single scroll owner for tab bodies — Ops grows naturally; Roles/Settings
+     keep their own height:100% + overflow pages. */
+  overflow: auto;
+}
+
+.footer {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--color-border-2);
+  background: var(--bg-base);
+  font-size: 11px;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  color: var(--text-dim);
+}
+
+.footerOnline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.footerDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.footerMeta {
+  color: var(--text-dim);
 }
 
 .ops {

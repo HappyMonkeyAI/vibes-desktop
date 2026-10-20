@@ -1,101 +1,180 @@
-/* OperationsView — Card-based mission control canvas with modal workflow.
- * Uses CSS custom properties from theme.css for light/dark mode support. */
+/* Hybrid C Operations — dispatch + metrics + cards + depth panel */
 
 .ops {
-  padding: 12px 28px 28px;
+  padding: 12px 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
   background: var(--bg-base);
+  /* Grow with content; the tab pane owns scrolling. Do not flex-shrink
+     children (that collapsed the card grid into a tiny strip). */
 }
 
-/* ---- Summary Bar ---- */
-.summaryBar {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-@media (max-width: 640px) {
-  .summaryBar {
-    grid-template-columns: 1fr;
-  }
-}
-
-.metricCard {
-  position: relative;
-  overflow: hidden;
+/* ---- Dispatch ---- */
+.dispatch {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 16px 18px 14px;
+  gap: 10px;
+  padding: 12px;
   border-radius: var(--radius-card);
   background: linear-gradient(180deg, var(--surface-card-grad-top), var(--surface-card-grad-bottom)), var(--surface-card);
   border: 1px solid var(--color-border-2);
-  transition: transform 0.18s ease, box-shadow 0.22s ease;
+  flex-shrink: 0;
 }
 
-.metricCard:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-2);
+.dispatchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: stretch;
 }
 
-.metricCard::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--accent);
-  box-shadow: 0 0 14px var(--accent);
+.missionInput {
+  flex: 1;
+  min-width: 200px;
 }
 
-.metricValue {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.05;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
+.dispatchActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
-.metricLabel {
+.workspaceBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-card-inner);
+  background: var(--surface-row);
+  border: 1px solid var(--color-border-1);
+}
+
+.workspaceLabel {
   font-size: var(--type-11);
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-dim);
 }
 
-.metricActive::before { --accent: var(--brand); }
-.metricCompleted::before { --accent: var(--success); }
-.metricTasks::before { --accent: var(--primary-5); }
-
-/* ---- Card Grid ---- */
-.cardGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
+.workspaceControls {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
 }
 
-/* Launch New Agent Card */
+.voiceNotReady {
+  font-size: var(--type-11);
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ---- Metrics ---- */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.metric {
+  text-align: left;
+  cursor: pointer;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  border: 1px solid var(--color-border-2);
+  border-left: 4px solid var(--accent, var(--brand));
+  color: inherit;
+  font: inherit;
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.metric:hover {
+  box-shadow: var(--shadow-1);
+}
+
+.metricActive {
+  outline: 1px solid color-mix(in srgb, var(--accent, var(--brand)) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, var(--brand)) 25%, transparent);
+}
+
+.metricValue {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.metricLabel {
+  margin-top: 4px;
+  font-size: var(--type-11);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent, var(--text-secondary));
+}
+
+.metricHint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ---- Split layout ---- */
+.split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  align-items: start;
+  flex: 0 0 auto;
+}
+
+@media (min-width: 960px) {
+  .splitOpen {
+    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  }
+}
+
+.cardsCol {
+  min-width: 0;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
 .launchCard {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 32px 20px;
+  gap: 10px;
+  min-height: 140px;
+  padding: 24px 16px;
   border: 2px dashed var(--color-border-3);
   border-radius: var(--radius-card);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  transition: border-color var(--motion-fast), color var(--motion-fast), background var(--motion-fast);
 }
 
 .launchCard:hover {
@@ -105,65 +184,63 @@
 }
 
 .launchIcon {
-  color: inherit;
-  opacity: 0.6;
+  opacity: 0.65;
 }
 
 .launchLabel {
   font-size: var(--type-14);
   font-weight: 600;
-  letter-spacing: 0.03em;
 }
 
-/* Mission Status Card */
 .missionCard {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px;
+  gap: 8px;
+  padding: 14px;
   border-radius: var(--radius-card);
   background: var(--surface-card);
   border: 1px solid var(--color-border-2);
   cursor: pointer;
-  transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+  min-height: 140px;
 }
 
 .missionCard:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  box-shadow: var(--shadow-2);
+  border-color: color-mix(in srgb, var(--accent, var(--brand)) 40%, var(--color-border-2));
+  box-shadow: var(--shadow-1);
 }
 
-/* Pulsing border for running/verifying missions */
-.missionCard.runningMission {
-  border-color: var(--brand);
+.missionCardSelected {
+  border-color: var(--accent, var(--brand));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, var(--brand)) 35%, transparent);
+}
+
+.runningMission {
   animation: pulseBorder 2s ease-in-out infinite;
 }
 
 @keyframes pulseBorder {
-  0%, 100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 40%, transparent);
-  }
-  50% {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 15%, transparent);
-  }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent, var(--brand)) 35%, transparent); }
+  50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, var(--brand)) 12%, transparent); }
 }
 
 .cardHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
 
 .cardTitle {
-  font-size: var(--type-14);
+  font-size: var(--type-13);
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
   flex: 1;
+  line-height: 1.35;
 }
 
 .closeBtn {
@@ -186,18 +263,19 @@
 .statusBadge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: var(--radius-pill);
-  font-size: var(--type-10);
-  font-weight: 600;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent, var(--brand));
+  background: color-mix(in srgb, var(--accent, var(--brand)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, var(--brand)) 28%, transparent);
   width: fit-content;
 }
 
 .workingDir {
-  font-size: var(--type-12);
+  font-size: var(--type-11);
   color: var(--text-secondary);
   font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
   white-space: nowrap;
@@ -209,86 +287,269 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  margin-top: auto;
 }
 
 .progressBar {
-  height: 6px;
-  border-radius: 3px;
+  height: 4px;
+  border-radius: 2px;
   background: var(--surface-chip);
   overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
-  background: var(--brand);
-  border-radius: 3px;
+  background: var(--accent, var(--brand));
+  border-radius: 2px;
   transition: width 0.3s ease;
 }
 
 .progressText {
-  font-size: var(--type-11);
+  font-size: 11px;
   color: var(--text-dim);
-  text-align: right;
 }
 
 .missionDate {
-  font-size: var(--type-10);
+  font-size: 10px;
   color: var(--text-dim);
-  font-style: italic;
-  margin-top: 4px;
 }
 
-/* ---- Toolbar (Live indicator) ---- */
-.opsToolbar {
+/* ---- Depth panel ---- */
+.depth {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  border: 1px solid var(--color-border-2);
+  overflow: hidden;
+  min-height: 0;
+  /* Viewport-relative cap — % of parent fails when Arco height chain is auto. */
+  max-height: calc(100vh - 220px);
+  position: sticky;
+  top: 8px;
+}
+
+.depthHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border-1);
+  background: var(--surface-row);
+  flex-shrink: 0;
+}
+
+.depthHeadMain {
+  min-width: 0;
+  flex: 1;
+}
+
+.depthTitle {
+  margin: 0;
+  font-size: var(--type-14);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.depthActions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border-1);
+  background: var(--surface-row);
+  flex-shrink: 0;
 }
 
-.live {
+.depthActionsRight {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.depthStatus {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--type-11);
-  font-weight: 600;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--success);
 }
 
-.liveDot {
-  width: 8px;
-  height: 8px;
+.depthStatusDot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 8px var(--success);
-  animation: livePulse 2s ease-in-out infinite;
 }
 
-@keyframes livePulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+.depthBody {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
 }
 
-.voiceNotReady {
-  font-size: var(--type-11);
+.depthMeta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.fieldLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.diag {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-card-inner);
+  background: #0b101b;
+  border: 1px solid var(--color-border-2);
+  color: #fecdd3;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 160px;
+}
+
+:root[data-theme='light'] .diag,
+:root:not([data-theme]) .diag {
+  background: #1e293b;
+}
+
+.taskChecklistItems {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.checklistItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface-row);
+  border-radius: var(--radius-card-inner);
+  border: 1px solid var(--color-border-2);
+}
+
+.checklistActive {
+  border-color: color-mix(in srgb, #38bdf8 50%, var(--color-border-2));
+  box-shadow: 0 0 0 1px color-mix(in srgb, #38bdf8 20%, transparent);
+}
+
+.checklistIcon {
+  width: 1.25em;
+  text-align: center;
+  font-size: 13px;
+}
+
+.checklistTitle {
+  flex: 1;
+  font-size: var(--type-13);
+  color: var(--text-primary);
+}
+
+.checklistStatus {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.logs {
+  background: #05080f;
+  border: 1px solid var(--color-border-2);
+  border-radius: var(--radius-card-inner);
+  padding: 10px;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-height: 180px;
+  overflow: auto;
+}
+
+:root[data-theme='light'] .logs,
+:root:not([data-theme]) .logs {
+  background: #0f172a;
+  color: #cbd5e1;
+}
+
+.logLine {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.logTs {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.logsEmpty {
+  color: #64748b;
   font-style: italic;
 }
 
-/* ---- Composer Row (mission input + voice + start) ---- */
-.composerRow {
+
+/* ---- Empty state (ADR-0003) ---- */
+.empty {
   display: flex;
-  gap: 8px;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 12px 8px;
+  text-align: center;
 }
 
-.missionInput {
-  flex: 1;
-  min-width: 0;
+.emptyTitle {
+  font-size: var(--type-16);
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-/* ---- Modal Forms ---- */
+.emptyHint {
+  font-size: var(--type-13);
+  color: var(--text-muted);
+  max-width: 36ch;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0;
+  color: var(--text-dim);
+}
+
+.emptyStateText {
+  font-size: var(--type-13);
+  font-weight: 500;
+}
+
+/* ---- Modals ---- */
 .modalForm {
   display: flex;
   flex-direction: column;
@@ -328,7 +589,6 @@
   flex: 1;
 }
 
-/* ---- Review Modal ---- */
 .reviewModalContent {
   display: flex;
   flex-direction: column;
@@ -383,190 +643,4 @@
 .taskTitle {
   font-size: var(--type-14);
   color: var(--text-primary);
-}
-
-/* ---- Detail Modal ---- */
-.detailModal {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.detailHeader {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-border-2);
-}
-
-.backBtn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.backBtn:hover {
-  color: var(--text-primary);
-  background: var(--surface-chip);
-}
-
-.detailTitle {
-  flex: 1;
-  margin: 0;
-  font-size: var(--type-16);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.statsStrip {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-
-.statBox {
-  padding: 12px;
-  background: var(--surface-row);
-  border-radius: var(--radius-card-inner);
-  border: 1px solid var(--color-border-2);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.statBoxLabel {
-  font-size: var(--type-10);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-
-.statBoxValue {
-  font-size: var(--type-14);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.goalBox {
-  padding: 12px;
-  background: var(--surface-row);
-  border-radius: var(--radius-card-inner);
-  border: 1px solid var(--color-border-2);
-}
-
-.goalBoxLabel {
-  font-size: var(--type-11);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 6px;
-}
-
-.goalBoxContent {
-  font-size: var(--type-14);
-  color: var(--text-primary);
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-.taskChecklist {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.taskChecklistLabel {
-  font-size: var(--type-11);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-
-.taskChecklistItems {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.checklistItem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--surface-row);
-  border-radius: var(--radius-card-inner);
-  border: 1px solid var(--color-border-2);
-}
-
-.checklistIcon {
-  font-size: 16px;
-  width: 24px;
-  text-align: center;
-}
-
-.checklistTitle {
-  flex: 1;
-  font-size: var(--type-13);
-  color: var(--text-primary);
-}
-
-.checklistStatus {
-  font-size: var(--type-10);
-  font-weight: 600;
-  color: var(--text-dim);
-  text-transform: uppercase;
-}
-
-/* ---- Empty State ---- */
-.emptyState {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 0;
-  font-size: var(--type-15);
-  color: var(--text-dim);
-}
-
-.emptyStateText {
-  font-weight: 500;
-}
-
-/* ---- Workspace Picker Row ---- */
-.workspacePickerRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--surface-row);
-  border-radius: var(--radius-card-inner);
-  border: 1px solid var(--color-border-2);
-}
-
-.workspacePickerLabel {
-  font-size: var(--type-12);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  min-width: 140px;
-}
-
-.workspacePickerInput {
-  display: flex;
-  gap: 8px;
-  flex: 1;
-}
-
-.workspacePickerInput :global(.arco-input) {
-  flex: 1;
 }

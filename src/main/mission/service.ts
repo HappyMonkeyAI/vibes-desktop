@@ -112,7 +112,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
   let state: MissionState = 'idle';
   let bridge: MissionBridge | null = null;
   /** A planned-but-not-yet-launched mission: its child holds the reviewed plan. */
-  let pendingPlan: { bridge: MissionBridge; request: string; workspaceRoot: string } | null = null;
+  let pendingPlan: { bridge: MissionBridge; request: string; workspaceRoot: string; tasks: string[] } | null = null;
   /** The running mission's id — scopes ledger writes and stop-blocking to it. */
   let currentMissionId: string | undefined;
   /** Set by stopMission so the background execution chain doesn't record a
@@ -169,22 +169,26 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
     void mission
       .executePlanned()
       .then(
-        (result) => {
+        async (result) => {
           if (!stopRequested && gen === generation) {
             // A resolved tool call is not success — the child reports outcomes
             // in text ("Mission completed/failed. Completed X/Y tasks."), and a
             // planning failure inside start_execution still resolves. Only an
             // explicit completed mission is recorded done.
             const outcome = missionOutcomeFrom(result);
+            if (outcome.status === 'failed') {
+              await store.markOpenTasksFailed(missionId, outcome.detail).catch(() => undefined);
+            }
             return store.recordMissionEvent(request, outcome.status, root, missionId, outcome.detail).catch(() => undefined);
           }
           return undefined;
         },
-        (error: unknown) => {
+        async (error: unknown) => {
           // A rejection after stopRequested is the child dying from our own
           // stop — already reflected as blocked rows, not a new failure.
           if (!stopRequested && gen === generation) {
             const detail = error instanceof Error ? error.message : String(error);
+            await store.markOpenTasksFailed(missionId, detail).catch(() => undefined);
             return store.recordMissionEvent(request, 'failed', root, missionId, detail).catch(() => undefined);
           }
           return undefined;
@@ -226,9 +230,11 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
       pendingPlan = null;
 
       let mission: MissionBridge | undefined;
+      let plannedTasks: string[] = [];
       try {
         if (adopt) {
           mission = adopt.bridge;
+          plannedTasks = adopt.tasks;
         } else {
           await cancelPendingPlan();
           mission = await spawnBridge(root);
@@ -237,7 +243,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
           // plan_mission reports failures as TEXT ("Mission planning failed: …")
           // and can return an empty task list — both must fail the start here,
           // or dispatching execution would "succeed" with nothing to run.
-          const plannedTasks = parseTasksFromPlan(planResponse);
+          plannedTasks = parseTasksFromPlan(planResponse);
           if (plannedTasks.length === 0) {
             const trimmed = planResponse.trim();
             throw new Error(trimmed || 'Mission planning produced no tasks.');
@@ -245,6 +251,11 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
         }
         wireLedger(mission, root, missionId);
         await store.recordMissionEvent(request, 'running', root, missionId);
+        // Seed the full reviewed plan so the card shows 0/N immediately, not
+        // only the tasks that have already emitted [TASK_STATUS] events.
+        if (plannedTasks.length > 0) {
+          await store.seedPlannedTasks(plannedTasks, root, missionId).catch(() => undefined);
+        }
         // Execution streams task-status events into the ledger while it runs; the
         // returned promise resolves as soon as the mission is dispatched.
         dispatchExecution(mission, request, root, missionId, gen);
@@ -291,7 +302,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
         }
         // Keep the child alive: it holds the reviewed plan in-process, and
         // Accept & Launch will execute it via the same bridge.
-        pendingPlan = { bridge: mission, request, workspaceRoot: root };
+        pendingPlan = { bridge: mission, request, workspaceRoot: root, tasks };
         return { tasks };
       } catch (error) {
         // Surface the failure so the UI can tell the user planning failed,

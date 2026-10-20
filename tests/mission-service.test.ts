@@ -254,6 +254,81 @@ describe('MissionService (T13/T14)', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it('seeds the full planned task list so progress is 0/N before any task-status events', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const plan = JSON.stringify([
+      { id: 1, name: 'Analyze structure', status: 'pending' },
+      { id: 2, name: 'Apply design advice', status: 'pending' },
+      { id: 3, name: 'Verify layout', status: 'pending' },
+    ]);
+    let resolveExec: (v: string) => void = () => undefined;
+    const execGate = new Promise<string>((r) => (resolveExec = r));
+    const service = createMissionService({
+      store,
+      createBridge: () => {
+        const bridge = makeFakeBridge({ planResponse: plan });
+        bridge.executePlanned = () => execGate;
+        return bridge;
+      },
+    });
+
+    const result = await service.startMission({ request: 'Improve design', workspaceRoot: dir });
+    expect(result.started).toBe(true);
+
+    const snap = await store.snapshot();
+    const tasks = snap.entries.filter((e) => e.kind !== 'mission' && e.missionId);
+    expect(tasks.map((t) => t.title).sort()).toEqual([
+      'Analyze structure',
+      'Apply design advice',
+      'Verify layout',
+    ]);
+    expect(tasks.every((t) => t.status === 'pending')).toBe(true);
+
+    resolveExec('Mission failed. Completed 1/3 tasks.');
+    await new Promise((r) => setTimeout(r, 40));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('acceptPlan seeds the reviewed tasks from pendingPlan', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const plan = JSON.stringify([
+      { id: 1, name: 'Step one', status: 'pending' },
+      { id: 2, name: 'Step two', status: 'pending' },
+    ]);
+    let resolveExec: (v: string) => void = () => undefined;
+    const execGate = new Promise<string>((r) => (resolveExec = r));
+    let sharedBridge: ReturnType<typeof makeFakeBridge> | undefined;
+    const service = createMissionService({
+      store,
+      createBridge: () => {
+        sharedBridge = makeFakeBridge({ planResponse: plan });
+        sharedBridge.executePlanned = () => execGate;
+        return sharedBridge;
+      },
+    });
+
+    const planned = await service.planMission({ request: 'Reviewed mission', workspaceRoot: dir });
+    expect(planned.tasks).toEqual(['Step one', 'Step two']);
+
+    const started = await service.startMission({
+      request: 'Reviewed mission',
+      workspaceRoot: dir,
+      acceptPlan: true,
+    });
+    expect(started.started).toBe(true);
+
+    const snap = await store.snapshot();
+    const tasks = snap.entries.filter((e) => e.kind !== 'mission' && e.title.startsWith('Step'));
+    expect(tasks).toHaveLength(2);
+    expect(tasks.every((t) => t.status === 'pending')).toBe(true);
+
+    resolveExec(EXEC_OK);
+    await new Promise((r) => setTimeout(r, 40));
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it("records FAILED when execution resolves with 'No mission has been planned.'", async () => {
     const dir = tempDir();
     const store = new LedgerStore(dir);

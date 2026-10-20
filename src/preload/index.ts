@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import {
   channels,
   type AppSettings,
+  type AppSettingsSaveInput,
   type LedgerNewEntryEvent,
   type LedgerSnapshot,
   type MissionPlanRequest,
@@ -13,8 +14,10 @@ import {
   type TestConnectionRequest,
   type TestConnectionResult,
   type VoiceDoctorResult,
+  type VoiceServerTestResult,
   type VoiceTranscribeRequest,
   type VoiceTranscribeResult,
+  type VoiceWarmResult,
   type WorkspaceHistoryEntry,
   type WorkspaceSelectResult,
 } from '@shared/channels';
@@ -45,6 +48,8 @@ const api = {
     doctor: (): Promise<VoiceDoctorResult> => ipcRenderer.invoke(channels.voiceDoctor),
     transcribe: (request: VoiceTranscribeRequest): Promise<VoiceTranscribeResult> =>
       ipcRenderer.invoke(channels.voiceTranscribe, request),
+    warm: (): Promise<VoiceWarmResult> => ipcRenderer.invoke(channels.voiceWarm),
+    testServer: (): Promise<VoiceServerTestResult> => ipcRenderer.invoke(channels.voiceTestServer),
   },
   mission: {
     start: (request: MissionStartRequest): Promise<MissionStartResult> =>
@@ -65,7 +70,7 @@ const api = {
   },
   settings: {
     get: (): Promise<AppSettings> => ipcRenderer.invoke(channels.settingsGet),
-    save: (input: Partial<AppSettings>): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.settingsSave, input),
+    save: (input: AppSettingsSaveInput): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.settingsSave, input),
   },
 };
 

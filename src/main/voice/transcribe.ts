@@ -69,8 +69,14 @@ export const spawnYapsnap: CliRunner = (args) =>
  * are deleted (SPEC S5: the wav is removed after transcription). Returns an
  * actionable error on any failure — never throws.
  */
-export async function transcribeFile(inputPath: string, outPath: string, runner: CliRunner = spawnYapsnap): Promise<VoiceTranscribeResult> {
-  const args = [inputPath, '-o', outPath, '--lang', 'auto'];
+export async function transcribeFile(
+  inputPath: string,
+  outPath: string,
+  runner: CliRunner = spawnYapsnap,
+  lang = 'auto',
+): Promise<VoiceTranscribeResult> {
+  const language = lang.trim() || 'auto';
+  const args = [inputPath, '-o', outPath, '--lang', language];
   let result;
   try {
     result = await runner(args);

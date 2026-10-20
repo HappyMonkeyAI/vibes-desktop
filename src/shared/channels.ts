@@ -156,6 +156,14 @@ export interface WorkspaceHistoryEntry {
   lastUsed: number;
 }
 
+/**
+ * Speech-to-text engine:
+ * - builtin — Whisper ONNX in-app (Transformers.js), downloads model on first talk (ZeroG-style)
+ * - server — OpenAI-compatible /v1/audio/transcriptions (e.g. qwen3-asr)
+ * - yapsnap — legacy local CLI (optional; requires pip install)
+ */
+export type SpeechEngine = 'builtin' | 'server' | 'yapsnap';
+
 /** App settings persisted in userData (Settings tab). */
 export interface AppSettings {
   /** Absolute path to a vibes checkout (contains src/mcp/server.ts). */
@@ -164,6 +172,38 @@ export interface AppSettings {
   memoryPath: string;
   autoSave: boolean;
   verboseLogging: boolean;
+  /** STT backend. */
+  speechEngine: SpeechEngine;
+  /** Hugging Face Whisper id for builtin engine. */
+  speechModel: string;
+  /** Transformers.js dtype for builtin: q8 | q4 | fp16 | fp32. */
+  speechPrecision: string;
+  /** Language code for STT, or `auto`. */
+  speechLang: string;
+  /** Full transcriptions URL, e.g. http://127.0.0.1:8765/v1/audio/transcriptions */
+  speechServerUrl: string;
+  /** Model name the server expects (e.g. qwen3-asr-0.6b-q8-0). */
+  speechServerModel: string;
+  /** True when an API key is stored for the speech server (never returned decrypted). */
+  speechServerHasKey: boolean;
+}
+
+/** Partial save payload — empty speechServerApiKey means keep the stored key. */
+export type AppSettingsSaveInput = Partial<Omit<AppSettings, 'speechServerHasKey'>> & {
+  speechServerApiKey?: string;
+};
+
+/** Result of warming / pre-fetching the local yapsnap model cache. */
+export interface VoiceWarmResult {
+  ok: boolean;
+  error?: string;
+  detail?: string;
+}
+
+/** Probe result for the configured speech server. */
+export interface VoiceServerTestResult {
+  ok: boolean;
+  error?: string;
 }
 
 /** Wire shape for the `ledger:new-entry` push event (main → renderer). */
@@ -178,6 +218,8 @@ export const channels = {
   rolesTestConnection: 'roles:test-connection',
   voiceDoctor: 'voice:doctor',
   voiceTranscribe: 'voice:transcribe',
+  voiceWarm: 'voice:warm',
+  voiceTestServer: 'voice:test-server',
   missionStart: 'mission:start',
   missionStop: 'mission:stop',
   missionPlan: 'mission:plan',
