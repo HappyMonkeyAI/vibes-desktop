@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-21 — Completion gate soft-pass on malformed owner review
+
+**Symptom:** Chat mission `75c45024-…` — all 3 tasks DONE, page correct (dark header + menu), but mission FAILED: `Owner adversary review is malformed`.
+
+**Cause:** Post-task `ENABLE_ADVERSARIAL_AUDIT` runs Owner-as-Adversary; reviewer JSON failed schema → completion gate rejected success despite done work.
+
+**Fix (Settings vibesPath `development/vibes`):** malformed / `unverified` owner reviews soft-pass; explicit `approved: false` still fails. Coerce string `line` numbers. Tests in `owner-adversary.test.mjs` (5/5 vibes + planner after `npm run build`). Child loads `src/` via tsx — restart mission / app to pick up patch.
+
+---
+
 ## 2026-10-21 — Chat tab phase 1 (T36)
 
 **Done:** `Chat` tab next to Operations. Flow: compose → `mission.plan` → RHS checklist → `start({ acceptPlan: true })` → ledger-bound status → `buildChatMissionSummary` on terminal. `MissionStartResult.missionId` returned for binding. DESIGN.md Chat contract locked. Tests: `chat-summary`, `chat-view`.
