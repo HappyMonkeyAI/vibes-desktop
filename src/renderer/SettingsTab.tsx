@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Input, Message, Select, Switch, Tabs, Tag } from '@arco-design/web-react';
 import type { AppSettings, SpeechEngine, VoiceDoctorResult } from '@shared/channels';
+import { isDecisionModelConfigured } from '@shared/channels';
 import { DEFAULT_SPEECH_MODEL, DEFAULT_SPEECH_PRECISION, SPEECH_MODELS, describeDownload, type SpeechPrecision } from './speech/speech-models';
 import styles from './SettingsTab.module.css';
 
 /**
- * Settings — General (paths / prefs) and Voice (builtin Whisper + optional
- * OpenAI-compatible server / legacy yapsnap).
+ * Settings — General (paths / prefs), Voice, and optional Decision MCP (KEV).
  */
 
 const SettingsTab: React.FC = () => {
@@ -23,12 +23,16 @@ const SettingsTab: React.FC = () => {
   const [speechServerModel, setSpeechServerModel] = useState('');
   const [speechServerApiKey, setSpeechServerApiKey] = useState('');
   const [speechServerHasKey, setSpeechServerHasKey] = useState(false);
+  const [decisionMcpUrl, setDecisionMcpUrl] = useState('');
+  const [decisionMcpAuthToken, setDecisionMcpAuthToken] = useState('');
+  const [decisionMcpHasToken, setDecisionMcpHasToken] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [doctor, setDoctor] = useState<VoiceDoctorResult | null>(null);
   const [warming, setWarming] = useState(false);
   const [testingServer, setTestingServer] = useState(false);
+  const [testingDecision, setTestingDecision] = useState(false);
 
   const refreshDoctor = async () => {
     try {
@@ -68,6 +72,9 @@ const SettingsTab: React.FC = () => {
     setSpeechServerModel(settings.speechServerModel || '');
     setSpeechServerHasKey(Boolean(settings.speechServerHasKey));
     setSpeechServerApiKey('');
+    setDecisionMcpUrl(settings.decisionMcpUrl || '');
+    setDecisionMcpHasToken(Boolean(settings.decisionMcpHasToken));
+    setDecisionMcpAuthToken('');
   };
 
   const handleSave = async () => {
@@ -86,10 +93,13 @@ const SettingsTab: React.FC = () => {
         speechServerUrl,
         speechServerModel,
         speechServerApiKey: speechServerApiKey || undefined,
+        decisionMcpUrl,
+        decisionMcpAuthToken: decisionMcpAuthToken || undefined,
       });
       if (result.ok) {
         Message.success('Settings saved.');
         setSpeechServerApiKey('');
+        setDecisionMcpAuthToken('');
         const refreshed = await window.vibesDesktop.settings.get();
         applySettings(refreshed);
       } else {
@@ -135,6 +145,30 @@ const SettingsTab: React.FC = () => {
     }
   };
 
+  const handleTestDecision = async () => {
+    setTestingDecision(true);
+    try {
+      await window.vibesDesktop.settings.save({
+        decisionMcpUrl,
+        decisionMcpAuthToken: decisionMcpAuthToken || undefined,
+      });
+      const refreshed = await window.vibesDesktop.settings.get();
+      applySettings(refreshed);
+      const result = await window.vibesDesktop.decision.test();
+      if (result.ok) Message.success(result.detail || 'Decision MCP reachable.');
+      else Message.error(result.error || 'Decision MCP probe failed.');
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Decision MCP probe failed.');
+    } finally {
+      setTestingDecision(false);
+    }
+  };
+
+  const decisionOn = isDecisionModelConfigured({
+    decisionMcpUrl,
+    decisionMcpHasToken: decisionMcpHasToken || Boolean(decisionMcpAuthToken.trim()),
+  });
+
   return (
     <div className={styles.page}>
       <h2 className={styles.title}>Settings</h2>
@@ -170,6 +204,49 @@ const SettingsTab: React.FC = () => {
               <span className={styles.rowLabel}>Verbose logging</span>
               <Switch checked={verboseLogging} onChange={setVerboseLogging} size="small" />
             </div>
+          </div>
+
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Decision model (KEV)</h3>
+            <p className={styles.hint}>
+              Optional. When MCP URL and bearer token are set, missions can use a local System One
+              decision model (triage / tool choice). Leave blank to keep decision calls off.
+            </p>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Status</span>
+              {decisionOn
+                ? <Tag color="green" size="small">on — URL + token present</Tag>
+                : <Tag color="gray" size="small">off — not configured</Tag>}
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Decision MCP URL</label>
+              <Input
+                placeholder="http://192.168.5.157:8766/mcp"
+                value={decisionMcpUrl}
+                onChange={setDecisionMcpUrl}
+                size="small"
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>
+                MCP bearer token {decisionMcpHasToken && <Tag color="green" size="small">token stored</Tag>}
+              </label>
+              <Input.Password
+                placeholder={decisionMcpHasToken ? 'Leave blank to keep stored token' : 'KEV_MCP_AUTH_TOKEN'}
+                value={decisionMcpAuthToken}
+                onChange={setDecisionMcpAuthToken}
+                size="small"
+              />
+            </div>
+            <div className={styles.actions}>
+              <Button size="small" type="outline" loading={testingDecision} onClick={() => void handleTestDecision()}>
+                Test decision MCP
+              </Button>
+            </div>
+            <p className={styles.hint}>
+              KEV MCP is often :8765/mcp; Gutsy MCP :8766/mcp. Use the LAN MCP URL, not :8008/:8009.
+              Clear the URL and save to disable.
+            </p>
           </div>
 
           <Button type="primary" onClick={() => void handleSave()} loading={loading || saving} size="large" disabled={loading}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { ActivityGroup, LedgerEntry, LedgerSnapshot, WorkspaceHistoryEntry } from '@shared/channels';
 import { classify } from '@shared/classify';
+import { buildRetryRequest } from '@shared/missionRetry';
 import { Button, Input, Modal, Message, Select } from '@arco-design/web-react';
 import { Plus, Close } from '@icon-park/react';
 import VoiceInput from './VoiceInput';
@@ -87,9 +88,13 @@ const progressOf = (tasks: LedgerEntry[]) => {
   return { done, total: planTasks.length };
 };
 
+/** Short form for cards; full UUID stays in logs / depth panel for fault tracing. */
+const shortMissionId = (id: string): string => id.slice(0, 8);
+
 const logTextFor = (entry: LedgerEntry): string => {
   const kind = entry.kind === 'mission' ? 'MISSION' : 'TASK';
-  const base = `[${kind}] ${entry.status.toUpperCase()} — ${entry.title}`;
+  const idTag = entry.kind === 'mission' && entry.missionId ? ` id=${entry.missionId}` : '';
+  const base = `[${kind}${idTag}] ${entry.status.toUpperCase()} — ${entry.title}`;
   return entry.detail ? `${base} — ${entry.detail}` : base;
 };
 
@@ -324,13 +329,22 @@ const OperationsView: React.FC = () => {
     if (starting) return;
     setStarting(true);
     try {
+      // T31 — forget-except-best: seed planner with prior failure + done steps only.
+      const request = buildRetryRequest({
+        title: card.title,
+        missionDetail: card.detail,
+        systemFailures: card.systemFailures,
+        failedTasks: card.tasks.filter((t) => t.status === 'failed' || t.status === 'blocked'),
+        doneTaskTitles: card.tasks.filter((t) => t.status === 'done').map((t) => t.title),
+      });
+      setMissionRequest(request);
       const result = await window.vibesDesktop.mission.start({
-        request: card.title,
+        request,
         workspaceRoot: card.workspaceRoot || workspaceRoot || undefined,
       });
       if (result.alreadyRunning) Message.warning('A mission is already running.');
       else if (!result.started && result.error) Message.error(result.error);
-      else if (result.started) Message.success('Mission restarted');
+      else if (result.started) Message.success('Mission restarted with prior-attempt lesson');
     } catch (error) {
       Message.error(error instanceof Error ? error.message : String(error));
     } finally {
@@ -611,7 +625,14 @@ const OperationsView: React.FC = () => {
                         {progress.total > 0 ? `${progress.done} / ${progress.total} tasks (${pct}%)` : 'no task activity yet'}
                       </span>
                     </div>
-                    <div className={styles.missionDate}>{formatDate(card.updatedAt)}</div>
+                    <div className={styles.cardFooter}>
+                      <div className={styles.missionDate}>{formatDate(card.updatedAt)}</div>
+                      {card.missionId ? (
+                        <div className={styles.missionId} title={card.missionId}>
+                          {shortMissionId(card.missionId)}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 );
               })}
@@ -669,6 +690,12 @@ const OperationsView: React.FC = () => {
                       : '—'}
                   </div>
                 </div>
+                {selectedCard.missionId ? (
+                  <div className={styles.depthMetaId}>
+                    <div className={styles.fieldLabel}>Mission ID</div>
+                    <code className={styles.missionIdFull}>{selectedCard.missionId}</code>
+                  </div>
+                ) : null}
               </div>
 
               {showFailurePanel ? (

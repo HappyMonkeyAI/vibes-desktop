@@ -45,3 +45,47 @@ describe('SettingsStore voice fields', () => {
     expect(store.get().speechServerModel).toBe('qwen3-asr-0.6b-q8-0');
   });
 });
+
+describe('SettingsStore decision MCP fields', () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), 'vibes-settings-decision-'));
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('defaults with decision model off', () => {
+    const store = new SettingsStore(dir, cipher);
+    const s = store.get();
+    // Env may populate on this machine — treat empty-file store without env as off when unset.
+    if (!process.env['KEV_MCP_URL'] && !process.env['KEV_MCP_AUTH_TOKEN']) {
+      expect(s.decisionMcpUrl).toBe('');
+      expect(s.decisionMcpHasToken).toBe(false);
+    }
+  });
+
+  it('encrypts the decision MCP token and never returns it in get()', () => {
+    const store = new SettingsStore(dir, cipher);
+    expect(store.save({
+      decisionMcpUrl: 'http://192.168.5.157:8765/mcp',
+      decisionMcpAuthToken: 'mcp-secret',
+    })).toBe(true);
+    const view = store.get();
+    expect(view.decisionMcpUrl).toBe('http://192.168.5.157:8765/mcp');
+    expect(view.decisionMcpHasToken).toBe(true);
+    expect(JSON.stringify(view)).not.toContain('mcp-secret');
+    expect(store.getDecisionMcpAuthToken()).toBe('mcp-secret');
+  });
+
+  it('clears usage when URL is emptied (token may remain stored)', () => {
+    const store = new SettingsStore(dir, cipher);
+    store.save({
+      decisionMcpUrl: 'http://192.168.5.157:8765/mcp',
+      decisionMcpAuthToken: 'mcp-secret',
+    });
+    store.save({ decisionMcpUrl: '' });
+    const view = store.get();
+    expect(view.decisionMcpUrl).toBe('');
+    // Token may still be on disk; resolveDecisionMcpConfig requires both.
+    expect(store.getDecisionMcpAuthToken()).toBe('mcp-secret');
+  });
+});

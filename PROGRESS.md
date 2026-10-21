@@ -2,6 +2,84 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-21 — LINKS.md + X harness cherry-picks
+
+**Done:** Captured five user-shared X posts into `LINKS.md` + distillation `.agent/memories/codebase_insights/2026-10-21-x-links-harness-cherry.md`. Neo MCP was down; used Nitter/arXiv. Top cherry-picks: Harness²-lite lessons on Retry, ProPerAgent-style intervene-gate via KEV (T26), Chat-tab inline artifacts (Xpress). PaperLeet defer; no second engine.
+
+---
+
+## 2026-10-21 — Structural audit: css_orphan false positive on Windows / HTML
+
+**Symptom:** Footer mission `957592ad-…` — HTML task DONE; CSS task failed `css_orphan` on `styles.css` even though `index.html` has `<link href="styles.css">`.
+
+**Cause:** Global-CSS exemption used `file.split('/').pop()` — on Windows absolute paths that never equals `styles.css`. Audit also ignored HTML `<link>` as an import.
+
+**Fix:** `path.basename` for global names; scan `.html` for stylesheet hrefs into `importedAssetFiles`. Tests `structural-audit-html-css.test.mjs` green in `development/vibes`.
+
+**Retry:** footer mission (or Retry from depth) — CSS step should clear audit.
+
+---
+
+## 2026-10-21 — Evidence gate: static / broken-.git workspaces
+
+**Symptom:** Footer mission `dae2bc76-…` — task done by executor then failed: `Evidence verification failed and Git state is unavailable: … not a git repository`. Workspace `development/test` had a stub `.git` (HEAD only) + no `package.json`.
+
+**Cause:** Evidence fallback ran `npm --version` via `execFile('npm')` → Windows ENOENT (`npm.cmd`), so commands looked failed even though git was the only real message.
+
+**Fix (in Settings vibesPath `development/vibes` + `local-ai-planner`):** skip dummy npm when no build/test scripts; use `npm.cmd` on win32 when scripts exist; MCP `ensureWorkspaceGitSnapshot` repairs stub `.git` before execute. Tests: `scheduler-evidence-static` + requeue still green.
+
+**Retry:** footer mission again (new child loads patched source).
+
+---
+
+## 2026-10-21 — Roles: AgentWorld executor + prior Default as reviewer
+
+**Done:** Probed Unsloth Studio `http://192.168.5.157:8888/v1` (Bearer). Models list includes `unsloth/Qwen-AgentWorld-35B-A3B-GGUF` (quant UD-IQ4_NL). Chat completions OK (answers often land in `reasoning_content` while `content` is empty — watch executor parsing). `/v1/systemone` on `:8888` → **404** (not a Decision/System One host; keep KEV MCP `:8765`).
+
+**Roles** (`%APPDATA%/vibes-desktop/roles-config.json`):
+- **Default + Executor** → LAN Unsloth `:8888` + AgentWorld (canonical model id, no `:quant` suffix)
+- **Reviewer + Planner** → previous Default (Cloudflare tunnel + encrypted key) so ENABLE_REVIEWER stays on
+- LM Studio `google/gemma-4-e2b` on `:1234` chat → 400 (not loaded / rejected); not used as reviewer
+
+**What's next:** Restart app → Roles → Test Connection on Executor and Reviewer. Load AgentWorld in Unsloth if unloaded. If tunnel reviewer 401s, point Reviewer at a working instruct model (e.g. LM Studio `liquid/lfm2.5-1.2b` which probed OK).
+
+---
+
+## 2026-10-20 EOD — Stop here
+
+**Day rolled up:** Hybrid C + voice + plan-seed already parked earlier; Part A (bookmarks → KEV/GUTSY) + ghost-done scheduler fix closed the loop.
+
+| Track | Outcome |
+|-------|---------|
+| Hybrid C / mission UX | Depth panel, failure detail, plan-seed checklist, mission UUID on cards/logs |
+| Voice | Builtin Whisper default (ADR-0002 amend); yapsnap legacy; optional ASR server |
+| Part A / T29–T34 | KEV MCP probe on LAN `:8765`; Settings Decision (URL+token, probe treats HTTP 400 reachable); Hy Memory defer; Retry forget-except-best |
+| Scheduler / T33 | Ghost-done fix ported to **Settings vibesPath** `development/vibes` (`requeueOrFailGate` + evidence-requeue test green). App was hitting that checkout, not `local-ai-planner` |
+
+**Uncommitted / external:** `development/vibes` has uncommitted scheduler + test changes — commit there when resuming. Desktop has local WIP (decision settings, missionRetry, ops UI) — commit when ready.
+
+**Next session (pick one):**
+1. Live Retry Unsplash info-boxes mission — confirm no false circular-deps deadlock
+2. Commit desktop + vibes scheduler patches
+3. T26 — wire missions to decision MCP when Settings has URL+token
+4. T21 V3 live pass; T24 TTS later
+
+**Open:** T26 (config only today; missions still don’t call KEV tools), T21 V3, T24 TTS. Gutsy `:8766` probe OK as reachable-on-400; KEV `:8008` still localhost-on-host.
+
+---
+
+## 2026-10-20 (scheduler) — Ghost-done deadlock fix live on Settings vibesPath
+
+**Symptom:** Unsplash columns mission (`3ee5aaaf-…`) failed with “Scheduler deadlock / circular depends_on” after 1/3 tasks — CSS/verify stuck waiting on a UUID while HTML looked incomplete.
+
+**Cause:** Evidence handoff rejected executor `done` but left `status=done` without `completedTasks` credit (false circular-deps deadlock). Fix existed in `local-ai-planner`; Settings/`VIBES_PATH` points at `development/vibes`, which lacked `requeueOrFailGate`.
+
+**Done:** Ported `requeueOrFailGate` + ghost-aware `describeDependencyDeadlock` + `tests/scheduler-evidence-requeue.test.mjs` into `development/vibes`. Test green after rebuild (`got >=4 executions`). Desktop already on that checkout; one child per mission so the next start loads patched `src/` via tsx.
+
+**Evidence:** `node --test tests/scheduler-evidence-requeue.test.mjs` pass in vibes; desktop `mission-retry` 3/3.
+
+**What's next:** Retry the Unsplash row mission (Retry / forget-except-best). Expect requeue on evidence fail or a “done but not credited” message — not the circular-deps essay. T26 decision MCP wiring still open.
+
 ## 2026-10-20 (theme) — Contrast pass: dark inputs + stronger light
 
 **Done:** Dark composer/selects use `--input-bg` `#0b101b` + light text (no white Arco fill). Light mode: cooler gray page `#e8ecf2`, darker text/borders, white cards with visible borders/shadows.

@@ -56,7 +56,12 @@ window.vibesDesktop = {
       speechServerUrl: 'http://127.0.0.1:8765/v1/audio/transcriptions',
       speechServerModel: 'qwen3-asr-0.6b-q8-0',
       speechServerHasKey: false,
+      decisionMcpUrl: '',
+      decisionMcpHasToken: false,
     }),
     save: vi.fn().mockResolvedValue({ ok: true }),
+  },
+  decision: {
+    test: vi.fn().mockResolvedValue({ ok: false, error: 'not configured' }),
   },
 };

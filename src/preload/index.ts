@@ -18,6 +18,7 @@ import {
   type VoiceTranscribeRequest,
   type VoiceTranscribeResult,
   type VoiceWarmResult,
+  type DecisionProbeResult,
   type WorkspaceHistoryEntry,
   type WorkspaceSelectResult,
 } from '@shared/channels';
@@ -71,6 +72,9 @@ const api = {
   settings: {
     get: (): Promise<AppSettings> => ipcRenderer.invoke(channels.settingsGet),
     save: (input: AppSettingsSaveInput): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.settingsSave, input),
+  },
+  decision: {
+    test: (): Promise<DecisionProbeResult> => ipcRenderer.invoke(channels.decisionTest),
   },
 };
 

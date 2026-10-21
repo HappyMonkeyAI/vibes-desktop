@@ -14,6 +14,8 @@ import { transcribeViaServer, probeSpeechServer } from '../voice/speech-server';
 import { warmYapsnapModels } from '../voice/warm';
 import type { WorkspaceHistoryStore } from '../workspace/history';
 import { DEFAULT_SETTINGS, type SettingsStore } from '../settings/store';
+import { resolveDecisionMcpConfig } from '../decision/config';
+import { probeDecisionMcp } from '../decision/probe';
 
 /**
  * Handler table: one entry per channel in the shared map. T5 wires the ledger
@@ -187,6 +189,17 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       if (!settingsStore) return { ok: true }; // parity stub — nothing to persist in tests
       const ok = settingsStore.save(input as AppSettingsSaveInput);
       return { ok };
+    },
+    // Optional KEV/GUTSY decision MCP — only probes when URL + token are configured.
+    [channels.decisionTest]: async () => {
+      const config = resolveDecisionMcpConfig(settingsStore);
+      if (!config) {
+        return {
+          ok: false,
+          error: 'Decision model is off — set MCP URL and bearer token in Settings, then Save.',
+        };
+      }
+      return probeDecisionMcp(config);
     },
   };
 }

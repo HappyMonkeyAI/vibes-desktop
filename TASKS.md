@@ -41,8 +41,19 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T25 Seed reviewed plan tasks into ledger (0/N progress); mark open tasks failed on mission fail; hide Mission Scheduler from checklist ✅ 2026-10-20
 - [x] T27 Expandable mission/step failure detail in depth panel; child emits task error on TASK_STATUS ✅ 2026-10-20
 - [x] T28 Dark Mission Control default + Stitch sky accent; light toggle retained ✅ 2026-10-20
+
+## P7 — Roadmap (next session)
+- [ ] T26 External MCP servers for missions: configure/register local MCP tools (KEV decision MCP when Settings has URL+token; html-design-advisor; …) — naming a path in the prompt is not enough. Settings Decision UI is config-only until this lands. **ProPerAgent-shaped use:** gate intervene vs continue before escalating (see LINKS.md / 2026-10-21 cherry note).
+- [ ] T35 (research→product) Harness²-lite: persist one post-failure harness lesson into Retry seed / `.vibes` — not full recursive harness editing (LINKS.md #1)
+- [ ] T36 Chat tab (phase 1): request → plan RHS → live summary → done comment; inline artifacts under turns (Xpress pattern, LINKS.md #2) — DESIGN.md update when started
+- [ ] T21 V3 live mission pass (checklist + logs + failure detail without DevTools) — still owed from P5; start with Retry Unsplash info-boxes after ghost-done port
+- [ ] chore: commit desktop WIP + `development/vibes` scheduler/`requeueOrFailGate` + evidence-requeue test (uncommitted there as of EOD 2026-10-20)
 - [ ] T24 Optional later: Agent Voice TTS announce on mission done/failed (HTTP to local daemon)
 
-## P7 — Roadmap (next)
-- [ ] T26 External MCP servers for missions: configure/register local MCP tools (e.g. html-design-advisor) so plan steps can call them — naming a path in the prompt is not enough
-- [ ] T21 V3 live mission pass (checklist + logs + failure detail without DevTools) — still owed from P5
+## P8 — Part A (harness / memory research → product)
+- [x] T29 Decision spike (probe): LAN **KEV MCP** `http://192.168.5.157:8765/mcp` — list_models + triage `kev_evaluate` (escalate ~4.5s) + shadow `kev_select_tool` (~80ms). APIs `:8008`/`:8009` not LAN-published (localhost on host). Notes in `2026-10-20-decision-model-kev-gutsy.md` ✅ 2026-10-20
+- [x] T34 Settings → Decision model (KEV): optional MCP URL + encrypted bearer; on only when both present; Test probe IPC (HTTP 400/405/406 = reachable); `resolveDecisionMcpConfig` for future mission use ✅ 2026-10-20
+- [x] T30 Docs spike: Hy Memory vs vibes MEMORY/CODEX + Adapter — **ignore/defer**; one-pager in `.agent/memories/codebase_insights/2026-10-20-hy-memory-vs-vibes.md` ✅ 2026-10-20
+- [x] T31 Retry seed: forget-except-best (prior failure + best done steps) when Retry from depth panel — `buildRetryRequest` / `cleanMissionTitle` ✅ 2026-10-20
+- [x] T32 Mission ID on card + MISSION log lines — ✅ 2026-10-20
+- [x] T33 Vibes regression: evidence-handoff failure requeues instead of ghost-done deadlock — test in `local-ai-planner` + **ported to Settings checkout `development/vibes`** (`requeueOrFailGate`, evidence-requeue test green) ✅ 2026-10-20

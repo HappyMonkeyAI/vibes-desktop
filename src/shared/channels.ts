@@ -186,12 +186,32 @@ export interface AppSettings {
   speechServerModel: string;
   /** True when an API key is stored for the speech server (never returned decrypted). */
   speechServerHasKey: boolean;
+  /**
+   * Streamable-HTTP MCP URL for a KEV-compatible decision server
+   * (e.g. http://192.168.5.157:8765/mcp). Empty = decision model off.
+   */
+  decisionMcpUrl: string;
+  /** True when a bearer token is stored for the decision MCP (never returned decrypted). */
+  decisionMcpHasToken: boolean;
 }
 
-/** Partial save payload — empty speechServerApiKey means keep the stored key. */
-export type AppSettingsSaveInput = Partial<Omit<AppSettings, 'speechServerHasKey'>> & {
+/** Partial save payload — empty *ApiKey / *AuthToken fields mean keep the stored secret. */
+export type AppSettingsSaveInput = Partial<Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken'>> & {
   speechServerApiKey?: string;
+  /** Bearer for decision MCP; empty string omitted = keep stored. */
+  decisionMcpAuthToken?: string;
 };
+
+/** Main-process view of an optional decision MCP endpoint. */
+export type DecisionMcpConfig = {
+  url: string;
+  token: string;
+};
+
+/** True when Settings (or env fallback) has both a URL and a token. */
+export function isDecisionModelConfigured(settings: Pick<AppSettings, 'decisionMcpUrl' | 'decisionMcpHasToken'>): boolean {
+  return Boolean(settings.decisionMcpUrl.trim() && settings.decisionMcpHasToken);
+}
 
 /** Result of warming / pre-fetching the local yapsnap model cache. */
 export interface VoiceWarmResult {
@@ -204,6 +224,13 @@ export interface VoiceWarmResult {
 export interface VoiceServerTestResult {
   ok: boolean;
   error?: string;
+}
+
+/** Probe result for the optional decision MCP (KEV / GUTSY). */
+export interface DecisionProbeResult {
+  ok: boolean;
+  error?: string;
+  detail?: string;
 }
 
 /** Wire shape for the `ledger:new-entry` push event (main → renderer). */
@@ -231,6 +258,7 @@ export const channels = {
   ledgerArchive: 'ledger:archive',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
+  decisionTest: 'decision:test',
 } as const;
 
 export type ChannelName = (typeof channels)[keyof typeof channels];

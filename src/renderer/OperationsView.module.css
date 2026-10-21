@@ -343,9 +343,38 @@
   color: var(--text-dim);
 }
 
+.cardFooter {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
 .missionDate {
   font-size: 10px;
   color: var(--text-dim);
+}
+
+.missionId {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.depthMetaId {
+  grid-column: 1 / -1;
+}
+
+.missionIdFull {
+  display: block;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  user-select: all;
+  word-break: break-all;
 }
 
 /* ---- Depth panel ---- */

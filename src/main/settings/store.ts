@@ -8,8 +8,8 @@ import type { Cipher } from '../roles/store';
  * or corrupt file resolves to the defaults rather than throwing — a machine that
  * has never saved settings must still boot.
  *
- * The speech-server API key is encrypted via the injected Cipher (same OS
- * safeStorage path as Roles) and never returned decrypted over IPC.
+ * Speech-server and decision-MCP secrets are encrypted via the injected Cipher
+ * (same OS safeStorage path as Roles) and never returned decrypted over IPC.
  */
 
 const SETTINGS_FILE_NAME = 'settings.json';
@@ -27,10 +27,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   speechServerUrl: 'http://127.0.0.1:8765/v1/audio/transcriptions',
   speechServerModel: 'qwen3-asr-0.6b-q8-0',
   speechServerHasKey: false,
+  decisionMcpUrl: '',
+  decisionMcpHasToken: false,
 };
 
-type Persisted = Omit<AppSettings, 'speechServerHasKey'> & {
+type Persisted = Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken'> & {
   speechServerApiKeyEnc?: string;
+  decisionMcpAuthTokenEnc?: string;
 };
 
 function asString(value: unknown): string {
@@ -64,11 +67,41 @@ export class SettingsStore {
     }
   }
 
+  /** Decrypted decision MCP bearer for main-process use only — never over IPC. */
+  getDecisionMcpAuthToken(): string | undefined {
+    try {
+      if (!existsSync(this.filePath)) {
+        const fromEnv = (process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim();
+        return fromEnv || undefined;
+      }
+      const raw = JSON.parse(readFileSync(this.filePath, 'utf-8')) as Persisted;
+      const enc = asString(raw.decisionMcpAuthTokenEnc);
+      if (enc && this.cipher) {
+        const plain = this.cipher.decrypt(enc);
+        if (plain) return plain;
+      }
+      const fromEnv = (process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim();
+      return fromEnv || undefined;
+    } catch {
+      const fromEnv = (process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim();
+      return fromEnv || undefined;
+    }
+  }
+
   get(): AppSettings {
     try {
-      if (!existsSync(this.filePath)) return { ...DEFAULT_SETTINGS };
+      if (!existsSync(this.filePath)) {
+        return {
+          ...DEFAULT_SETTINGS,
+          decisionMcpUrl: (process.env['KEV_MCP_URL'] ?? '').trim(),
+          decisionMcpHasToken: Boolean((process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim()),
+        };
+      }
       const raw = JSON.parse(readFileSync(this.filePath, 'utf-8')) as Persisted & Record<string, unknown>;
-      const hasKey = Boolean(asString(raw.speechServerApiKeyEnc));
+      const hasSpeechKey = Boolean(asString(raw.speechServerApiKeyEnc));
+      const hasDecisionToken = Boolean(asString(raw.decisionMcpAuthTokenEnc))
+        || Boolean((process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim());
+      const decisionUrl = asString(raw.decisionMcpUrl) || (process.env['KEV_MCP_URL'] ?? '').trim();
       return {
         vibesPath: asString(raw.vibesPath),
         contextPath: asString(raw.contextPath),
@@ -81,7 +114,9 @@ export class SettingsStore {
         speechLang: asString(raw.speechLang) || DEFAULT_SETTINGS.speechLang,
         speechServerUrl: asString(raw.speechServerUrl) || DEFAULT_SETTINGS.speechServerUrl,
         speechServerModel: asString(raw.speechServerModel) || DEFAULT_SETTINGS.speechServerModel,
-        speechServerHasKey: hasKey,
+        speechServerHasKey: hasSpeechKey,
+        decisionMcpUrl: decisionUrl,
+        decisionMcpHasToken: hasDecisionToken,
       };
     } catch {
       return { ...DEFAULT_SETTINGS };
@@ -91,19 +126,27 @@ export class SettingsStore {
   save(input: AppSettingsSaveInput): boolean {
     try {
       const currentView = this.get();
-      let existingEnc = '';
+      let existingSpeechEnc = '';
+      let existingDecisionEnc = '';
       try {
         if (existsSync(this.filePath)) {
           const raw = JSON.parse(readFileSync(this.filePath, 'utf-8')) as Persisted;
-          existingEnc = asString(raw.speechServerApiKeyEnc);
+          existingSpeechEnc = asString(raw.speechServerApiKeyEnc);
+          existingDecisionEnc = asString(raw.decisionMcpAuthTokenEnc);
         }
       } catch {
-        existingEnc = '';
+        existingSpeechEnc = '';
+        existingDecisionEnc = '';
       }
 
-      let nextEnc = existingEnc;
+      let nextSpeechEnc = existingSpeechEnc;
       if (typeof input.speechServerApiKey === 'string' && input.speechServerApiKey.length > 0 && this.cipher) {
-        nextEnc = this.cipher.encrypt(input.speechServerApiKey);
+        nextSpeechEnc = this.cipher.encrypt(input.speechServerApiKey);
+      }
+
+      let nextDecisionEnc = existingDecisionEnc;
+      if (typeof input.decisionMcpAuthToken === 'string' && input.decisionMcpAuthToken.length > 0 && this.cipher) {
+        nextDecisionEnc = this.cipher.encrypt(input.decisionMcpAuthToken);
       }
 
       const nextEngine = input.speechEngine === 'server' || input.speechEngine === 'yapsnap' || input.speechEngine === 'builtin'
@@ -122,7 +165,9 @@ export class SettingsStore {
         speechLang: asString(input.speechLang ?? currentView.speechLang) || DEFAULT_SETTINGS.speechLang,
         speechServerUrl: asString(input.speechServerUrl ?? currentView.speechServerUrl),
         speechServerModel: asString(input.speechServerModel ?? currentView.speechServerModel),
-        speechServerApiKeyEnc: nextEnc || undefined,
+        speechServerApiKeyEnc: nextSpeechEnc || undefined,
+        decisionMcpUrl: asString(input.decisionMcpUrl ?? currentView.decisionMcpUrl),
+        decisionMcpAuthTokenEnc: nextDecisionEnc || undefined,
       };
       const dir = path.dirname(this.filePath);
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });

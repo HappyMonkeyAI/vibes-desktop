@@ -79,6 +79,11 @@ Lessons learned while building Vibes Desktop. Imperative rules with the why; one
 - Palettes live under `:root[data-theme='light' | 'dark']`; light is the default, dark retained so a future toggle is an attribute flip. CSS custom properties carry every color; non-CSS data (theme list, labels, kind, terminal palettes) stays in a themes module with a `toggledTheme()` helper. Module CSS must reference semantic surface tokens (`--surface-card`, `--surface-row`, …), never hardcoded `rgba(255,255,255,…)` overlays — that is what makes both modes render correctly from one stylesheet.
 - Set `arco-theme` + `data-theme` on `documentElement` **synchronously in `<body>` before the module script** to prevent a theme flash. Setting the attribute on `body` from a `<head>` script silently no-ops (body doesn't exist yet).
 
+## Scheduler / vibes checkout
+
+- A “circular depends_on” deadlock after the first task often means **ghost-done**: evidence handoff failed after the executor marked `done`, but `completedTasks` never got the id. Dependents wait forever. Fix is `requeueOrFailGate` in the vibes checkout Settings points at (`development/vibes`), not only `local-ai-planner`. Bridge runs `tsx src/mcp/server.ts` (source), one child per mission — patched source is enough; keep the evidence-requeue regression test green in that checkout.
+- Deadlock copy must distinguish ghost (done but not credited), missing depends_on ids, and real cycles — never always blame circular links.
+
 ## Verification tooling (Windows)
 
 - Window-capture (`CopyFromScreen`) grabs the desktop wallpaper when the app isn't frontmost — it failed silently and returned the background image. Use CDP's `Page.captureScreenshot` instead: it captures the renderer directly with no z-order fight. Drive CDP from Node v26's global `WebSocket`; add `awaitPromise: true` to `Runtime.evaluate` for any expression that returns a Promise, or you get `{}` back.
