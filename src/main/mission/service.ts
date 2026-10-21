@@ -261,7 +261,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
         // Execution streams task-status events into the ledger while it runs; the
         // returned promise resolves as soon as the mission is dispatched.
         dispatchExecution(mission, request, root, missionId, gen);
-        return { started: true, alreadyRunning: false };
+        return { started: true, alreadyRunning: false, missionId };
       } catch (error) {
         // Covers a crashed child and a planning error — both are start failures.
         const message = error instanceof Error ? error.message : String(error);
@@ -269,7 +269,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
         try { if (mission) await mission.stop().catch(() => undefined); } catch {}
         await endBridge();
         state = 'idle';
-        return { started: false, alreadyRunning: false, error: message };
+        return { started: false, alreadyRunning: false, error: message, missionId };
       }
     },
 

@@ -2,6 +2,14 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-21 — Chat tab phase 1 (T36)
+
+**Done:** `Chat` tab next to Operations. Flow: compose → `mission.plan` → RHS checklist → `start({ acceptPlan: true })` → ledger-bound status → `buildChatMissionSummary` on terminal. `MissionStartResult.missionId` returned for binding. DESIGN.md Chat contract locked. Tests: `chat-summary`, `chat-view`.
+
+**Out of scope (phase 2):** interrupt/replan mid-run, steering replies, inline artifacts.
+
+---
+
 ## 2026-10-21 — LINKS.md + X harness cherry-picks
 
 **Done:** Captured five user-shared X posts into `LINKS.md` + distillation `.agent/memories/codebase_insights/2026-10-21-x-links-harness-cherry.md`. Neo MCP was down; used Nitter/arXiv. Top cherry-picks: Harness²-lite lessons on Retry, ProPerAgent-style intervene-gate via KEV (T26), Chat-tab inline artifacts (Xpress). PaperLeet defer; no second engine.

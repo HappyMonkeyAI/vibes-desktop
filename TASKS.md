@@ -45,7 +45,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 ## P7 — Roadmap (next session)
 - [ ] T26 External MCP servers for missions: configure/register local MCP tools (KEV decision MCP when Settings has URL+token; html-design-advisor; …) — naming a path in the prompt is not enough. Settings Decision UI is config-only until this lands. **ProPerAgent-shaped use:** gate intervene vs continue before escalating (see LINKS.md / 2026-10-21 cherry note).
 - [ ] T35 (research→product) Harness²-lite: persist one post-failure harness lesson into Retry seed / `.vibes` — not full recursive harness editing (LINKS.md #1)
-- [ ] T36 Chat tab (phase 1): request → plan RHS → live summary → done comment; inline artifacts under turns (Xpress pattern, LINKS.md #2) — DESIGN.md update when started
+- [x] T36 Chat tab (phase 1): request → plan RHS → auto-launch → ledger summary → done comment — `ChatView` + DESIGN.md ✅ 2026-10-21 (artifacts / steering / interrupt = phase 2)
 - [ ] T21 V3 live mission pass (checklist + logs + failure detail without DevTools) — still owed from P5; start with Retry Unsplash info-boxes after ghost-done port
 - [ ] chore: commit desktop WIP + `development/vibes` scheduler/`requeueOrFailGate` + evidence-requeue test (uncommitted there as of EOD 2026-10-20)
 - [ ] T24 Optional later: Agent Voice TTS announce on mission done/failed (HTTP to local daemon)

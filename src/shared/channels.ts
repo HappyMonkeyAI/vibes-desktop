@@ -129,6 +129,8 @@ export interface MissionStartResult {
   alreadyRunning: boolean;
   /** Present when the start was rejected or failed for a reason the user can act on. */
   error?: string;
+  /** Minted when start succeeds — Chat / depth panels bind ledger rows to this id. */
+  missionId?: string;
 }
 
 /** Mission plan response from the planner API. */

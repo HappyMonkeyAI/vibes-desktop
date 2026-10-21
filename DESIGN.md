@@ -58,7 +58,31 @@ Empty state stays ADR-0003: **"All quiet"**, never an incomplete-source error.
 | Roles / models | Roles tab + `.vibes/config.json` | Keep Roles; footer may show active model when known |
 | Engine health | Child spawn / stop | Footer LIVE / offline |
 
-Out of scope for this pass: full TUI Settings parity (YOLO, swarm, triage interval), chat transcript pane, system htop pane, keyboard Alt+ view switching.
+Out of scope for Hybrid C pass: full TUI Settings parity (YOLO, swarm, triage interval), system htop pane, keyboard Alt+ view switching.
+
+## Chat tab (phase 1 — locked 2026-10-21)
+
+Traditional chat harness **above** mission ATC. Same `missionService` + ledger as Operations — not a second agent.
+
+```
+┌─ Chat (transcript) ──────────────────┬─ Plan (RHS) ─────────┐
+│ user: request                        │ 1. … checklist       │
+│ assistant: planned N steps · running │ 2. …                 │
+│ assistant: status lines from ledger  │ 3. …                 │
+│ assistant: done/fail summary         │                      │
+├─ workspace · composer · Send / Stop ─┴──────────────────────┤
+```
+
+**Interaction**
+1. User sends a message (workspace required).
+2. Plan via existing `mission:plan` → RHS task list + short assistant note.
+3. Auto-launch with `acceptPlan: true` (one write path into `startMission`).
+4. Live plan/status from ledger rows for that `missionId` (honest; no invented streams).
+5. On mission terminal state → one summary comment in the transcript.
+
+**Phase 2 (later):** interrupt/pause, mid-run replan, steering replies, inline artifacts (Xpress).
+
+**Rejected:** second composer that bypasses missionService; embedding the TUI.
 
 ## Voice (locked 2026-10-20; revised same day)
 
