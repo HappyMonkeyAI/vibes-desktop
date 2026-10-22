@@ -1,0 +1,72 @@
+# Features — Vibes Desktop 0.1
+
+Operator-facing map of what ships in **0.1.x**. Design intent lives in [DESIGN.md](../DESIGN.md); acceptance criteria in [SPEC.md](../SPEC.md); release notes in [CHANGELOG.md](../CHANGELOG.md).
+
+## Mission Control (Operations)
+
+| Capability | Where | Notes |
+|------------|--------|--------|
+| Launch / Start / Stop | Dispatch bar + Launch tile | Optional Review Plan; single mission at a time |
+| Metric strip | Needs You / Running / Upcoming / Recent | Click filters cards |
+| Depth panel | Checklist, detail, live logs | From ledger only — no fabricated streams |
+| Retry | Depth actions | Seeds prior failure + harness lesson into next request |
+| Needs You | Metric + depth + Chat | Escalate / triage / fail gate → Retry step / Skip / Fail |
+
+## Chat
+
+| Capability | Notes |
+|------------|--------|
+| Send → plan → launch | Auto-starts after plan accept path |
+| Steer mid-run | `mission:steer` → vibes `steer_mission` |
+| Follow-up queue | FIFO when busy; Pause / Resume / Clear |
+| Needs You actions | Same resolve path as Operations |
+
+## Settings
+
+### Roles
+
+Per-role base URL / model / API key (encrypted at rest). Test connection probes the OpenAI-compatible endpoint. Writes merge into workspace `.vibes/config.json`.
+
+### Decision (intervene gate)
+
+| Field | Purpose |
+|-------|---------|
+| MCP URL | e.g. Unsloth Studio `http://<host>:8888/mcp/` or KEV `http://<host>:8765/mcp` |
+| Bearer token | Encrypted; also injectable as env for live tests |
+
+When both are set, missions get Decision config. On intervene, desktop calls:
+
+1. **`system_one`** — Unsloth Studio System One (preferred for `:8888` / unsloth hosts)
+2. **`kev_evaluate`** — classic HappyMonkey KEV
+
+Outcomes: continue / escalate / skip. Escalate (and near-tie / abstention) surfaces as **Needs You**.
+
+Probe: Settings → Test decision MCP. Live e2e: `VIBES_DECISION_LIVE=1` (+ URL/token in env or Settings).
+
+### Mission MCP tools
+
+Toggle **HTML Design Advisor** to seed/remove that server in workspace `.vibes/mcp.json` when a mission spawns.
+
+### Voice
+
+| Engine | Use |
+|--------|-----|
+| Builtin Whisper | In-process / bundled path |
+| Server ASR | OpenAI-compatible speech URL |
+| yapsnap | Legacy CLI + ffmpeg |
+
+Optional **Agent Voice announce**: daemon URL + token; soft `POST /v1/announce` on mission terminal states. Test button in Settings.
+
+## Reliability helpers
+
+- **Soft-pass:** malformed / unverified Owner adversary review does not false-FAIL (explicit `approved: false` still fails).
+- **Double-check completion:** optional evidence re-check (`ENABLE_DOUBLE_CHECK_COMPLETION` via config).
+- **Harness lesson:** on failure, writes `.vibes/harness-lesson.json`; Retry injects Keep/Avoid guidance (v2 schema).
+
+## Packaging
+
+`npm run dist` → Windows NSIS installer (`Vibes Desktop Setup <version>.exe`). App version = `package.json` `version`.
+
+## Out of scope (0.1)
+
+Bark STT, Flint, full Agent S4 MCP marketplace UI, Hy Memory as product store, non-Windows installers.

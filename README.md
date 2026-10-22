@@ -20,8 +20,16 @@ npm run build      # electron-builder distributable
 
 Requires Node 22+, a Vibes checkout or the `vibes-tui` npm package (the app spawns its MCP server), and for voice: ffmpeg on PATH plus `pip install yapsnap`.
 
+## Version
+
+Current app version: **0.1.0** (`package.json`). User-facing release notes: [CHANGELOG.md](CHANGELOG.md). Feature map: [docs/FEATURES.md](docs/FEATURES.md).
+
+Bump `package.json` `version` when cutting a release; add a matching `CHANGELOG.md` section the same day. Session detail stays in `PROGRESS.md` — do not duplicate full narrative into the changelog.
+
 ## Documentation Spine
 
+- [CHANGELOG.md](CHANGELOG.md) — released versions
+- [docs/FEATURES.md](docs/FEATURES.md) — operator feature map
 - [CONTEXT.md](CONTEXT.md) — stack, rules, what not to do
 - [AGENTS.md](AGENTS.md) — agent behavior law
 - [SPEC.md](SPEC.md) — acceptance criteria (S1–S8)

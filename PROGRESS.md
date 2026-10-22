@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-22 — Release hygiene (T48)
+
+**Done:** Bumped app to **0.1.0**. Added Keep-a-Changelog `CHANGELOG.md`, operator `docs/FEATURES.md` (Mission Control, Chat, Decision/`system_one`, Needs You, Voice, harness). README points at version + those docs. TASKS P9: T49 tag/installer, T50 live Needs-You, T51 optional Kev/Bark.
+
+**Evidence:** files on disk; `package.json` version `0.1.0`.
+
+**Next:** Save Decision in Settings → T50 live escalate; or T49 tag + `npm run dist` when packaging.
+
+---
+
 ## 2026-10-22 — Live Decision via Unsloth Studio MCP
 
 **Done:** Unsloth Agent MCP `http://192.168.5.157:8888/mcp/` tool `system_one` (English / laya-english). Client tries `system_one` then `kev_evaluate`. Live shadow: escalate≈0.70 on css_orphan fixture. Settings hint updated. Key stays in Settings / env — not committed.

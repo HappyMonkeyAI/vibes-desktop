@@ -62,6 +62,12 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T47 Needs-You escalate UI: vibes `intervention` TASK_STATUS → ledger needsHuman; Ops/Chat Retry step / Skip / Fail → `resolve_intervention` ✅ 2026-10-22
 - [x] T42 Decision shadow live (Unsloth): `8888/mcp/` + `system_one` + English model ✅ 2026-10-22 (also works with classic KEV `kev_evaluate`)
 
+## P9 — Release hygiene
+- [x] T48 Version + changelog + feature map — bump `0.1.0`, `CHANGELOG.md`, `docs/FEATURES.md`, README spine ✅ 2026-10-22
+- [ ] T49 Tag `v0.1.0` + rebuild NSIS installer when ready to distribute
+- [ ] T50 Live Needs-You mission (Decision escalate → Retry/Skip/Fail in Ops or Chat) — after Settings Decision save
+- [ ] T51 Optional: Kev 4B in Unsloth Decision picker; Bark STT watchlist (bookmark delta)
+
 ## P8 — Part A (harness / memory research → product)
 - [x] T29 Decision spike (probe): LAN **KEV MCP** `http://192.168.5.157:8765/mcp` — list_models + triage `kev_evaluate` (escalate ~4.5s) + shadow `kev_select_tool` (~80ms). APIs `:8008`/`:8009` not LAN-published (localhost on host). Notes in `2026-10-20-decision-model-kev-gutsy.md` ✅ 2026-10-20
 - [x] T34 Settings → Decision model (KEV): optional MCP URL + encrypted bearer; on only when both present; Test probe IPC (HTTP 400/405/406 = reachable); `resolveDecisionMcpConfig` for future mission use ✅ 2026-10-20
