@@ -5,7 +5,7 @@ import type { LedgerStore } from '../ledger/store';
 import { VibesBridge, type TaskStatusEvent } from '../bridge/vibes-bridge';
 import type { MissionStartResult, MissionPlanResponse, MissionQueueSnapshot } from '@shared/channels';
 import { createFollowupQueue, type FollowupQueue } from './followup-queue';
-import { distillHarnessLesson } from '@shared/harnessLesson';
+import { distillHarnessLessonRecord } from '@shared/harnessLesson';
 import { writeHarnessLesson } from '../harness/lesson-store';
 import { announceToDaemon, missionAnnounceText } from '../voice/announce';
 import type { SettingsStore } from '../settings/store';
@@ -217,7 +217,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
     const systemFailures = rows
       .filter((e) => /scheduler|completion gate|mission/i.test(e.title) && e.status === 'failed')
       .map((e) => ({ title: e.title, detail: e.detail }));
-    const lesson = distillHarnessLesson({
+    const lesson = distillHarnessLessonRecord({
       missionTitle: request,
       missionDetail,
       failedTasks,

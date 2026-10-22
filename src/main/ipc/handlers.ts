@@ -222,7 +222,14 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       if (!root) return null;
       const record = readHarnessLesson(root);
       if (!record) return null;
-      return { lesson: record.lesson, missionTitle: record.missionTitle, at: record.at };
+      return {
+        lesson: record.lesson,
+        missionTitle: record.missionTitle,
+        at: record.at,
+        helped: record.helped,
+        failed: record.failed,
+        harnessClass: record.harnessClass,
+      };
     },
     // T24 — test announcement to Agent Voice daemon.
     [channels.voiceAnnounceTest]: async () => {

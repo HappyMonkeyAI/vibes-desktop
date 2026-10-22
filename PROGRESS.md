@@ -2,13 +2,23 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-22 — Neo bookmark delta (T45)
+
+**Done:** Neo reconnected; scanned X History → Bookmarks (~25 posts, newest Oct 21). Distilled in `2026-10-22-bookmarks-neo-delta.md` + LINKS. Top fit: OO-Harness (T46 vibes lesson schema), Agent S4 reinforces MCP registry; Bark/Flint watchlist; Épi/Lisa/OpenUI out of scope.
+
+**Also:** T46 shipped in desktop — harness-lesson.json v2 (`helped`/`failed`/`harnessClass`) + Retry Keep/Avoid lines.
+
+**Next:** optional Bark STT spike; Needs-You escalate UI.
+
+---
+
 ## 2026-10-22 — Bookmarks + Chat queue + MCP registry
 
-1. **Bookmarks:** Live Neo/X scan blocked (Neo MCP error; IDE browser not logged in). Distilled local `happymonkeyai_bookmarks_recent_2026-10-18.md` + kb gates → no new desktop tickets beyond queue/MCP; notes in `.agent/memories/codebase_insights/2026-10-22-bookmarks-rescan.md`. T45 = re-scan when Neo is up.
+1. **Bookmarks (pre-Neo):** Local Oct-18 export only; Neo was down. Notes in `2026-10-22-bookmarks-rescan.md`.
 2. **T43:** Chat queue bar — waiting list, Pause/Resume, Clear over existing `mission.queue.*`.
 3. **T44:** Settings → Mission MCP tools → HTML Design Advisor; `writeVibesMcpJson` merges/removes `html-design-advisor` in workspace `.vibes/mcp.json` on mission spawn.
 
-**Next:** T45 Neo bookmark delta; optional Needs-You escalate UI.
+**Next:** (superseded) T45 Neo delta done same day.
 
 ---
 

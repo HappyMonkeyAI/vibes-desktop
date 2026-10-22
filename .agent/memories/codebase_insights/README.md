@@ -26,6 +26,7 @@
 
 - [2026-10-20-x-bookmarks-harness-memory.md](./2026-10-20-x-bookmarks-harness-memory.md) — `@HappyMonkeyAI` X bookmarks (harness², decision models, Hy Memory, local LLMs, voice). Includes Vibes-actionable distillation + full dump.
 - [2026-10-22-bookmarks-rescan.md](./2026-10-22-bookmarks-rescan.md) — Neo blocked; local Oct-18 export delta; T43/T44 product takeaways.
+- [2026-10-22-bookmarks-neo-delta.md](./2026-10-22-bookmarks-neo-delta.md) — Live Neo Bookmarks delta (OO-Harness, Agent S4, Bark, Flint); T46.
 - [2026-10-20-decision-model-kev-gutsy.md](./2026-10-20-decision-model-kev-gutsy.md) — Part A decision spike grounded in local **KEV** (docker + MCP) and **GUTSY** (edge fallback); not bookmark Vega/d1.
 - [2026-10-20-hy-memory-vs-vibes.md](./2026-10-20-hy-memory-vs-vibes.md) — T30: Hy Memory vs ledger / MEMORY / CODEX / Adapter → **ignore/defer**.
 - [2026-10-21-x-links-harness-cherry.md](./2026-10-21-x-links-harness-cherry.md) — User X share → LINKS.md; Harness² / Xpress / Lisa / ProPerAgent / PaperLeet cherry-picks.

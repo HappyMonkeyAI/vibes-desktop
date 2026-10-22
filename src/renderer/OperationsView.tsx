@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { ActivityGroup, LedgerEntry, LedgerSnapshot, WorkspaceHistoryEntry } from '@shared/channels';
 import { classify } from '@shared/classify';
+import { formatHarnessLessonForRetry } from '@shared/harnessLesson';
 import { buildRetryRequest } from '@shared/missionRetry';
 import { Button, Input, Modal, Message, Select } from '@arco-design/web-react';
 import { Plus, Close } from '@icon-park/react';
@@ -341,7 +342,9 @@ const OperationsView: React.FC = () => {
         systemFailures: card.systemFailures,
         failedTasks: card.tasks.filter((t) => t.status === 'failed' || t.status === 'blocked'),
         doneTaskTitles: card.tasks.filter((t) => t.status === 'done').map((t) => t.title),
-        harnessLesson: persisted?.lesson,
+        harnessLesson: persisted
+          ? formatHarnessLessonForRetry(persisted)
+          : undefined,
       });
       setMissionRequest(request);
       const result = await window.vibesDesktop.mission.start({

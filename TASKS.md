@@ -57,7 +57,8 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T42 Decision shadow live gate — `VIBES_DECISION_LIVE=1` e2e + offline fixture ✅ 2026-10-22
 - [x] T43 Chat queue chrome: list waiting follow-ups + Pause/Resume/Clear ✅ 2026-10-22
 - [x] T44 Mission MCP registry seed: Settings → HTML Design Advisor → workspace `.vibes/mcp.json` on spawn ✅ 2026-10-22
-- [ ] T45 Live HappyMonkeyAI bookmark delta via BrowserOS Neo (blocked 2026-10-22 — Neo MCP down; local Oct-18 export already covered)
+- [x] T45 Live HappyMonkeyAI bookmark delta via BrowserOS Neo ✅ 2026-10-22 — OO-Harness / Agent S4 / Bark / Flint; see LINKS + neo-delta memory
+- [x] T46 OO-Harness-lite: harness-lesson v2 helped/failed + harnessClass → Retry seed Keep/Avoid ✅ 2026-10-22
 
 ## P8 — Part A (harness / memory research → product)
 - [x] T29 Decision spike (probe): LAN **KEV MCP** `http://192.168.5.157:8765/mcp` — list_models + triage `kev_evaluate` (escalate ~4.5s) + shadow `kev_select_tool` (~80ms). APIs `:8008`/`:8009` not LAN-published (localhost on host). Notes in `2026-10-20-decision-model-kev-gutsy.md` ✅ 2026-10-20

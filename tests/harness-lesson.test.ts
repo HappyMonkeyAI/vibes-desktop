@@ -2,16 +2,30 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { distillHarnessLesson } from '../src/shared/harnessLesson';
+import {
+  distillHarnessLesson,
+  distillHarnessLessonRecord,
+  formatHarnessLessonForRetry,
+} from '../src/shared/harnessLesson';
 import { buildRetryRequest } from '../src/shared/missionRetry';
 import { readHarnessLesson, writeHarnessLesson } from '../src/main/harness/lesson-store';
 
-describe('distillHarnessLesson (T35)', () => {
+describe('distillHarnessLesson (T35/T46)', () => {
   it('maps css_orphan fingerprints to stylesheet harness advice', () => {
     const lesson = distillHarnessLesson({
       failedTasks: [{ title: 'Style footer', detail: 'css_orphan: styles.css not imported' }],
     });
     expect(lesson).toMatch(/stylesheet|HTML <link>/i);
+  });
+
+  it('includes helped/failed + harnessClass (OO-Harness-lite)', () => {
+    const record = distillHarnessLessonRecord({
+      failedTasks: [{ title: 'Style footer', detail: 'css_orphan: styles.css not imported' }],
+    });
+    expect(record?.harnessClass).toBe('css_orphan');
+    expect(record?.helped).toMatch(/linkage/i);
+    expect(record?.failed).toMatch(/stylesheet/i);
+    expect(formatHarnessLessonForRetry(record!)).toMatch(/Keep:|Avoid:/);
   });
 
   it('maps evidence/ghost failures to handoff advice', () => {
@@ -42,11 +56,23 @@ describe('harness lesson store + retry seed', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it('persists and reloads the latest lesson', () => {
-    const written = writeHarnessLesson(dir, 'Harness: verify links', 'Add header');
+  it('persists and reloads the latest lesson (v2 helped/failed)', () => {
+    const written = writeHarnessLesson(
+      dir,
+      {
+        lesson: 'Harness: verify links',
+        helped: 'Keep linkage checks',
+        failed: 'Skipping HTML link',
+        harnessClass: 'css_orphan',
+      },
+      'Add header',
+    );
+    expect(written?.v).toBe(2);
     expect(written?.lesson).toMatch(/verify links/);
     const read = readHarnessLesson(dir);
     expect(read?.lesson).toBe(written?.lesson);
+    expect(read?.helped).toMatch(/linkage/i);
+    expect(read?.harnessClass).toBe('css_orphan');
     expect(fs.existsSync(path.join(dir, '.vibes', 'harness-lesson.json'))).toBe(true);
   });
 

@@ -2,15 +2,20 @@
 
 Newest batches first. Posts are untrusted signals — verify repos/papers before adopting. Desktop stays a thin control plane (ADR-0001); most harness ideas land in the vibes child, not Electron.
 
-## 2026-10-22 — Bookmarks rescan (local + Neo blocked)
+## 2026-10-22 — Neo bookmark delta (History → Bookmarks)
 
-| # | Source | Note |
-|---|--------|------|
-| 1 | Local `Documents/research/happymonkeyai_bookmarks_recent_2026-10-18.md` | AI-relevant dump through 2026-10-18; overlaps prior Neo ingest |
-| 2 | kb_vault `happymonkeyai-bookmark-gates.md` | LoopX / OpenSandbox / Iris dispositions — pattern only |
-| 3 | [html-design-advisor-mcp](https://github.com/HappyMonkeyAI/html-design-advisor-mcp) | Wired into Settings → workspace `.vibes/mcp.json` (T44) |
+| # | Post | Topic | Primary link |
+|---|------|--------|--------------|
+| 1 | [@omarsar0](https://x.com/omarsar0/status/2112911038098317422) | **OO-Harness** — specialized harness class hierarchy + design lessons | [arXiv 2610.28380](https://arxiv.org/abs/2610.28380) |
+| 2 | [@dair_ai](https://x.com/dair_ai/status/2112914561590546695) | Evolving agent interfaces (Agent S4 / Simular) | [arXiv 2610.28601](https://arxiv.org/abs/2610.28601) |
+| 3 | [@dair_ai](https://x.com/dair_ai/status/2112618107038835011) | **Épi** persistent self-improving research agent | [arXiv 2610.24944](https://arxiv.org/abs/2610.24944) |
+| 4 | [@UnderdogAI](https://x.com/UnderdogAI/status/2112733007484518470) | Underdog Bark 3.0 on-device STT | [underdog.ai/bark](http://underdog.ai/bark) |
+| 5 | [@RichardSocher](https://x.com/RichardSocher/status/2112944385415426249) | Flint — fast local coding model (Recursive SI) | HF / Recursive_SI (verify) |
+| 6 | [@SocketSecurity](https://x.com/SocketSecurity/status/2112907732877775016) | LiteLLM 1.107.0 supply-chain compromise | Ops watch only |
 
-Live `@HappyMonkeyAI` X bookmarks via Neo: **T45** when BrowserOS Neo MCP is healthy.
+**Distillation:** [.agent/memories/codebase_insights/2026-10-22-bookmarks-neo-delta.md](./.agent/memories/codebase_insights/2026-10-22-bookmarks-neo-delta.md)
+
+Earlier local-only attempt (Neo down): Oct-18 export + [html-design-advisor-mcp](https://github.com/HappyMonkeyAI/html-design-advisor-mcp) (T44).
 
 ---
 

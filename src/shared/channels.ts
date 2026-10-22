@@ -308,6 +308,9 @@ export type HarnessLessonView = {
   lesson: string;
   missionTitle: string;
   at: number;
+  helped?: string;
+  failed?: string;
+  harnessClass?: string | null;
 } | null;
 
 export type ChannelName = (typeof channels)[keyof typeof channels];
