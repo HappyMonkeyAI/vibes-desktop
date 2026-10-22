@@ -34,7 +34,7 @@ Per-role base URL / model / API key (encrypted at rest). Test connection probes 
 | MCP URL | e.g. Unsloth Studio `http://<host>:8888/mcp/` or KEV `http://<host>:8765/mcp` |
 | Bearer token | Encrypted; also injectable as env for live tests |
 
-When both are set, missions get Decision config. On intervene, desktop calls:
+When both are set, missions get Decision config. The **vibes child** (not only the desktop probe) calls:
 
 1. **`system_one`** — Unsloth Studio System One (preferred for `:8888` / unsloth hosts)
 2. **`kev_evaluate`** — classic HappyMonkey KEV
@@ -42,6 +42,7 @@ When both are set, missions get Decision config. On intervene, desktop calls:
 Outcomes: continue / escalate / skip. Escalate (and near-tie / abstention) surfaces as **Needs You**.
 
 Probe: Settings → Test decision MCP. Live e2e: `VIBES_DECISION_LIVE=1` (+ URL/token in env or Settings).
+One-shot persist (dev): `KEV_MCP_URL=… KEV_MCP_AUTH_TOKEN=… npx electron scripts/set-decision-settings.mjs`.
 
 ### Mission MCP tools
 

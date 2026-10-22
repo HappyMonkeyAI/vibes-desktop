@@ -7,6 +7,10 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 
 ## [Unreleased]
 
+### Fixed
+
+- Vibes intervene gate calls Unsloth `system_one` (was `kev_evaluate`-only), so Decision escalate can open Needs You against Studio `:8888`.
+
 ## [0.1.0] — 2026-10-22
 
 First feature cut after the Electron scaffold (`0.0.1`). Mission Control, Chat, Decision intervene, and voice announce are usable end-to-end against a local Vibes checkout + LAN LLM / Unsloth Decision.
