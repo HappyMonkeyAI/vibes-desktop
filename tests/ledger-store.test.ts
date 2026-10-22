@@ -183,6 +183,22 @@ describe('LedgerStore (T5)', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it('clearNeedsHuman drops flags on mission and task rows', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const missionId = 'm-clear';
+    await store.recordMissionEvent('Mission', 'blocked', dir, missionId, 'wait', { needsHuman: true });
+    await store.recordTaskStatus(
+      { name: 'Gate', status: 'intervention', detail: 'Escalate?' },
+      dir,
+      missionId,
+    );
+    await store.clearNeedsHuman(missionId, 'Intervention: skip');
+    const snap = await store.snapshot();
+    expect(snap.entries.every((e) => !e.needsHuman)).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it('intervention status lands in Needs You with needsHuman + question detail', async () => {
     const dir = tempDir();
     const store = new LedgerStore(dir);

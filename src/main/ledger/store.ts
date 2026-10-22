@@ -128,6 +128,31 @@ export class LedgerStore extends EventEmitter {
     }
   }
 
+  /** Clear Needs You flags after resolve_intervention (mission + task rows). */
+  async clearNeedsHuman(missionId: string, detail?: string): Promise<void> {
+    await this.enqueue(async () => {
+      await this.ready;
+      const rows = [...this.entries.values()].filter(
+        (e) => e.missionId === missionId && e.needsHuman && e.source === 'vibes-mission',
+      );
+      for (const existing of rows) {
+        const status: LedgerEntry['status'] =
+          existing.kind === 'mission'
+            ? (existing.status === 'blocked' ? 'running' : existing.status)
+            : (existing.status === 'blocked' ? 'failed' : existing.status);
+        const entry: LedgerEntry = {
+          ...existing,
+          status,
+          group: classify({ status, needsHuman: false }),
+          needsHuman: undefined,
+          detail: detail ?? existing.detail,
+          updatedAt: Date.now(),
+        };
+        await this.append(entry);
+      }
+    });
+  }
+
   /** Record a mission-level event as a ledger entry. One mission = one row:
    *  upserts by (missionId, title) so the mission's lifecycle updates in place. */
   async recordMissionEvent(

@@ -67,7 +67,8 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T49 Tag `v0.1.0` + NSIS `dist/Vibes Desktop Setup 0.1.0.exe` (~219 MB) ✅ 2026-10-22
 - [x] T50 Needs-You + Unsloth Decision wired end-to-end ✅ 2026-10-22 — Settings Decision → Unsloth `:8888/mcp/`; vibes + desktop `system_one`; mission-service intervention→resolve unit; live decision shadow green
 - [ ] T51 Optional: Kev 4B in Unsloth Decision picker; Bark STT watchlist (bookmark delta)
-- [ ] T50b Live UI pass: run a real mission that escalates and click Retry/Skip/Fail in Ops or Chat
+- [x] T50b Live Needs-You UI ✅ 2026-10-22 — mission `8b9c0e46` completion-gate → blocked+needsHuman; CDP clicked **Skip step**; vibes completion-gate→intervene + desktop `clearNeedsHuman` shipped. Follow-up: vibes scheduler deadlock (0/1 pending) on repeat orphan drills
+- [ ] T52 Vibes scheduler deadlock: pending task with empty deps never runs (`Completed 0/1`) — seen on T50b re-runs
 
 ## P8 — Part A (harness / memory research → product)
 - [x] T29 Decision spike (probe): LAN **KEV MCP** `http://192.168.5.157:8765/mcp` — list_models + triage `kev_evaluate` (escalate ~4.5s) + shadow `kev_select_tool` (~80ms). APIs `:8008`/`:8009` not LAN-published (localhost on host). Notes in `2026-10-20-decision-model-kev-gutsy.md` ✅ 2026-10-20

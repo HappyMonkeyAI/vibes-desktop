@@ -513,22 +513,9 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
       }
       try {
         await bridge.resolveIntervention(action, input.message?.trim() || undefined);
-        // Clear Needs You on the mission row; task rows update on next TASK_STATUS.
+        // Clear Needs You on mission + task rows (completion-gate rows stay blocked otherwise).
         if (currentMissionId) {
-          const snap = await store.snapshot();
-          const missionRow = snap.entries.find(
-            (e) => e.missionId === currentMissionId && e.kind === 'mission',
-          );
-          if (missionRow?.needsHuman) {
-            await store.recordMissionEvent(
-              missionRow.title,
-              'running',
-              missionRow.workspaceRoot,
-              currentMissionId,
-              `Intervention: ${action}`,
-              { needsHuman: false },
-            );
-          }
+          await store.clearNeedsHuman(currentMissionId, `Intervention: ${action}`);
         }
         return { ok: true };
       } catch (error) {

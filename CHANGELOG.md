@@ -10,6 +10,8 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 ### Fixed
 
 - Vibes intervene gate calls Unsloth `system_one` (was `kev_evaluate`-only), so Decision escalate can open Needs You against Studio `:8888`.
+- Completion-gate rejects (Owner / incomplete) open Needs You via Decision + `intervention_required`.
+- Resolving intervention clears `needsHuman` on task rows as well as the mission card.
 
 ## [0.1.0] — 2026-10-22
 

@@ -402,6 +402,8 @@ describe('MissionService (T13/T14)', () => {
     expect(after.needsHuman).toBeFalsy();
     expect(after.status).toBe('running');
     expect(after.detail).toContain('Intervention: skip');
+    const taskAfter = snap.entries.find((e) => e.title === 'Fix CSS orphan')!;
+    expect(taskAfter.needsHuman).toBeFalsy();
 
     resolveExec(EXEC_OK);
     await new Promise((r) => setTimeout(r, 40));

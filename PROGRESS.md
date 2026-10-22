@@ -2,6 +2,23 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-22 — T50b live Needs-You UI
+
+**Done:**
+- Live mission `8b9c0e46`: completion gate → ledger `blocked` + `needsHuman` (Needs You banner).
+- CDP clicked **Skip step** (`scripts/t50b-resolve-skip.mjs` / `t50b-cdp-needs-you.mjs` against `--remote-debugging-port=9223`).
+- Vibes: completion-gate rejects now Decision + `intervention_required` (not hard-fail only).
+- Desktop: `LedgerStore.clearNeedsHuman` clears mission **and** task rows on resolve (stuck “Mission Completion Gate” rows).
+- Unit: ledger clear + mission-service intervention tests green.
+
+**Evidence:** live CDP logs; `npm test -- tests/ledger-store.test.ts tests/mission-service.test.ts` 30/30.
+
+**Open:** Repeat orphan drills often die with vibes scheduler deadlock (`Completed 0/1`, empty deps) — tracked as T52.
+
+**Next:** T52 deadlock, or T51 optional Kev/Bark.
+
+---
+
 ## 2026-10-22 — T49 release cut + T50 Decision wire
 
 **Done:**
