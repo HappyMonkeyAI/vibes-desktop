@@ -2,13 +2,23 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-22 — T47 Needs-You escalate UI
+
+**Done:** Vibes emits `[TASK_STATUS] status=intervention` on `intervention_required` (KEV escalate / triage / task fail). Desktop ledger marks `blocked` + `needsHuman` → Needs You metric. Operations depth + Chat show Retry step / Skip / Fail → `mission:resolve-intervention` → vibes `resolve_intervention`. Chat no longer treats needsHuman-blocked as mission terminal.
+
+**Evidence:** typecheck + ledger intervention test + ipc parity.
+
+**Next:** live Decision V3 with KEV filled; optional Bark STT; Chat header human re-run.
+
+---
+
 ## 2026-10-22 — Neo bookmark delta (T45)
 
 **Done:** Neo reconnected; scanned X History → Bookmarks (~25 posts, newest Oct 21). Distilled in `2026-10-22-bookmarks-neo-delta.md` + LINKS. Top fit: OO-Harness (T46 vibes lesson schema), Agent S4 reinforces MCP registry; Bark/Flint watchlist; Épi/Lisa/OpenUI out of scope.
 
 **Also:** T46 shipped in desktop — harness-lesson.json v2 (`helped`/`failed`/`harnessClass`) + Retry Keep/Avoid lines.
 
-**Next:** optional Bark STT spike; Needs-You escalate UI.
+**Next:** (superseded) T47 Needs-You UI done same day.
 
 ---
 

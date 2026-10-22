@@ -23,6 +23,8 @@ import {
   type HarnessLessonView,
   type MissionSteerRequest,
   type MissionSteerResult,
+  type MissionResolveInterventionRequest,
+  type MissionResolveInterventionResult,
   type VoiceAnnounceTestResult,
   type WorkspaceHistoryEntry,
   type WorkspaceSelectResult,
@@ -74,6 +76,10 @@ const api = {
     },
     steer: (request: MissionSteerRequest): Promise<MissionSteerResult> =>
       ipcRenderer.invoke(channels.missionSteer, request),
+    resolveIntervention: (
+      request: MissionResolveInterventionRequest,
+    ): Promise<MissionResolveInterventionResult> =>
+      ipcRenderer.invoke(channels.missionResolveIntervention, request),
   },
   workspace: {
     select: (): Promise<WorkspaceSelectResult> => ipcRenderer.invoke(channels.workspaceSelect),

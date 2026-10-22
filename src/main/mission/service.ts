@@ -2,8 +2,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { existsSync } from 'node:fs';
 import type { LedgerStore } from '../ledger/store';
-import { VibesBridge, type TaskStatusEvent } from '../bridge/vibes-bridge';
-import type { MissionStartResult, MissionPlanResponse, MissionQueueSnapshot } from '@shared/channels';
+import { VibesBridge, type InterventionAction, type TaskStatusEvent } from '../bridge/vibes-bridge';
+import type { MissionStartResult, MissionPlanResponse, MissionQueueSnapshot, MissionResolveInterventionResult } from '@shared/channels';
 import { createFollowupQueue, type FollowupQueue } from './followup-queue';
 import { distillHarnessLessonRecord } from '@shared/harnessLesson';
 import { writeHarnessLesson } from '../harness/lesson-store';
@@ -34,6 +34,8 @@ export interface MissionBridge {
   stop(): Promise<void>;
   /** Chat phase 2 — inject mid-run steering (optional on fakes). */
   steerMission?(message: string): Promise<string>;
+  /** Needs-You — resolve pending vibes intervention (optional on fakes). */
+  resolveIntervention?(action: InterventionAction, message?: string): Promise<string>;
 }
 
 export type MissionState = 'idle' | 'running';
@@ -68,6 +70,11 @@ export interface MissionService {
   clearFollowupQueue(): MissionQueueSnapshot;
   /** Chat phase 2 — steer the running mission. */
   steerMission(message: string): Promise<{ ok: boolean; error?: string }>;
+  /** Needs-You — retry / skip / fail / reply on a pending intervention. */
+  resolveIntervention(input: {
+    action: InterventionAction;
+    message?: string;
+  }): Promise<MissionResolveInterventionResult>;
 }
 
 /** Parse tasks from the plan_mission tool response. The vibes MCP server returns
@@ -192,13 +199,38 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
   /** Wire a bridge's live task lifecycle events into the ledger, scoped to one mission. */
   const wireLedger = (mission: MissionBridge, workspaceRoot: string, missionId: string): void => {
     mission.on('task-status', (event) => {
-      void store
-        .recordTaskStatus(
-          { name: event.name, status: event.status, detail: event.detail },
+      void (async () => {
+        const status =
+          event.status === 'intervention'
+          || event.status === 'failed'
+          || event.status === 'complete'
+          || event.status === 'in-progress'
+          || event.status === 'pending'
+            ? event.status
+            : 'failed';
+        await store.recordTaskStatus(
+          { name: event.name, status, detail: event.detail },
           workspaceRoot,
           missionId,
-        )
-        .catch(() => undefined);
+        );
+        // Escalate mission card into Needs You when vibes asks for intervention.
+        if (status === 'intervention') {
+          const snap = await store.snapshot();
+          const missionRow = snap.entries.find(
+            (e) => e.missionId === missionId && e.kind === 'mission',
+          );
+          if (missionRow) {
+            await store.recordMissionEvent(
+              missionRow.title,
+              'blocked',
+              workspaceRoot,
+              missionId,
+              event.detail || 'Operator intervention required',
+              { needsHuman: true },
+            );
+          }
+        }
+      })().catch(() => undefined);
     });
   };
 
@@ -462,6 +494,42 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
       }
       try {
         await bridge.steerMission(text);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    },
+
+    async resolveIntervention(input): Promise<MissionResolveInterventionResult> {
+      const action = input.action;
+      if (action !== 'retry' && action !== 'skip' && action !== 'fail' && action !== 'reply') {
+        return { ok: false, error: 'Invalid intervention action.' };
+      }
+      if (state !== 'running' || !bridge) {
+        return { ok: false, error: 'No mission is waiting for intervention.' };
+      }
+      if (typeof bridge.resolveIntervention !== 'function') {
+        return { ok: false, error: 'Active bridge does not support resolve_intervention.' };
+      }
+      try {
+        await bridge.resolveIntervention(action, input.message?.trim() || undefined);
+        // Clear Needs You on the mission row; task rows update on next TASK_STATUS.
+        if (currentMissionId) {
+          const snap = await store.snapshot();
+          const missionRow = snap.entries.find(
+            (e) => e.missionId === currentMissionId && e.kind === 'mission',
+          );
+          if (missionRow?.needsHuman) {
+            await store.recordMissionEvent(
+              missionRow.title,
+              'running',
+              missionRow.workspaceRoot,
+              currentMissionId,
+              `Intervention: ${action}`,
+              { needsHuman: false },
+            );
+          }
+        }
         return { ok: true };
       } catch (error) {
         return { ok: false, error: error instanceof Error ? error.message : String(error) };

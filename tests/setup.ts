@@ -35,6 +35,7 @@ window.vibesDesktop = {
     plan: vi.fn().mockResolvedValue({ tasks: [] as string[] }),
     cancelPlan: vi.fn().mockResolvedValue({ ok: true }),
     steer: vi.fn().mockResolvedValue({ ok: true }),
+    resolveIntervention: vi.fn().mockResolvedValue({ ok: true }),
     queue: {
       get: vi.fn().mockResolvedValue({ paused: false, items: [] }),
       setPaused: vi.fn().mockResolvedValue({ paused: false, items: [] }),

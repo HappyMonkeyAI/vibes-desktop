@@ -62,6 +62,8 @@ const ChatView: React.FC = () => {
   const [snapshot, setSnapshot] = useState<LedgerSnapshot | null>(null);
   const [summarizedFor, setSummarizedFor] = useState<string | null>(null);
   const [queue, setQueue] = useState<MissionQueueSnapshot>({ paused: false, items: [] });
+  const [interventionHint, setInterventionHint] = useState<string | null>(null);
+  const intervenedForRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const pushMessage = (role: ChatRole, text: string) => {
@@ -133,11 +135,30 @@ const ChatView: React.FC = () => {
       setPlanSteps(tasks.map((t) => ({ title: t.title, status: t.status, detail: t.detail })));
     }
 
+    const needing =
+      mission?.needsHuman
+      || tasks.some((t) => t.needsHuman)
+      || related.some((e) => e.needsHuman);
+    if (needing) {
+      const detail =
+        related.find((e) => e.needsHuman && e.detail)?.detail
+        || mission?.detail
+        || 'The mission is waiting for your decision.';
+      setInterventionHint(detail);
+      if (intervenedForRef.current !== activeMissionId) {
+        intervenedForRef.current = activeMissionId;
+        pushMessage('system', `Needs you — ${detail.slice(0, 280)}`);
+      }
+    } else {
+      setInterventionHint(null);
+    }
+
+    // Blocked + needsHuman is intervention (still running), not a terminal fail.
     const terminal =
       mission &&
       (mission.status === 'done' ||
         mission.status === 'failed' ||
-        mission.status === 'blocked' ||
+        (mission.status === 'blocked' && !mission.needsHuman) ||
         mission.status === 'archived');
     if (terminal && summarizedFor !== activeMissionId) {
       pushMessage(
@@ -150,6 +171,8 @@ const ChatView: React.FC = () => {
       );
       setSummarizedFor(activeMissionId);
       setBusy(false);
+      setInterventionHint(null);
+      intervenedForRef.current = null;
     }
   }, [snapshot, activeMissionId, planTitles, activeRequest, summarizedFor]);
 
@@ -310,6 +333,27 @@ const ChatView: React.FC = () => {
     }
   };
 
+  const handleResolveIntervention = async (action: 'retry' | 'skip' | 'fail') => {
+    try {
+      const result = await window.vibesDesktop.mission.resolveIntervention({ action });
+      if (result.ok) {
+        setInterventionHint(null);
+        pushMessage(
+          'system',
+          action === 'retry'
+            ? 'Retrying the failed step…'
+            : action === 'skip'
+              ? 'Skipped — mission continues.'
+              : 'Failed the mission from Chat.',
+        );
+      } else {
+        Message.error(result.error || 'Could not resolve intervention.');
+      }
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Could not resolve intervention.');
+    }
+  };
+
   const planLabel = useMemo(() => {
     if (planSteps.length === 0) return 'No plan yet';
     const done = planSteps.filter((s) => s.status === 'done').length;
@@ -394,6 +438,25 @@ const ChatView: React.FC = () => {
       </div>
 
       <div className={styles.composer}>
+        {interventionHint ? (
+          <div className={styles.interveneBar} role="region" aria-label="Needs you">
+            <div className={styles.queueMeta}>
+              <span className={styles.workspaceLabel}>Needs you</span>
+              <span className={styles.panelMeta}>{interventionHint.slice(0, 160)}</span>
+            </div>
+            <div className={styles.queueActions}>
+              <Button size="mini" type="primary" onClick={() => void handleResolveIntervention('retry')}>
+                Retry
+              </Button>
+              <Button size="mini" onClick={() => void handleResolveIntervention('skip')}>
+                Skip
+              </Button>
+              <Button size="mini" status="danger" onClick={() => void handleResolveIntervention('fail')}>
+                Fail
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {(queue.items.length > 0 || queue.paused) && (
           <div className={styles.queueBar} aria-label="Follow-up mission queue">
             <div className={styles.queueMeta}>

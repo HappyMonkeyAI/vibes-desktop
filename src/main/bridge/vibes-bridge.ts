@@ -46,8 +46,8 @@ export function buildChildEnv(llmEnv: Record<string, string> = {}): Record<strin
 
 export interface TaskStatusEvent {
   name: string;
-  status: 'in-progress' | 'complete' | 'failed';
-  /** Failure reason from the child (`error` on task_failed events). */
+  status: 'in-progress' | 'complete' | 'failed' | 'intervention' | 'pending';
+  /** Failure / intervention question from the child. */
   detail?: string;
 }
 

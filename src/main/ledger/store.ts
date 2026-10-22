@@ -16,7 +16,7 @@ import type { ActivityGroup, LedgerEntry, LedgerSnapshot } from '@shared/channel
 
 export interface TaskStatusInput {
   name: string;
-  status: 'pending' | 'in-progress' | 'complete' | 'failed';
+  status: 'pending' | 'in-progress' | 'complete' | 'failed' | 'intervention';
   detail?: string;
 }
 
@@ -25,6 +25,8 @@ const STATUS_MAP = {
   'in-progress': 'running',
   complete: 'done',
   failed: 'failed',
+  /** Operator must answer resolve_intervention (KEV escalate / triage / task fail). */
+  intervention: 'blocked',
 } as const;
 
 const FILE_NAME = 'ledger.jsonl';
@@ -99,15 +101,17 @@ export class LedgerStore extends EventEmitter {
       if (existing && input.status === 'pending' && existing.status !== 'pending') {
         return existing;
       }
+      const needsHuman = input.status === 'intervention';
       const entry: LedgerEntry = {
         id: existing?.id ?? crypto.randomUUID(),
-        group: classify({ status, needsHuman: false }),
+        group: classify({ status, needsHuman }),
         status,
         source: 'vibes-mission',
         title: input.name,
         detail: input.detail ?? existing?.detail,
         missionId,
         workspaceRoot: workspaceRoot || existing?.workspaceRoot,
+        needsHuman: needsHuman || undefined,
         updatedAt: Date.now(),
       };
       return this.append(entry);
@@ -132,15 +136,17 @@ export class LedgerStore extends EventEmitter {
     workspaceRoot?: string,
     missionId?: string,
     detail?: string,
+    opts?: { needsHuman?: boolean },
   ): Promise<LedgerEntry> {
     return this.enqueue(async () => {
       await this.ready;
       const existing = [...this.entries.values()].find(
         (e) => e.source === 'vibes-mission' && e.title === title && e.missionId === missionId,
       );
+      const needsHuman = Boolean(opts?.needsHuman);
       const entry: LedgerEntry = {
         id: existing?.id ?? crypto.randomUUID(),
-        group: classify({ status, needsHuman: false }),
+        group: classify({ status, needsHuman }),
         status,
         source: 'vibes-mission',
         kind: 'mission',
@@ -148,6 +154,7 @@ export class LedgerStore extends EventEmitter {
         detail: detail ?? existing?.detail,
         missionId,
         workspaceRoot: workspaceRoot || existing?.workspaceRoot,
+        needsHuman: needsHuman || undefined,
         updatedAt: Date.now(),
       };
       return this.append(entry);

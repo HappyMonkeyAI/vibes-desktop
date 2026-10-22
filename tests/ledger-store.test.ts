@@ -182,4 +182,36 @@ describe('LedgerStore (T5)', () => {
     expect(rows[0].status).toBe('done'); // final status wins
     rmSync(dir, { recursive: true, force: true });
   });
+
+  it('intervention status lands in Needs You with needsHuman + question detail', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const missionId = 'm-intervene';
+    await store.recordMissionEvent('Ship it', 'running', dir, missionId);
+    const row = await store.recordTaskStatus(
+      {
+        name: 'Patch CSS',
+        status: 'intervention',
+        detail: 'Retry this step, skip it, or fail the mission?',
+      },
+      dir,
+      missionId,
+    );
+    expect(row.status).toBe('blocked');
+    expect(row.needsHuman).toBe(true);
+    expect(row.group).toBe('needs-you');
+    expect(row.detail).toMatch(/Retry this step/);
+    await store.recordMissionEvent(
+      'Ship it',
+      'blocked',
+      dir,
+      missionId,
+      row.detail,
+      { needsHuman: true },
+    );
+    const snap = await store.snapshot();
+    expect(snap.groupCounts['needs-you']).toBeGreaterThanOrEqual(1);
+    expect(snap.entries.find((e) => e.kind === 'mission')!.needsHuman).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
 });

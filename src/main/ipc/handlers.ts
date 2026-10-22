@@ -3,7 +3,7 @@ import type { WebContents } from 'electron';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { channels, type AppSettings, type AppSettingsSaveInput, type ChannelName, type LedgerSnapshot, type MissionPlanRequest, type MissionStartRequest, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult, type WorkspaceSelectResult } from '@shared/channels';
+import { channels, type AppSettings, type AppSettingsSaveInput, type ChannelName, type LedgerSnapshot, type MissionPlanRequest, type MissionResolveInterventionRequest, type MissionStartRequest, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult, type WorkspaceSelectResult } from '@shared/channels';
 import type { LedgerStore } from '../ledger/store';
 import type { RolesStore } from '../roles/store';
 import type { MissionService } from '../mission/service';
@@ -251,6 +251,15 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
         ? (req as { message: string }).message
         : '';
       return missionService.steerMission(message);
+    },
+    // Needs-You — resolve pending vibes intervention.
+    [channels.missionResolveIntervention]: async (_e, req) => {
+      if (!missionService) return { ok: false, error: 'Mission service not available' };
+      const body = req as MissionResolveInterventionRequest;
+      return missionService.resolveIntervention({
+        action: body?.action,
+        message: typeof body?.message === 'string' ? body.message : undefined,
+      });
     },
   };
 }

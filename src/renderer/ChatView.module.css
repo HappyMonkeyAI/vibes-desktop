@@ -186,6 +186,17 @@
   flex-shrink: 0;
 }
 
+.interveneBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #fb7185 45%, var(--color-border-2));
+  background: color-mix(in srgb, #fb7185 12%, var(--surface-card));
+}
+
 .queueBar {
   display: flex;
   flex-wrap: wrap;

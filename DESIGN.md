@@ -45,6 +45,7 @@ Empty state stays ADR-0003: **"All quiet"**, never an incomplete-source error.
 3. **Select card:** opens depth panel (prefer sticky split over full-screen modal when width allows; modal fallback on narrow).
 4. **Active mission:** depth panel auto-focuses the running card; checklist + logs update from ledger subscription (no fake streams).
 5. **Failure:** expandable **Why this failed** in the depth panel (mission summary + system rows + failed steps); each failed step expands for its own error text. Retry / Archive stay in the action bar.
+5b. **Needs You (intervention):** when vibes emits `intervention` (KEV escalate / triage / task fail gate), the mission card moves to Needs You; depth + Chat show Retry step / Skip / Fail wired to `resolve_intervention`. Do not treat needsHuman-blocked as a finished failure.
 6. **Viewport:** tab pane scrolls the Operations page; card grid must not sit in a flex-shrunk strip. Depth actions (Retry / Archive / Terminate) sit under the panel header; panel body scrolls under a viewport `max-height`.
 
 ## Must surface (parity with TUI intent)

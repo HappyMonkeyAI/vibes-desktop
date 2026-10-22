@@ -298,11 +298,19 @@ export const channels = {
   voiceAnnounceTest: 'voice:announce-test',
   /** Chat phase 2 — inject mid-run steering into the active mission. */
   missionSteer: 'mission:steer',
+  /** Needs-You — resolve pending vibes intervention (retry/skip/fail/reply). */
+  missionResolveIntervention: 'mission:resolve-intervention',
 } as const;
 
 export type VoiceAnnounceTestResult = { ok: boolean; error?: string; id?: string };
 export type MissionSteerRequest = { message: string };
 export type MissionSteerResult = { ok: boolean; error?: string };
+export type MissionInterventionAction = 'retry' | 'skip' | 'fail' | 'reply';
+export type MissionResolveInterventionRequest = {
+  action: MissionInterventionAction;
+  message?: string;
+};
+export type MissionResolveInterventionResult = { ok: boolean; error?: string };
 
 export type HarnessLessonView = {
   lesson: string;
