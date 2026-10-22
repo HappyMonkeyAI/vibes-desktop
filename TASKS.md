@@ -64,7 +64,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 
 ## P9 — Release hygiene
 - [x] T48 Version + changelog + feature map — bump `0.1.0`, `CHANGELOG.md`, `docs/FEATURES.md`, README spine ✅ 2026-10-22
-- [ ] T49 Tag `v0.1.0` + rebuild NSIS installer when ready to distribute
+- [x] T49 Tag `v0.1.0` + NSIS `dist/Vibes Desktop Setup 0.1.0.exe` (~219 MB) ✅ 2026-10-22
 - [x] T50 Needs-You + Unsloth Decision wired end-to-end ✅ 2026-10-22 — Settings Decision → Unsloth `:8888/mcp/`; vibes + desktop `system_one`; mission-service intervention→resolve unit; live decision shadow green
 - [ ] T51 Optional: Kev 4B in Unsloth Decision picker; Bark STT watchlist (bookmark delta)
 - [ ] T50b Live UI pass: run a real mission that escalates and click Retry/Skip/Fail in Ops or Chat

@@ -2,13 +2,15 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
-## 2026-10-22 — T50 Unsloth Decision → Needs-You path
+## 2026-10-22 — T49 release cut + T50 Decision wire
 
-**Done:** Settings Decision persisted to Unsloth `http://192.168.5.157:8888/mcp/` (encrypted token via `scripts/set-decision-settings.mjs`). Vibes intervene gate now tries `system_one` then `kev_evaluate` (parity with desktop). Mission-service unit: intervention TASK_STATUS → needsHuman → `resolveIntervention` skip clears flag. Live `VIBES_DECISION_LIVE=1` shadow green.
+**Done:**
+- **T50:** Settings Decision → Unsloth `http://192.168.5.157:8888/mcp/` (encrypted). Vibes intervene gate tries `system_one` then `kev_evaluate`. Mission-service unit: intervention → needsHuman → resolve skip. Live decision shadow green.
+- **T49:** Tag `v0.1.0` pushed; NSIS `dist/Vibes Desktop Setup 0.1.0.exe` (~219 MB).
 
-**Evidence:** vibes `decision-tool-candidates` 2/2; desktop mission-service + decision-shadow (incl. live) green; vibes commit on `ag/completion-gates`.
+**Evidence:** vibes `08bb0ab`; desktop `4b1096b` + tag; installer on disk.
 
-**Next:** T50b click-through in Ops/Chat on a real escalate; then T49 tag + NSIS.
+**Next:** T50b — real mission escalate click-through in Ops/Chat; T51 optional Kev 4B/Bark.
 
 ---
 
