@@ -9,6 +9,7 @@ import {
   type MissionPlanResponse,
   type MissionStartRequest,
   type MissionStartResult,
+  type MissionQueueSnapshot,
   type RolesConfigInput,
   type RolesConfigView,
   type TestConnectionRequest,
@@ -60,6 +61,12 @@ const api = {
       ipcRenderer.invoke(channels.missionPlan, request),
     /** Discard a reviewed-but-unlaunched plan (Decline / modal close). */
     cancelPlan: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.missionCancelPlan),
+    queue: {
+      get: (): Promise<MissionQueueSnapshot> => ipcRenderer.invoke(channels.missionQueueGet),
+      setPaused: (paused: boolean): Promise<MissionQueueSnapshot> =>
+        ipcRenderer.invoke(channels.missionQueuePause, paused),
+      clear: (): Promise<MissionQueueSnapshot> => ipcRenderer.invoke(channels.missionQueueClear),
+    },
   },
   workspace: {
     select: (): Promise<WorkspaceSelectResult> => ipcRenderer.invoke(channels.workspaceSelect),

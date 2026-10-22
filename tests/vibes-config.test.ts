@@ -58,6 +58,7 @@ describe('toVibesConfig (T9 mapping)', () => {
     const configured = toVibesConfig(full);
     expect(configured.ENABLE_REVIEWER).toBe('true');
     expect(configured.ENABLE_ADVERSARIAL_AUDIT).toBe('true');
+    expect(configured.ENABLE_DOUBLE_CHECK_COMPLETION).toBe('true');
 
     // Unconfigured reviewer → vibes would default to gemma2:27b on the
     // executor's server (a model that usually doesn't exist there) and fail
@@ -65,6 +66,8 @@ describe('toVibesConfig (T9 mapping)', () => {
     const unconfigured = toVibesConfig({ ...full, reviewer: { baseUrl: '', model: '', apiKey: '' } });
     expect(unconfigured.ENABLE_REVIEWER).toBe('false');
     expect(unconfigured.ENABLE_ADVERSARIAL_AUDIT).toBe('false');
+    // Double-check is deterministic evidence — stays on without a reviewer.
+    expect(unconfigured.ENABLE_DOUBLE_CHECK_COMPLETION).toBe('true');
   });
 });
 

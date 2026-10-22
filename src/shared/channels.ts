@@ -123,6 +123,8 @@ export interface MissionStartRequest {
   /** When true, execute the plan already reviewed by the user (kept alive by mission:plan)
    *  instead of planning again. Falls back to a fresh plan when no pending plan matches. */
   acceptPlan?: boolean;
+  /** When a mission is already running, enqueue this request (crash-safe FIFO) instead of rejecting. */
+  enqueueIfBusy?: boolean;
 }
 export interface MissionStartResult {
   started: boolean;
@@ -131,6 +133,15 @@ export interface MissionStartResult {
   error?: string;
   /** Minted when start succeeds — Chat / depth panels bind ledger rows to this id. */
   missionId?: string;
+  /** True when enqueueIfBusy parked the request behind the active mission. */
+  queued?: boolean;
+  queueId?: string;
+  queueDepth?: number;
+}
+
+export interface MissionQueueSnapshot {
+  paused: boolean;
+  items: Array<{ id: string; request: string; workspaceRoot: string; createdAt: number }>;
 }
 
 /** Mission plan response from the planner API. */
@@ -253,6 +264,9 @@ export const channels = {
   missionStop: 'mission:stop',
   missionPlan: 'mission:plan',
   missionCancelPlan: 'mission:cancel-plan',
+  missionQueueGet: 'mission:queue-get',
+  missionQueuePause: 'mission:queue-pause',
+  missionQueueClear: 'mission:queue-clear',
   workspaceSelect: 'workspace:select',
   workspaceHistorySave: 'workspace:history:save',
   workspaceHistoryGet: 'workspace:history:get',

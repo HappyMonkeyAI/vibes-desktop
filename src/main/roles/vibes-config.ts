@@ -31,7 +31,8 @@ export type VibesConfigKey =
   | 'TRIAGE_BASE_URL'
   | 'TRIAGE_API_KEY'
   | 'ENABLE_REVIEWER'
-  | 'ENABLE_ADVERSARIAL_AUDIT';
+  | 'ENABLE_ADVERSARIAL_AUDIT'
+  | 'ENABLE_DOUBLE_CHECK_COMPLETION';
 
 /**
  * OpenAI-compatible providers serve under a version prefix (Ollama, LM Studio,
@@ -86,6 +87,8 @@ export function toVibesConfig(input: RolesConfigInput): Record<VibesConfigKey, s
     TRIAGE_API_KEY: triage.apiKey ?? '',
     ENABLE_REVIEWER: reviewerConfigured ? 'true' : 'false',
     ENABLE_ADVERSARIAL_AUDIT: reviewerConfigured ? 'true' : 'false',
+    // Always on: deterministic evidence re-check before mission success (Cline-style).
+    ENABLE_DOUBLE_CHECK_COMPLETION: 'true',
   };
 }
 

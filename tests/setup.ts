@@ -33,6 +33,11 @@ window.vibesDesktop = {
     stop: vi.fn().mockResolvedValue({ stopped: false }),
     plan: vi.fn().mockResolvedValue({ tasks: [] as string[] }),
     cancelPlan: vi.fn().mockResolvedValue({ ok: true }),
+    queue: {
+      get: vi.fn().mockResolvedValue({ paused: false, items: [] }),
+      setPaused: vi.fn().mockResolvedValue({ paused: false, items: [] }),
+      clear: vi.fn().mockResolvedValue({ paused: false, items: [] }),
+    },
   },
   workspace: {
     select: vi.fn().mockResolvedValue({ path: null }),

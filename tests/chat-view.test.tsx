@@ -58,6 +58,7 @@ describe('ChatView phase 1', () => {
         request: 'Add a dark footer',
         workspaceRoot: 'C:/work/site',
         acceptPlan: true,
+        enqueueIfBusy: true,
       });
     });
   });

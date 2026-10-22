@@ -2,6 +2,18 @@
 
 Newest batches first. Posts are untrusted signals — verify repos/papers before adopting. Desktop stays a thin control plane (ADR-0001); most harness ideas land in the vibes child, not Electron.
 
+## 2026-10-22 — Cline + OpenBot (desktop/vibes cherry-picks)
+
+| # | Source | Idea adopted | Where |
+|---|--------|--------------|--------|
+| 1 | [cline/cline](https://github.com/cline/cline) | Double-check completion (evidence before success) | vibes `mission-double-check` + scheduler (T38) |
+| 2 | [nightly-labs/openbot](https://github.com/nightly-labs/openbot) | Crash-safe FIFO follow-up queue + pause | desktop `followup-queue` + Chat `enqueueIfBusy` (T39) |
+| 3 | Cline Focus Chain | Sticky plan checklist as mission focus | DESIGN Chat + RHS (T40 lite) |
+
+**Not adopted:** Cline/OpenBot as second engines; OpenBot ACP multi-provider shell; Computer Use; PolyForm code copy (ideas only).
+
+---
+
 ## 2026-10-21 — X posts (user share)
 
 | # | Post | Topic | Primary link |

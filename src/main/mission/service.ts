@@ -3,7 +3,8 @@ import crypto from 'node:crypto';
 import { existsSync } from 'node:fs';
 import type { LedgerStore } from '../ledger/store';
 import { VibesBridge, type TaskStatusEvent } from '../bridge/vibes-bridge';
-import type { MissionStartResult, MissionPlanResponse } from '@shared/channels';
+import type { MissionStartResult, MissionPlanResponse, MissionQueueSnapshot } from '@shared/channels';
+import { createFollowupQueue, type FollowupQueue } from './followup-queue';
 
 /**
  * T13 + T14 — the mission lifecycle service. Owns a single VibesBridge and the
@@ -37,14 +38,26 @@ export interface MissionServiceOptions {
   vibesPath?: () => string | undefined;
   /** Bridge factory — injectable so tests never spawn a real child process. */
   createBridge?: (workspaceRoot: string) => MissionBridge;
+  /** App userData path for crash-safe follow-up queue persistence (OpenBot-style). */
+  userDataPath?: string;
+  /** Inject a queue (tests); otherwise created from userDataPath when provided. */
+  followupQueue?: FollowupQueue;
 }
 
 export interface MissionService {
   state(): MissionState;
-  startMission(request: { request: string; workspaceRoot?: string; acceptPlan?: boolean }): Promise<MissionStartResult>;
+  startMission(request: {
+    request: string;
+    workspaceRoot?: string;
+    acceptPlan?: boolean;
+    enqueueIfBusy?: boolean;
+  }): Promise<MissionStartResult>;
   planMission(request: { request: string; workspaceRoot?: string }): Promise<MissionPlanResponse>;
   cancelPlan(): Promise<void>;
   stopMission(): Promise<{ stopped: boolean }>;
+  getFollowupQueue(): MissionQueueSnapshot;
+  setFollowupQueuePaused(paused: boolean): MissionQueueSnapshot;
+  clearFollowupQueue(): MissionQueueSnapshot;
 }
 
 /** Parse tasks from the plan_mission tool response. The vibes MCP server returns
@@ -106,6 +119,9 @@ export function missionOutcomeFrom(result: string): { status: 'done' | 'failed';
 
 export function createMissionService(options: MissionServiceOptions): MissionService {
   const { store, createBridge } = options;
+  const followupQueue: FollowupQueue | null =
+    options.followupQueue
+    ?? (options.userDataPath ? createFollowupQueue(options.userDataPath) : null);
   let state: MissionState = 'idle';
   let bridge: MissionBridge | null = null;
   /** A planned-but-not-yet-launched mission: its child holds the reviewed plan. */
@@ -201,18 +217,57 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
         // stopped mission must never kill its successor's child.
         if (gen !== generation) return;
         void endBridge().finally(() => {
-          if (gen === generation) state = 'idle';
+          if (gen !== generation) return;
+          state = 'idle';
+          // Natural completion drains the crash-safe follow-up queue (not Stop).
+          if (!stopRequested) tryDrainFollowup();
         });
       });
   };
 
-  return {
+  /** Filled after `service` is created so natural-completion drain can re-enter start. */
+  let startMissionFn: MissionService['startMission'] | null = null;
+
+  /** Start the next queued request once idle (no-op when paused / empty / no store). */
+  const tryDrainFollowup = (): void => {
+    if (!followupQueue || state !== 'idle' || !startMissionFn) return;
+    const next = followupQueue.dequeueIfRunning();
+    if (!next) return;
+    void startMissionFn({
+      request: next.request,
+      workspaceRoot: next.workspaceRoot,
+      acceptPlan: false,
+    }).catch(() => undefined);
+  };
+
+  const service: MissionService = {
     state: () => state,
 
-    async startMission({ request, workspaceRoot, acceptPlan }): Promise<MissionStartResult> {
+    async startMission({ request, workspaceRoot, acceptPlan, enqueueIfBusy }): Promise<MissionStartResult> {
       // T14 guard: only one mission runs at a time. The check is synchronous and
       // happens before any await, so two rapid starts cannot both pass it.
-      if (state === 'running') return { started: false, alreadyRunning: true };
+      if (state === 'running') {
+        if (enqueueIfBusy && followupQueue) {
+          const root = workspaceRoot?.trim();
+          const text = request?.trim();
+          if (!root) {
+            return { started: false, alreadyRunning: true, error: 'Choose a working directory before queueing a mission.' };
+          }
+          if (!text) {
+            return { started: false, alreadyRunning: true, error: 'Cannot queue an empty request.' };
+          }
+          const item = followupQueue.enqueue(text, root);
+          const snap = followupQueue.snapshot();
+          return {
+            started: false,
+            alreadyRunning: true,
+            queued: true,
+            queueId: item.id,
+            queueDepth: snap.items.length,
+          };
+        }
+        return { started: false, alreadyRunning: true };
+      }
 
       // Never fall back to the app's own directory — a mission must run in an
       // explicit workspace, or it would rewrite this app's source tree.
@@ -328,7 +383,24 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
       // T13: in-flight tasks of THIS mission become blocked, not silently dropped.
       await store.markInFlightBlocked(missionId).catch(() => undefined);
       state = 'idle';
+      // Stop does not auto-drain — queue stays until pause off + next natural completion
+      // or the user starts a new mission while idle (queue can be cleared/paused via IPC).
       return { stopped: hadChild };
     },
+
+    getFollowupQueue(): MissionQueueSnapshot {
+      return followupQueue?.snapshot() ?? { paused: false, items: [] };
+    },
+
+    setFollowupQueuePaused(paused: boolean): MissionQueueSnapshot {
+      return followupQueue?.setPaused(paused) ?? { paused, items: [] };
+    },
+
+    clearFollowupQueue(): MissionQueueSnapshot {
+      return followupQueue?.clear() ?? { paused: false, items: [] };
+    },
   };
+
+  startMissionFn = (req) => service.startMission(req);
+  return service;
 }

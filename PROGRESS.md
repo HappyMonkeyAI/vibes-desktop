@@ -2,6 +2,18 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-22 — Cline/OpenBot cherry-picks (T38–T40)
+
+**Order:** double-check → follow-up queue → focus-chain lite.
+
+1. **T38 Double-check (vibes):** `doubleCheckMissionEvidence` before mission success; `ENABLE_DOUBLE_CHECK_COMPLETION` default on; Owner adversary prompt now uses real newlines (was `join('\\n')` — garbled reviews); re-check language in system prompt. Tests `mission-double-check.test.mjs` 6/6. Mirrored to `local-ai-planner`. Desktop writes the flag via `toVibesConfig`.
+2. **T39 Follow-up queue (desktop):** `followup-queue.ts` JSON in userData; `startMission({ enqueueIfBusy })`; drain on natural completion (not Stop); Chat queues when plan/start hits busy. IPC `mission:queue-*`. Tests `followup-queue.test.ts`.
+3. **T40 Focus chain lite:** DESIGN — RHS checklist sticky until next send.
+
+**Next:** T21 live Chat pass; optional queue pause UI in Chat chrome; commit vibes soft-pass + double-check.
+
+---
+
 ## 2026-10-21 — Completion gate soft-pass on malformed owner review
 
 **Symptom:** Chat mission `75c45024-…` — all 3 tasks DONE, page correct (dark header + menu), but mission FAILED: `Owner adversary review is malformed`.

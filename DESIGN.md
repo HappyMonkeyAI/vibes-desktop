@@ -79,8 +79,11 @@ Traditional chat harness **above** mission ATC. Same `missionService` + ledger a
 3. Auto-launch with `acceptPlan: true` (one write path into `startMission`).
 4. Live plan/status from ledger rows for that `missionId` (honest; no invented streams).
 5. On mission terminal state → one summary comment in the transcript.
+6. If a mission is already running → crash-safe follow-up queue (`enqueueIfBusy`); drains on natural completion (not Stop). Pause/clear via `mission.queue.*` IPC.
 
-**Phase 2 (later):** interrupt/pause, mid-run replan, steering replies, inline artifacts (Xpress).
+**Focus chain (Cline-inspired):** RHS checklist is the sticky plan for the active run — do not clear until the user sends a new request. Treat those step titles as the mission focus while ledger rows update status.
+
+**Phase 2 (later):** mid-run replan, steering replies, inline artifacts (Xpress); richer queue UI in Chat chrome.
 
 **Rejected:** second composer that bypasses missionService; embedding the TUI.
 

@@ -47,8 +47,11 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [ ] T35 (research→product) Harness²-lite: persist one post-failure harness lesson into Retry seed / `.vibes` — not full recursive harness editing (LINKS.md #1)
 - [x] T36 Chat tab (phase 1): request → plan RHS → auto-launch → ledger summary → done comment — `ChatView` + DESIGN.md ✅ 2026-10-21 (artifacts / steering / interrupt = phase 2)
 - [x] T37 Completion gate: soft-pass malformed/`unverified` Owner adversary review (explicit `approved:false` still fails) — vibes + planner; mission `75c45024` false FAIL ✅ 2026-10-21
-- [ ] T21 V3 live mission pass (checklist + logs + failure detail without DevTools) — still owed from P5; re-run Chat header mission after T37
-- [ ] chore: commit desktop WIP + `development/vibes` scheduler/`requeueOrFailGate` + owner-adversary soft-pass + evidence-requeue test
+- [x] T38 Double-check completion (Cline): deterministic evidence re-check + owner prompt newline fix + `ENABLE_DOUBLE_CHECK_COMPLETION` — vibes + planner + desktop config ✅ 2026-10-22
+- [x] T39 Crash-safe follow-up queue (OpenBot): FIFO in userData, `enqueueIfBusy`, drain on natural completion, Chat queues when busy ✅ 2026-10-22
+- [x] T40 Focus chain (lite): DESIGN + Chat RHS sticky plan as mission focus until next send ✅ 2026-10-22
+- [ ] T21 V3 live mission pass (checklist + logs + failure detail without DevTools) — still owed from P5; re-run Chat header mission after T37–T39
+- [ ] chore: commit desktop WIP + `development/vibes` scheduler/`requeueOrFailGate` + owner-adversary soft-pass + double-check + evidence-requeue test
 - [ ] T24 Optional later: Agent Voice TTS announce on mission done/failed (HTTP to local daemon)
 
 ## P8 — Part A (harness / memory research → product)

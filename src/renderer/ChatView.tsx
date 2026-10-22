@@ -170,6 +170,24 @@ const ChatView: React.FC = () => {
       pushMessage('system', 'Planning…');
       const planResponse = await window.vibesDesktop.mission.plan({ request, workspaceRoot });
       if (planResponse.error) {
+        const busy =
+          /already running/i.test(planResponse.error)
+          || /wait for it to finish/i.test(planResponse.error);
+        if (busy) {
+          const queued = await window.vibesDesktop.mission.start({
+            request,
+            workspaceRoot,
+            enqueueIfBusy: true,
+          });
+          if (queued.queued) {
+            pushMessage(
+              'assistant',
+              `Mission busy — queued follow-up (${queued.queueDepth ?? 1} waiting). It starts when the current run finishes.`,
+            );
+            setBusy(false);
+            return;
+          }
+        }
         pushMessage('assistant', `Could not plan: ${planResponse.error}`);
         setBusy(false);
         return;
@@ -191,9 +209,18 @@ const ChatView: React.FC = () => {
         request,
         workspaceRoot,
         acceptPlan: true,
+        enqueueIfBusy: true,
       });
+      if (result.queued) {
+        pushMessage(
+          'assistant',
+          `Mission busy — queued follow-up (${result.queueDepth ?? 1} waiting). It starts when the current run finishes.`,
+        );
+        setBusy(false);
+        return;
+      }
       if (result.alreadyRunning) {
-        pushMessage('assistant', 'A mission is already running in Operations — wait or stop it first.');
+        pushMessage('assistant', 'A mission is already running — wait, stop it, or send again to queue.');
         setBusy(false);
         return;
       }

@@ -134,7 +134,12 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       if (!missionService) return { started: false, alreadyRunning: false };
       const request = req as MissionStartRequest;
       // No cwd fallback — an empty workspaceRoot is rejected by the service.
-      return missionService.startMission({ request: request.request, workspaceRoot: request.workspaceRoot, acceptPlan: request.acceptPlan });
+      return missionService.startMission({
+        request: request.request,
+        workspaceRoot: request.workspaceRoot,
+        acceptPlan: request.acceptPlan,
+        enqueueIfBusy: request.enqueueIfBusy,
+      });
     },
     [channels.missionStop]: async () => (missionService ? missionService.stopMission() : { stopped: false }),
     // Mission plan via VibesBridge: call planMission and return extracted tasks.
@@ -149,6 +154,14 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       if (missionService) await missionService.cancelPlan();
       return { ok: true };
     },
+    [channels.missionQueueGet]: async () =>
+      missionService ? missionService.getFollowupQueue() : { paused: false, items: [] },
+    [channels.missionQueuePause]: async (_e, paused) =>
+      missionService
+        ? missionService.setFollowupQueuePaused(Boolean(paused))
+        : { paused: Boolean(paused), items: [] },
+    [channels.missionQueueClear]: async () =>
+      missionService ? missionService.clearFollowupQueue() : { paused: false, items: [] },
     // Native folder picker for the mission working directory; cancel → null path.
     [channels.workspaceSelect]: async (): Promise<WorkspaceSelectResult> =>
       selectWorkspace ? selectWorkspace() : { path: null },
