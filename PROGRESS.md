@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-22 — Commit ratchet + T21 live e2e
+
+**Commits:** desktop `44a9442` (queue + double-check config); vibes `ag/completion-gates` `8eca3ae` (soft-pass, double-check, evidence requeue, css audit); planner `3a1736f` (gate mirror, provider-catalog left unstaged).
+
+**T21:** `VIBES_LIVE=1 VIBES_PATH=…/vibes npx vitest run tests/live-mission.e2e.test.ts` → **3/3 passed** (~53s). Live service now resolves `VIBES_PATH`. Endpoints `192.168.5.232:11434` + reviewer `192.168.5.229:1234` reachable.
+
+**Next:** T26 wire KEV Decision into intervene vs continue; or Chat header re-run in the packaged UI for human V3.
+
+---
+
 ## 2026-10-22 — Cline/OpenBot cherry-picks (T38–T40)
 
 **Order:** double-check → follow-up queue → focus-chain lite.
