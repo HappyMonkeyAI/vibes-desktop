@@ -30,6 +30,9 @@ const SettingsTab: React.FC = () => {
   const [ttsDaemonUrl, setTtsDaemonUrl] = useState('http://127.0.0.1:4100');
   const [ttsDaemonToken, setTtsDaemonToken] = useState('');
   const [ttsDaemonHasToken, setTtsDaemonHasToken] = useState(false);
+  const [htmlDesignAdvisorEnabled, setHtmlDesignAdvisorEnabled] = useState(false);
+  const [htmlDesignAdvisorPython, setHtmlDesignAdvisorPython] = useState('python');
+  const [htmlDesignAdvisorWorkspace, setHtmlDesignAdvisorWorkspace] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -84,6 +87,9 @@ const SettingsTab: React.FC = () => {
     setTtsDaemonUrl(settings.ttsDaemonUrl || 'http://127.0.0.1:4100');
     setTtsDaemonHasToken(Boolean(settings.ttsDaemonHasToken));
     setTtsDaemonToken('');
+    setHtmlDesignAdvisorEnabled(Boolean(settings.htmlDesignAdvisorEnabled));
+    setHtmlDesignAdvisorPython(settings.htmlDesignAdvisorPython || 'python');
+    setHtmlDesignAdvisorWorkspace(settings.htmlDesignAdvisorWorkspace || '');
   };
 
   const handleSave = async () => {
@@ -107,6 +113,9 @@ const SettingsTab: React.FC = () => {
         ttsAnnounceEnabled,
         ttsDaemonUrl,
         ttsDaemonToken: ttsDaemonToken || undefined,
+        htmlDesignAdvisorEnabled,
+        htmlDesignAdvisorPython,
+        htmlDesignAdvisorWorkspace,
       });
       if (result.ok) {
         Message.success('Settings saved.');
@@ -278,6 +287,49 @@ const SettingsTab: React.FC = () => {
             <p className={styles.hint}>
               KEV MCP is often :8765/mcp; Gutsy MCP :8766/mcp. Use the LAN MCP URL, not :8008/:8009.
               Clear the URL and save to disable.
+            </p>
+          </div>
+
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Mission MCP tools</h3>
+            <p className={styles.hint}>
+              Optional servers merged into the mission workspace <code>.vibes/mcp.json</code> on spawn
+              (vibes child loads them). Off removes only the advisor entry; other servers stay.
+            </p>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>HTML Design Advisor</span>
+              <Switch
+                checked={htmlDesignAdvisorEnabled}
+                onChange={setHtmlDesignAdvisorEnabled}
+                size="small"
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Python command</label>
+              <Input
+                placeholder="python"
+                value={htmlDesignAdvisorPython}
+                onChange={setHtmlDesignAdvisorPython}
+                size="small"
+                disabled={!htmlDesignAdvisorEnabled}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Catalog workspace (optional)</label>
+              <Input
+                placeholder="C:/path/to/ui-design"
+                value={htmlDesignAdvisorWorkspace}
+                onChange={setHtmlDesignAdvisorWorkspace}
+                size="small"
+                disabled={!htmlDesignAdvisorEnabled}
+              />
+            </div>
+            <p className={styles.hint}>
+              Requires <code>pip install</code> of{' '}
+              <a href="https://github.com/HappyMonkeyAI/html-design-advisor-mcp" target="_blank" rel="noreferrer">
+                html-design-advisor-mcp
+              </a>
+              . Sets <code>python -m html_design_advisor</code> under key <code>html-design-advisor</code>.
             </p>
           </div>
 

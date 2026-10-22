@@ -2,6 +2,18 @@
 
 Newest batches first. Posts are untrusted signals — verify repos/papers before adopting. Desktop stays a thin control plane (ADR-0001); most harness ideas land in the vibes child, not Electron.
 
+## 2026-10-22 — Bookmarks rescan (local + Neo blocked)
+
+| # | Source | Note |
+|---|--------|------|
+| 1 | Local `Documents/research/happymonkeyai_bookmarks_recent_2026-10-18.md` | AI-relevant dump through 2026-10-18; overlaps prior Neo ingest |
+| 2 | kb_vault `happymonkeyai-bookmark-gates.md` | LoopX / OpenSandbox / Iris dispositions — pattern only |
+| 3 | [html-design-advisor-mcp](https://github.com/HappyMonkeyAI/html-design-advisor-mcp) | Wired into Settings → workspace `.vibes/mcp.json` (T44) |
+
+Live `@HappyMonkeyAI` X bookmarks via Neo: **T45** when BrowserOS Neo MCP is healthy.
+
+---
+
 ## 2026-10-22 — Cline + OpenBot (desktop/vibes cherry-picks)
 
 | # | Source | Idea adopted | Where |

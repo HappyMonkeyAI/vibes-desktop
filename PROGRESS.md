@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-22 — Bookmarks + Chat queue + MCP registry
+
+1. **Bookmarks:** Live Neo/X scan blocked (Neo MCP error; IDE browser not logged in). Distilled local `happymonkeyai_bookmarks_recent_2026-10-18.md` + kb gates → no new desktop tickets beyond queue/MCP; notes in `.agent/memories/codebase_insights/2026-10-22-bookmarks-rescan.md`. T45 = re-scan when Neo is up.
+2. **T43:** Chat queue bar — waiting list, Pause/Resume, Clear over existing `mission.queue.*`.
+3. **T44:** Settings → Mission MCP tools → HTML Design Advisor; `writeVibesMcpJson` merges/removes `html-design-advisor` in workspace `.vibes/mcp.json` on mission spawn.
+
+**Next:** T45 Neo bookmark delta; optional Needs-You escalate UI.
+
+---
+
 ## 2026-10-22 — T24 TTS + Chat steer + Decision shadow
 
 1. **T24:** `announceToDaemon` → Agent Voice `POST /v1/announce`; Settings Voice toggle + Test; soft announce on mission terminal.
@@ -10,7 +20,7 @@ Newest first. Each entry: date, what was done, evidence, what's next, open quest
 
 **Evidence:** typecheck + announce/decision/settings tests green; live Decision skipped (no `KEV_MCP_*` in shell — set `VIBES_DECISION_LIVE=1` + creds for V3).
 
-**Next:** optional Chat UI for queue pause; html-design-advisor MCP registry.
+**Next:** (superseded) T43 queue chrome + T44 MCP registry done same day.
 
 ---
 

@@ -212,6 +212,15 @@ export interface AppSettings {
   ttsDaemonUrl: string;
   /** True when an AVT_TOKEN is stored (never returned decrypted). */
   ttsDaemonHasToken: boolean;
+  /**
+   * When true, mission spawn merges `html-design-advisor` into workspace
+   * `.vibes/mcp.json` (stdio: python -m html_design_advisor).
+   */
+  htmlDesignAdvisorEnabled: boolean;
+  /** Python executable for the advisor (default `python`). */
+  htmlDesignAdvisorPython: string;
+  /** Optional HTML_DESIGN_ADVISOR_WORKSPACE (ui-design catalog root). */
+  htmlDesignAdvisorWorkspace: string;
 }
 
 /** Partial save payload — empty *ApiKey / *AuthToken fields mean keep the stored secret. */

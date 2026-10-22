@@ -6,6 +6,7 @@ import { LedgerStore } from './ledger/store';
 import { RolesStore } from './roles/store';
 import { makeSafeCipher } from './roles/safeCipher';
 import { writeVibesConfig } from './roles/config-writer';
+import { writeVibesMcpJson } from './roles/mcp-writer';
 import { createMissionService } from './mission/service';
 import { resolveDecisionMcpConfig } from './decision/config';
 import { VibesBridge } from './bridge/vibes-bridge';
@@ -90,6 +91,12 @@ app.whenReady().then(() => {
     createBridge: (workspaceRoot) => {
       const decision = resolveDecisionMcpConfig(settingsStore);
       writeVibesConfig(workspaceRoot, rolesStore.input(), decision);
+      const settings = settingsStore.get();
+      writeVibesMcpJson(workspaceRoot, {
+        enabled: settings.htmlDesignAdvisorEnabled,
+        pythonCommand: settings.htmlDesignAdvisorPython || 'python',
+        workspace: settings.htmlDesignAdvisorWorkspace || undefined,
+      });
       const llmEnv: Record<string, string> = {};
       if (decision) {
         llmEnv.KEV_MCP_URL = decision.url;

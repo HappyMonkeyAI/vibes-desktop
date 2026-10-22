@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { LedgerEntry, LedgerSnapshot, WorkspaceHistoryEntry } from '@shared/channels';
+import type {
+  LedgerEntry,
+  LedgerSnapshot,
+  MissionQueueSnapshot,
+  WorkspaceHistoryEntry,
+} from '@shared/channels';
 import { buildChatMissionSummary } from '@shared/chatSummary';
 import { Button, Input, Message, Select } from '@arco-design/web-react';
 import VoiceInput from './VoiceInput';
@@ -56,6 +61,7 @@ const ChatView: React.FC = () => {
   const [activeRequest, setActiveRequest] = useState('');
   const [snapshot, setSnapshot] = useState<LedgerSnapshot | null>(null);
   const [summarizedFor, setSummarizedFor] = useState<string | null>(null);
+  const [queue, setQueue] = useState<MissionQueueSnapshot>({ paused: false, items: [] });
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const pushMessage = (role: ChatRole, text: string) => {
@@ -66,9 +72,20 @@ const ChatView: React.FC = () => {
     void window.vibesDesktop.workspace.history.get().then(setWorkspaceHistory).catch(() => {});
   };
 
+  const refreshQueue = () => {
+    void window.vibesDesktop.mission.queue.get().then(setQueue).catch(() => {});
+  };
+
   useEffect(() => {
     refreshHistory();
+    refreshQueue();
   }, []);
+
+  useEffect(() => {
+    if (queue.items.length === 0 && !queue.paused) return;
+    const id = window.setInterval(refreshQueue, 2500);
+    return () => window.clearInterval(id);
+  }, [queue.items.length, queue.paused]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -203,6 +220,7 @@ const ChatView: React.FC = () => {
               'assistant',
               `Mission busy — queued follow-up (${queued.queueDepth ?? 1} waiting). It starts when the current run finishes.`,
             );
+            refreshQueue();
             setBusy(false);
             return;
           }
@@ -235,6 +253,7 @@ const ChatView: React.FC = () => {
           'assistant',
           `Mission busy — queued follow-up (${result.queueDepth ?? 1} waiting). It starts when the current run finishes.`,
         );
+        refreshQueue();
         setBusy(false);
         return;
       }
@@ -263,6 +282,31 @@ const ChatView: React.FC = () => {
       setBusy(false);
     } else {
       Message.info('Nothing to stop.');
+    }
+  };
+
+  const handleQueuePauseToggle = async () => {
+    try {
+      const next = await window.vibesDesktop.mission.queue.setPaused(!queue.paused);
+      setQueue(next);
+      pushMessage(
+        'system',
+        next.paused
+          ? 'Follow-up queue paused — waiting items will not auto-start.'
+          : 'Follow-up queue resumed.',
+      );
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Could not update queue pause.');
+    }
+  };
+
+  const handleQueueClear = async () => {
+    try {
+      const next = await window.vibesDesktop.mission.queue.clear();
+      setQueue(next);
+      pushMessage('system', 'Follow-up queue cleared.');
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Could not clear queue.');
     }
   };
 
@@ -350,6 +394,35 @@ const ChatView: React.FC = () => {
       </div>
 
       <div className={styles.composer}>
+        {(queue.items.length > 0 || queue.paused) && (
+          <div className={styles.queueBar} aria-label="Follow-up mission queue">
+            <div className={styles.queueMeta}>
+              <span className={styles.workspaceLabel}>Queue</span>
+              <span className={styles.panelMeta}>
+                {queue.paused ? 'paused · ' : ''}
+                {queue.items.length} waiting
+              </span>
+            </div>
+            <ul className={styles.queueList}>
+              {queue.items.slice(0, 4).map((item) => (
+                <li key={item.id} className={styles.queueItem} title={item.request}>
+                  {item.request.length > 72 ? `${item.request.slice(0, 72)}…` : item.request}
+                </li>
+              ))}
+              {queue.items.length > 4 ? (
+                <li className={styles.queueItem}>+{queue.items.length - 4} more</li>
+              ) : null}
+            </ul>
+            <div className={styles.queueActions}>
+              <Button size="mini" onClick={() => void handleQueuePauseToggle()}>
+                {queue.paused ? 'Resume' : 'Pause'}
+              </Button>
+              <Button size="mini" status="danger" onClick={() => void handleQueueClear()}>
+                Clear
+              </Button>
+            </div>
+          </div>
+        )}
         <div className={styles.workspaceRow}>
           <span className={styles.workspaceLabel}>Workspace</span>
           <Select

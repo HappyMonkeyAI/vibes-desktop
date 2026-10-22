@@ -32,6 +32,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ttsAnnounceEnabled: false,
   ttsDaemonUrl: 'http://127.0.0.1:4100',
   ttsDaemonHasToken: false,
+  htmlDesignAdvisorEnabled: false,
+  htmlDesignAdvisorPython: 'python',
+  htmlDesignAdvisorWorkspace: '',
 };
 
 type Persisted = Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken' | 'ttsDaemonHasToken'> & {
@@ -149,6 +152,12 @@ export class SettingsStore {
           : DEFAULT_SETTINGS.ttsAnnounceEnabled,
         ttsDaemonUrl: asString(raw.ttsDaemonUrl) || DEFAULT_SETTINGS.ttsDaemonUrl,
         ttsDaemonHasToken: hasTtsToken,
+        htmlDesignAdvisorEnabled: typeof raw.htmlDesignAdvisorEnabled === 'boolean'
+          ? raw.htmlDesignAdvisorEnabled
+          : DEFAULT_SETTINGS.htmlDesignAdvisorEnabled,
+        htmlDesignAdvisorPython: asString(raw.htmlDesignAdvisorPython)
+          || DEFAULT_SETTINGS.htmlDesignAdvisorPython,
+        htmlDesignAdvisorWorkspace: asString(raw.htmlDesignAdvisorWorkspace),
       };
     } catch {
       return { ...DEFAULT_SETTINGS };
@@ -213,6 +222,14 @@ export class SettingsStore {
           : currentView.ttsAnnounceEnabled,
         ttsDaemonUrl: asString(input.ttsDaemonUrl ?? currentView.ttsDaemonUrl) || DEFAULT_SETTINGS.ttsDaemonUrl,
         ttsDaemonTokenEnc: nextTtsEnc || undefined,
+        htmlDesignAdvisorEnabled: typeof input.htmlDesignAdvisorEnabled === 'boolean'
+          ? input.htmlDesignAdvisorEnabled
+          : currentView.htmlDesignAdvisorEnabled,
+        htmlDesignAdvisorPython: asString(input.htmlDesignAdvisorPython ?? currentView.htmlDesignAdvisorPython)
+          || DEFAULT_SETTINGS.htmlDesignAdvisorPython,
+        htmlDesignAdvisorWorkspace: asString(
+          input.htmlDesignAdvisorWorkspace ?? currentView.htmlDesignAdvisorWorkspace,
+        ),
       };
       const dir = path.dirname(this.filePath);
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });

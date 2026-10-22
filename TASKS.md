@@ -55,6 +55,9 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] chore: commit desktop T38–T40 + vibes `ag/completion-gates` + planner gate mirror ✅ 2026-10-22
 - [x] T24 Agent Voice TTS announce on mission done/failed — Settings → Voice → daemon URL/token; soft `POST /v1/announce` ✅ 2026-10-22
 - [x] T42 Decision shadow live gate — `VIBES_DECISION_LIVE=1` e2e + offline fixture ✅ 2026-10-22
+- [x] T43 Chat queue chrome: list waiting follow-ups + Pause/Resume/Clear ✅ 2026-10-22
+- [x] T44 Mission MCP registry seed: Settings → HTML Design Advisor → workspace `.vibes/mcp.json` on spawn ✅ 2026-10-22
+- [ ] T45 Live HappyMonkeyAI bookmark delta via BrowserOS Neo (blocked 2026-10-22 — Neo MCP down; local Oct-18 export already covered)
 
 ## P8 — Part A (harness / memory research → product)
 - [x] T29 Decision spike (probe): LAN **KEV MCP** `http://192.168.5.157:8765/mcp` — list_models + triage `kev_evaluate` (escalate ~4.5s) + shadow `kev_select_tool` (~80ms). APIs `:8008`/`:8009` not LAN-published (localhost on host). Notes in `2026-10-20-decision-model-kev-gutsy.md` ✅ 2026-10-20
