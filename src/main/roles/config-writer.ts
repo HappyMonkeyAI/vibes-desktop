@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { RolesConfigInput } from '@shared/channels';
+import type { DecisionMcpConfig, RolesConfigInput } from '@shared/channels';
 import { omitEmpty, toVibesConfig, type VibesConfigKey } from './vibes-config';
 
 /**
@@ -20,7 +20,11 @@ export function vibesConfigPath(workspaceRoot: string): string {
 /** Merge our config into the workspace's native file. Returns the path, or null.
  *  Refuses non-absolute roots: a relative path would resolve against the app's
  *  own cwd and write .vibes/config.json into the source tree. */
-export function writeVibesConfig(workspaceRoot: string, input: RolesConfigInput): string | null {
+export function writeVibesConfig(
+  workspaceRoot: string,
+  input: RolesConfigInput,
+  decision?: DecisionMcpConfig | null,
+): string | null {
   if (!workspaceRoot || !path.isAbsolute(workspaceRoot)) return null;
   const target = vibesConfigPath(workspaceRoot);
   try {
@@ -34,7 +38,26 @@ export function writeVibesConfig(workspaceRoot: string, input: RolesConfigInput)
         existing = {};
       }
     }
-    const merged: Partial<Record<VibesConfigKey, string>> = { ...existing, ...omitEmpty(toVibesConfig(input)) };
+    const decisionFields: Partial<Record<VibesConfigKey, string>> = decision
+      ? {
+          KEV_MCP_URL: decision.url,
+          KEV_MCP_AUTH_TOKEN: decision.token,
+          ENABLE_DECISION_INTERVENE_GATE: 'true',
+        }
+      : {
+          // Explicit off so a prior mission's token does not linger in the workspace file.
+          ENABLE_DECISION_INTERVENE_GATE: 'false',
+        };
+    const merged: Partial<Record<VibesConfigKey, string>> = {
+      ...existing,
+      ...omitEmpty(toVibesConfig(input)),
+      ...omitEmpty(decisionFields as Record<VibesConfigKey, string>),
+    };
+    // When decision is off, strip secrets from the workspace config.
+    if (!decision) {
+      delete merged.KEV_MCP_URL;
+      delete merged.KEV_MCP_AUTH_TOKEN;
+    }
     mkdirSync(path.dirname(target), { recursive: true });
     writeFileSync(target, JSON.stringify(merged, null, 2) + '\n', 'utf-8');
     return target;

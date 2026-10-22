@@ -2,6 +2,14 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-22 — T26 Decision intervene gate (KEV)
+
+**Done:** ProPerAgent-shaped gate before operator interrupt. Desktop writes `KEV_MCP_*` + `ENABLE_DECISION_INTERVENE_GATE` into workspace config and bridge env when Settings Decision is configured. Vibes `handleTaskFailure` calls `kev_evaluate` (continue/escalate/skip); auto-retry/skip when clear; escalate on near-tie / outage. Pure gate tests green (desktop + vibes).
+
+**Next:** Live shadow with Settings Decision filled; optional Chat Needs-You UI when escalate; broader MCP registry (html-design-advisor) still open.
+
+---
+
 ## 2026-10-22 — Commit ratchet + T21 live e2e
 
 **Commits:** desktop `44a9442` (queue + double-check config); vibes `ag/completion-gates` `8eca3ae` (soft-pass, double-check, evidence requeue, css audit); planner `3a1736f` (gate mirror, provider-catalog left unstaged).

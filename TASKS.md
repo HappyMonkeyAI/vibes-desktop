@@ -43,7 +43,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T28 Dark Mission Control default + Stitch sky accent; light toggle retained ✅ 2026-10-20
 
 ## P7 — Roadmap (next session)
-- [ ] T26 External MCP servers for missions: configure/register local MCP tools (KEV decision MCP when Settings has URL+token; html-design-advisor; …) — naming a path in the prompt is not enough. Settings Decision UI is config-only until this lands. **ProPerAgent-shaped use:** gate intervene vs continue before escalating (see LINKS.md / 2026-10-21 cherry note).
+- [x] T26 Decision intervene gate (KEV): Settings URL+token → child env + `.vibes` config; before operator interrupt, `kev_evaluate` continue/escalate/skip (probabilities + margin); escalate on abstention/near-tie. html-design-advisor / general MCP registry still later. ✅ 2026-10-22
 - [ ] T35 (research→product) Harness²-lite: persist one post-failure harness lesson into Retry seed / `.vibes` — not full recursive harness editing (LINKS.md #1)
 - [x] T36 Chat tab (phase 1): request → plan RHS → auto-launch → ledger summary → done comment — `ChatView` + DESIGN.md ✅ 2026-10-21 (artifacts / steering / interrupt = phase 2)
 - [x] T37 Completion gate: soft-pass malformed/`unverified` Owner adversary review (explicit `approved:false` still fails) — vibes + planner; mission `75c45024` false FAIL ✅ 2026-10-21

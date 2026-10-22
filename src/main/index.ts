@@ -7,6 +7,7 @@ import { RolesStore } from './roles/store';
 import { makeSafeCipher } from './roles/safeCipher';
 import { writeVibesConfig } from './roles/config-writer';
 import { createMissionService } from './mission/service';
+import { resolveDecisionMcpConfig } from './decision/config';
 import { VibesBridge } from './bridge/vibes-bridge';
 import { WorkspaceHistoryStore } from './workspace/history';
 import { SettingsStore } from './settings/store';
@@ -86,8 +87,15 @@ app.whenReady().then(() => {
       try { return resolveVibesPath(); } catch { return undefined; }
     },
     createBridge: (workspaceRoot) => {
-      writeVibesConfig(workspaceRoot, rolesStore.input());
-      return new VibesBridge({ vibesPath: resolveVibesPath(), workspaceRoot });
+      const decision = resolveDecisionMcpConfig(settingsStore);
+      writeVibesConfig(workspaceRoot, rolesStore.input(), decision);
+      const llmEnv: Record<string, string> = {};
+      if (decision) {
+        llmEnv.KEV_MCP_URL = decision.url;
+        llmEnv.KEV_MCP_AUTH_TOKEN = decision.token;
+        llmEnv.ENABLE_DECISION_INTERVENE_GATE = 'true';
+      }
+      return new VibesBridge({ vibesPath: resolveVibesPath(), workspaceRoot, llmEnv });
     },
   });
   createWindow();

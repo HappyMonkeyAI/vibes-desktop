@@ -32,7 +32,10 @@ export type VibesConfigKey =
   | 'TRIAGE_API_KEY'
   | 'ENABLE_REVIEWER'
   | 'ENABLE_ADVERSARIAL_AUDIT'
-  | 'ENABLE_DOUBLE_CHECK_COMPLETION';
+  | 'ENABLE_DOUBLE_CHECK_COMPLETION'
+  | 'KEV_MCP_URL'
+  | 'KEV_MCP_AUTH_TOKEN'
+  | 'ENABLE_DECISION_INTERVENE_GATE';
 
 /**
  * OpenAI-compatible providers serve under a version prefix (Ollama, LM Studio,

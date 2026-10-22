@@ -22,6 +22,8 @@ const ALLOWED_VIBES_ENV_KEYS = new Set([
   'OPENROUTER_API_KEY', 'OPENROUTER_BASE_URL', 'OPENROUTER_MODEL',
   'DEEPSEEK_API_KEY', 'DEEPSEEK_BASE_URL', 'DEEPSEEK_MODEL',
   'OLLAMA_BASE_URL', 'OLLAMA_MODEL', 'OLLAMA_API_KEY', 'CONTEXT_WINDOW',
+  // T26 — optional KEV decision MCP for intervene-vs-continue gate
+  'KEV_MCP_URL', 'KEV_MCP_AUTH_TOKEN', 'ENABLE_DECISION_INTERVENE_GATE',
 ]);
 
 /** Minimal platform base env so the child can find node/tsx but sees no app secrets. */
