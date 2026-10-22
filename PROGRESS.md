@@ -2,6 +2,14 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-22 — T35 Harness²-lite lesson
+
+**Done:** On mission failure, distill one process-level lesson (`distillHarnessLesson`) and write `.vibes/harness-lesson.json`. Retry loads it via `harness:lesson-get` and puts it first in `buildRetryRequest`. Fingerprints: css_orphan, evidence/ghost, completion gate, circular deps, npm ENOENT. Tests `harness-lesson.test.ts`.
+
+**Next:** T24 TTS optional; Chat phase-2 steering; live Decision shadow.
+
+---
+
 ## 2026-10-22 — T26 Decision intervene gate (KEV)
 
 **Done:** ProPerAgent-shaped gate before operator interrupt. Desktop writes `KEV_MCP_*` + `ENABLE_DECISION_INTERVENE_GATE` into workspace config and bridge env when Settings Decision is configured. Vibes `handleTaskFailure` calls `kev_evaluate` (continue/escalate/skip); auto-retry/skip when clear; escalate on near-tie / outage. Pure gate tests green (desktop + vibes).

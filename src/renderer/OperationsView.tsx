@@ -329,6 +329,11 @@ const OperationsView: React.FC = () => {
     if (starting) return;
     setStarting(true);
     try {
+      const root = card.workspaceRoot || workspaceRoot || '';
+      // T35 — load persisted harness lesson from `.vibes` when present.
+      const persisted = root
+        ? await window.vibesDesktop.harness.latestLesson(root).catch(() => null)
+        : null;
       // T31 — forget-except-best: seed planner with prior failure + done steps only.
       const request = buildRetryRequest({
         title: card.title,
@@ -336,15 +341,22 @@ const OperationsView: React.FC = () => {
         systemFailures: card.systemFailures,
         failedTasks: card.tasks.filter((t) => t.status === 'failed' || t.status === 'blocked'),
         doneTaskTitles: card.tasks.filter((t) => t.status === 'done').map((t) => t.title),
+        harnessLesson: persisted?.lesson,
       });
       setMissionRequest(request);
       const result = await window.vibesDesktop.mission.start({
         request,
-        workspaceRoot: card.workspaceRoot || workspaceRoot || undefined,
+        workspaceRoot: root || undefined,
       });
       if (result.alreadyRunning) Message.warning('A mission is already running.');
       else if (!result.started && result.error) Message.error(result.error);
-      else if (result.started) Message.success('Mission restarted with prior-attempt lesson');
+      else if (result.started) {
+        Message.success(
+          persisted?.lesson
+            ? 'Mission restarted with harness lesson + prior attempt'
+            : 'Mission restarted with prior-attempt lesson',
+        );
+      }
     } catch (error) {
       Message.error(error instanceof Error ? error.message : String(error));
     } finally {

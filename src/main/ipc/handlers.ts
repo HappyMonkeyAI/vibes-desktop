@@ -16,6 +16,7 @@ import type { WorkspaceHistoryStore } from '../workspace/history';
 import { DEFAULT_SETTINGS, type SettingsStore } from '../settings/store';
 import { resolveDecisionMcpConfig } from '../decision/config';
 import { probeDecisionMcp } from '../decision/probe';
+import { readHarnessLesson } from '../harness/lesson-store';
 
 /**
  * Handler table: one entry per channel in the shared map. T5 wires the ledger
@@ -213,6 +214,14 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
         };
       }
       return probeDecisionMcp(config);
+    },
+    // T35 — latest harness lesson for Retry seed (null when absent / bad path).
+    [channels.harnessLessonGet]: async (_e, workspaceRootArg) => {
+      const root = typeof workspaceRootArg === 'string' ? workspaceRootArg.trim() : '';
+      if (!root) return null;
+      const record = readHarnessLesson(root);
+      if (!record) return null;
+      return { lesson: record.lesson, missionTitle: record.missionTitle, at: record.at };
     },
   };
 }

@@ -275,6 +275,14 @@ export const channels = {
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
   decisionTest: 'decision:test',
+  /** T35 — latest Harness²-lite lesson for a workspace (`.vibes/harness-lesson.json`). */
+  harnessLessonGet: 'harness:lesson-get',
 } as const;
+
+export type HarnessLessonView = {
+  lesson: string;
+  missionTitle: string;
+  at: number;
+} | null;
 
 export type ChannelName = (typeof channels)[keyof typeof channels];

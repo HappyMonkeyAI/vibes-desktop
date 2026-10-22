@@ -5,6 +5,8 @@ import type { LedgerStore } from '../ledger/store';
 import { VibesBridge, type TaskStatusEvent } from '../bridge/vibes-bridge';
 import type { MissionStartResult, MissionPlanResponse, MissionQueueSnapshot } from '@shared/channels';
 import { createFollowupQueue, type FollowupQueue } from './followup-queue';
+import { distillHarnessLesson } from '@shared/harnessLesson';
+import { writeHarnessLesson } from '../harness/lesson-store';
 
 /**
  * T13 + T14 — the mission lifecycle service. Owns a single VibesBridge and the
@@ -179,6 +181,30 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
     });
   };
 
+  /** T35 — write one harness lesson into `.vibes/harness-lesson.json` after failure. */
+  const persistHarnessLessonFromLedger = async (
+    request: string,
+    root: string,
+    missionId: string,
+    missionDetail?: string,
+  ): Promise<void> => {
+    const snap = await store.snapshot();
+    const rows = snap.entries.filter((e) => e.missionId === missionId);
+    const failedTasks = rows
+      .filter((e) => e.kind !== 'mission' && (e.status === 'failed' || e.status === 'blocked'))
+      .map((e) => ({ title: e.title, detail: e.detail }));
+    const systemFailures = rows
+      .filter((e) => /scheduler|completion gate|mission/i.test(e.title) && e.status === 'failed')
+      .map((e) => ({ title: e.title, detail: e.detail }));
+    const lesson = distillHarnessLesson({
+      missionTitle: request,
+      missionDetail,
+      failedTasks,
+      systemFailures,
+    });
+    if (lesson) writeHarnessLesson(root, lesson, request);
+  };
+
   /** Dispatch execution in the background. Resolves the start call immediately
    *  after planning; the ledger streams live updates until the mission ends. */
   const dispatchExecution = (mission: MissionBridge, request: string, root: string, missionId: string, gen: number): void => {
@@ -196,6 +222,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
             const outcome = missionOutcomeFrom(result);
             if (outcome.status === 'failed') {
               await store.markOpenTasksFailed(missionId).catch(() => undefined);
+              await persistHarnessLessonFromLedger(request, root, missionId, outcome.detail).catch(() => undefined);
             }
             return store.recordMissionEvent(request, outcome.status, root, missionId, outcome.detail).catch(() => undefined);
           }
@@ -207,6 +234,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
           if (!stopRequested && gen === generation) {
             const detail = error instanceof Error ? error.message : String(error);
             await store.markOpenTasksFailed(missionId).catch(() => undefined);
+            await persistHarnessLessonFromLedger(request, root, missionId, detail).catch(() => undefined);
             return store.recordMissionEvent(request, 'failed', root, missionId, detail).catch(() => undefined);
           }
           return undefined;

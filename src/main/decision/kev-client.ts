@@ -43,15 +43,17 @@ function parseSseOrJson(body: string): unknown {
   }
 }
 
-function sessionHeaders(base: HeadersInit, sessionId: string | null): Headers {
-  const h = new Headers(base);
-  if (sessionId) h.set('mcp-session-id', sessionId);
+type HeaderMap = Record<string, string>;
+
+function sessionHeaders(base: HeaderMap, sessionId: string | null): HeaderMap {
+  const h = { ...base };
+  if (sessionId) h['mcp-session-id'] = sessionId;
   return h;
 }
 
 async function mcpPost(
   url: string,
-  headers: HeadersInit,
+  headers: HeaderMap,
   body: unknown,
   fetchImpl: FetchLike,
   sessionId: string | null,
@@ -78,7 +80,7 @@ export async function kevEvaluateIntervene(options: {
   fetchImpl?: FetchLike;
 }): Promise<KevEvaluateResult | null> {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const headers: HeadersInit = {
+  const headers: HeaderMap = {
     Authorization: `Bearer ${options.config.token}`,
     Accept: 'application/json, text/event-stream',
     'Content-Type': 'application/json',

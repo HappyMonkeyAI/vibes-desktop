@@ -20,6 +20,7 @@ import {
   type VoiceTranscribeResult,
   type VoiceWarmResult,
   type DecisionProbeResult,
+  type HarnessLessonView,
   type WorkspaceHistoryEntry,
   type WorkspaceSelectResult,
 } from '@shared/channels';
@@ -82,6 +83,10 @@ const api = {
   },
   decision: {
     test: (): Promise<DecisionProbeResult> => ipcRenderer.invoke(channels.decisionTest),
+  },
+  harness: {
+    latestLesson: (workspaceRoot: string): Promise<HarnessLessonView> =>
+      ipcRenderer.invoke(channels.harnessLessonGet, workspaceRoot),
   },
 };
 

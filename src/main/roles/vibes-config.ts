@@ -92,6 +92,11 @@ export function toVibesConfig(input: RolesConfigInput): Record<VibesConfigKey, s
     ENABLE_ADVERSARIAL_AUDIT: reviewerConfigured ? 'true' : 'false',
     // Always on: deterministic evidence re-check before mission success (Cline-style).
     ENABLE_DOUBLE_CHECK_COMPLETION: 'true',
+    // Decision MCP is injected by writeVibesConfig when Settings has URL+token;
+    // empty here so omitEmpty drops them from a roles-only save.
+    KEV_MCP_URL: '',
+    KEV_MCP_AUTH_TOKEN: '',
+    ENABLE_DECISION_INTERVENE_GATE: '',
   };
 }
 

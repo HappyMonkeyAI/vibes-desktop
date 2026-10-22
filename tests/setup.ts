@@ -69,4 +69,7 @@ window.vibesDesktop = {
   decision: {
     test: vi.fn().mockResolvedValue({ ok: false, error: 'not configured' }),
   },
+  harness: {
+    latestLesson: vi.fn().mockResolvedValue(null),
+  },
 };

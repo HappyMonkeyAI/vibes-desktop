@@ -10,6 +10,8 @@ export type RetrySeedInput = {
   systemFailures?: Array<{ title: string; detail?: string }>;
   failedTasks?: Array<{ title: string; detail?: string }>;
   doneTaskTitles?: string[];
+  /** T35 — one persisted / distilled harness lesson (Harness²-lite). */
+  harnessLesson?: string;
 };
 
 const SKIP_DETAIL = /^(Left |Mission failed\.)/;
@@ -50,7 +52,10 @@ export function buildRetryRequest(input: RetrySeedInput): string {
     lessons.push(`Failed step "${task.title}": ${detail.slice(0, 300)}`);
   }
 
-  const unique = [...new Set(lessons)].slice(0, 3);
+  const harness = input.harnessLesson?.trim().slice(0, 400);
+  if (harness) lessons.unshift(harness);
+
+  const unique = [...new Set(lessons)].slice(0, 4);
   const best = (input.doneTaskTitles ?? []).filter(Boolean).slice(0, 5);
 
   if (unique.length === 0 && best.length === 0) return title;

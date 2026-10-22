@@ -44,7 +44,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 
 ## P7 — Roadmap (next session)
 - [x] T26 Decision intervene gate (KEV): Settings URL+token → child env + `.vibes` config; before operator interrupt, `kev_evaluate` continue/escalate/skip (probabilities + margin); escalate on abstention/near-tie. html-design-advisor / general MCP registry still later. ✅ 2026-10-22
-- [ ] T35 (research→product) Harness²-lite: persist one post-failure harness lesson into Retry seed / `.vibes` — not full recursive harness editing (LINKS.md #1)
+- [x] T35 Harness²-lite: distill one post-failure harness lesson → `.vibes/harness-lesson.json` + Retry seed (extends T31) ✅ 2026-10-22
 - [x] T36 Chat tab (phase 1): request → plan RHS → auto-launch → ledger summary → done comment — `ChatView` + DESIGN.md ✅ 2026-10-21 (artifacts / steering / interrupt = phase 2)
 - [x] T37 Completion gate: soft-pass malformed/`unverified` Owner adversary review (explicit `approved:false` still fails) — vibes + planner; mission `75c45024` false FAIL ✅ 2026-10-21
 - [x] T38 Double-check completion (Cline): deterministic evidence re-check + owner prompt newline fix + `ENABLE_DOUBLE_CHECK_COMPLETION` — vibes + planner + desktop config ✅ 2026-10-22
