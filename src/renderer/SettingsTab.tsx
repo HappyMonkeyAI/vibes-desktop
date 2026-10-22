@@ -26,6 +26,10 @@ const SettingsTab: React.FC = () => {
   const [decisionMcpUrl, setDecisionMcpUrl] = useState('');
   const [decisionMcpAuthToken, setDecisionMcpAuthToken] = useState('');
   const [decisionMcpHasToken, setDecisionMcpHasToken] = useState(false);
+  const [ttsAnnounceEnabled, setTtsAnnounceEnabled] = useState(false);
+  const [ttsDaemonUrl, setTtsDaemonUrl] = useState('http://127.0.0.1:4100');
+  const [ttsDaemonToken, setTtsDaemonToken] = useState('');
+  const [ttsDaemonHasToken, setTtsDaemonHasToken] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,6 +37,7 @@ const SettingsTab: React.FC = () => {
   const [warming, setWarming] = useState(false);
   const [testingServer, setTestingServer] = useState(false);
   const [testingDecision, setTestingDecision] = useState(false);
+  const [testingAnnounce, setTestingAnnounce] = useState(false);
 
   const refreshDoctor = async () => {
     try {
@@ -75,6 +80,10 @@ const SettingsTab: React.FC = () => {
     setDecisionMcpUrl(settings.decisionMcpUrl || '');
     setDecisionMcpHasToken(Boolean(settings.decisionMcpHasToken));
     setDecisionMcpAuthToken('');
+    setTtsAnnounceEnabled(Boolean(settings.ttsAnnounceEnabled));
+    setTtsDaemonUrl(settings.ttsDaemonUrl || 'http://127.0.0.1:4100');
+    setTtsDaemonHasToken(Boolean(settings.ttsDaemonHasToken));
+    setTtsDaemonToken('');
   };
 
   const handleSave = async () => {
@@ -95,6 +104,9 @@ const SettingsTab: React.FC = () => {
         speechServerApiKey: speechServerApiKey || undefined,
         decisionMcpUrl,
         decisionMcpAuthToken: decisionMcpAuthToken || undefined,
+        ttsAnnounceEnabled,
+        ttsDaemonUrl,
+        ttsDaemonToken: ttsDaemonToken || undefined,
       });
       if (result.ok) {
         Message.success('Settings saved.');
@@ -142,6 +154,26 @@ const SettingsTab: React.FC = () => {
       Message.error(error instanceof Error ? error.message : 'Server probe failed.');
     } finally {
       setTestingServer(false);
+    }
+  };
+
+  const handleTestAnnounce = async () => {
+    setTestingAnnounce(true);
+    try {
+      await window.vibesDesktop.settings.save({
+        ttsAnnounceEnabled,
+        ttsDaemonUrl,
+        ttsDaemonToken: ttsDaemonToken || undefined,
+      });
+      const refreshed = await window.vibesDesktop.settings.get();
+      applySettings(refreshed);
+      const result = await window.vibesDesktop.voice.testAnnounce();
+      if (result.ok) Message.success('Test announcement accepted by the daemon.');
+      else Message.error(result.error || 'Announce failed.');
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Announce failed.');
+    } finally {
+      setTestingAnnounce(false);
     }
   };
 
@@ -394,6 +426,43 @@ const SettingsTab: React.FC = () => {
               </p>
             </div>
           )}
+
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Mission announce (TTS)</h3>
+            <p className={styles.hint}>
+              Optional Agent Voice daemon (`POST /v1/announce`). When enabled, speak a short line on mission done/failed.
+              Soft-fail — never blocks the mission.
+            </p>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Announce on mission terminal</span>
+              <Switch checked={ttsAnnounceEnabled} onChange={setTtsAnnounceEnabled} size="small" />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Daemon URL</label>
+              <Input
+                placeholder="http://127.0.0.1:4100"
+                value={ttsDaemonUrl}
+                onChange={setTtsDaemonUrl}
+                size="small"
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>
+                Daemon token {ttsDaemonHasToken && <Tag color="green" size="small">token stored</Tag>}
+              </label>
+              <Input.Password
+                placeholder={ttsDaemonHasToken ? 'Leave blank to keep stored token' : 'AVT_TOKEN'}
+                value={ttsDaemonToken}
+                onChange={setTtsDaemonToken}
+                size="small"
+              />
+            </div>
+            <div className={styles.actions}>
+              <Button size="small" type="outline" loading={testingAnnounce} onClick={() => void handleTestAnnounce()}>
+                Test announce
+              </Button>
+            </div>
+          </div>
 
           <Button type="primary" onClick={() => void handleSave()} loading={loading || saving} size="large" disabled={loading}>
             Save Settings

@@ -2,6 +2,18 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-22 — T24 TTS + Chat steer + Decision shadow
+
+1. **T24:** `announceToDaemon` → Agent Voice `POST /v1/announce`; Settings Voice toggle + Test; soft announce on mission terminal.
+2. **T41 Chat steering:** `steer_mission` MCP + bridge/service IPC; Chat sends steer while `activeMissionId` set.
+3. **T42:** `decision-shadow.e2e.test.ts` (live when `VIBES_DECISION_LIVE=1` + KEV env); offline fixture always.
+
+**Evidence:** typecheck + announce/decision/settings tests green; live Decision skipped (no `KEV_MCP_*` in shell — set `VIBES_DECISION_LIVE=1` + creds for V3).
+
+**Next:** optional Chat UI for queue pause; html-design-advisor MCP registry.
+
+---
+
 ## 2026-10-22 — T35 Harness²-lite lesson
 
 **Done:** On mission failure, distill one process-level lesson (`distillHarnessLesson`) and write `.vibes/harness-lesson.json`. Retry loads it via `harness:lesson-get` and puts it first in `buildRetryRequest`. Fingerprints: css_orphan, evidence/ghost, completion gate, circular deps, npm ENOENT. Tests `harness-lesson.test.ts`.

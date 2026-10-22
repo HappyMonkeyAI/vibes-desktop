@@ -17,6 +17,7 @@ import { DEFAULT_SETTINGS, type SettingsStore } from '../settings/store';
 import { resolveDecisionMcpConfig } from '../decision/config';
 import { probeDecisionMcp } from '../decision/probe';
 import { readHarnessLesson } from '../harness/lesson-store';
+import { announceToDaemon } from '../voice/announce';
 
 /**
  * Handler table: one entry per channel in the shared map. T5 wires the ledger
@@ -222,6 +223,27 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       const record = readHarnessLesson(root);
       if (!record) return null;
       return { lesson: record.lesson, missionTitle: record.missionTitle, at: record.at };
+    },
+    // T24 — test announcement to Agent Voice daemon.
+    [channels.voiceAnnounceTest]: async () => {
+      if (!settingsStore) return { ok: false, error: 'Settings unavailable' };
+      const settings = settingsStore.get();
+      const token = settingsStore.getTtsDaemonToken()?.trim();
+      if (!token) {
+        return { ok: false, error: 'Set an Agent Voice daemon token in Settings → Voice, then Save.' };
+      }
+      return announceToDaemon(
+        { baseUrl: settings.ttsDaemonUrl, token },
+        { text: 'Vibes Desktop test announcement.', priority: 3, sourceName: 'vibes-desktop' },
+      );
+    },
+    // Chat phase 2 — mid-run steering.
+    [channels.missionSteer]: async (_e, req) => {
+      if (!missionService) return { ok: false, error: 'Mission service not available' };
+      const message = typeof (req as { message?: unknown })?.message === 'string'
+        ? (req as { message: string }).message
+        : '';
+      return missionService.steerMission(message);
     },
   };
 }

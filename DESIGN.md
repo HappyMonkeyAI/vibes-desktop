@@ -83,15 +83,15 @@ Traditional chat harness **above** mission ATC. Same `missionService` + ledger a
 
 **Focus chain (Cline-inspired):** RHS checklist is the sticky plan for the active run — do not clear until the user sends a new request. Treat those step titles as the mission focus while ledger rows update status.
 
-**Phase 2 (later):** mid-run replan, steering replies, inline artifacts (Xpress); richer queue UI in Chat chrome.
+**Phase 2 (steering — locked 2026-10-22):** While Chat owns an `activeMissionId`, further sends call `mission:steer` → vibes `steer_mission` (queued for the next task). Placeholder switches to “Steer the running mission…”. Mid-run replan / inline artifacts still later.
 
 **Rejected:** second composer that bypasses missionService; embedding the TUI.
 
-## Voice (locked 2026-10-20; revised same day)
+## Voice (locked 2026-10-20; revised 2026-10-22)
 
 - **Default STT:** in-app Whisper ONNX (`@huggingface/transformers`) — downloads on first hold-to-talk and caches (ZeroG Terminal behaviour). No pip/yapsnap required.
 - **Optional STT:** OpenAI-compatible server (qwen3-asr) or legacy yapsnap CLI.
-- **TTS (later):** Agent Voice daemon HTTP announce; not embedded MCP.
+- **TTS announce (T24):** Optional Agent Voice daemon `POST /v1/announce` on mission done/failed (Settings → Voice). Soft-fail; never blocks the mission.
 
 ## Success criteria
 

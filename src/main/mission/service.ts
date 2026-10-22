@@ -7,6 +7,8 @@ import type { MissionStartResult, MissionPlanResponse, MissionQueueSnapshot } fr
 import { createFollowupQueue, type FollowupQueue } from './followup-queue';
 import { distillHarnessLesson } from '@shared/harnessLesson';
 import { writeHarnessLesson } from '../harness/lesson-store';
+import { announceToDaemon, missionAnnounceText } from '../voice/announce';
+import type { SettingsStore } from '../settings/store';
 
 /**
  * T13 + T14 — the mission lifecycle service. Owns a single VibesBridge and the
@@ -30,6 +32,8 @@ export interface MissionBridge {
   planMission(description: string): Promise<string>;
   executePlanned(): Promise<string>;
   stop(): Promise<void>;
+  /** Chat phase 2 — inject mid-run steering (optional on fakes). */
+  steerMission?(message: string): Promise<string>;
 }
 
 export type MissionState = 'idle' | 'running';
@@ -44,6 +48,8 @@ export interface MissionServiceOptions {
   userDataPath?: string;
   /** Inject a queue (tests); otherwise created from userDataPath when provided. */
   followupQueue?: FollowupQueue;
+  /** Optional settings for T24 TTS announce on terminal. */
+  settingsStore?: SettingsStore;
 }
 
 export interface MissionService {
@@ -60,6 +66,8 @@ export interface MissionService {
   getFollowupQueue(): MissionQueueSnapshot;
   setFollowupQueuePaused(paused: boolean): MissionQueueSnapshot;
   clearFollowupQueue(): MissionQueueSnapshot;
+  /** Chat phase 2 — steer the running mission. */
+  steerMission(message: string): Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Parse tasks from the plan_mission tool response. The vibes MCP server returns
@@ -120,10 +128,23 @@ export function missionOutcomeFrom(result: string): { status: 'done' | 'failed';
 }
 
 export function createMissionService(options: MissionServiceOptions): MissionService {
-  const { store, createBridge } = options;
+  const { store, createBridge, settingsStore } = options;
   const followupQueue: FollowupQueue | null =
     options.followupQueue
     ?? (options.userDataPath ? createFollowupQueue(options.userDataPath) : null);
+
+  const maybeAnnounce = (status: 'done' | 'failed', title: string, detail?: string): void => {
+    if (!settingsStore) return;
+    const settings = settingsStore.get();
+    if (!settings.ttsAnnounceEnabled) return;
+    const token = settingsStore.getTtsDaemonToken()?.trim();
+    if (!token) return;
+    const text = missionAnnounceText(status, title, detail);
+    void announceToDaemon(
+      { baseUrl: settings.ttsDaemonUrl, token },
+      { text, priority: status === 'failed' ? 7 : 5, sourceName: 'vibes-desktop' },
+    ).catch(() => undefined);
+  };
   let state: MissionState = 'idle';
   let bridge: MissionBridge | null = null;
   /** A planned-but-not-yet-launched mission: its child holds the reviewed plan. */
@@ -224,6 +245,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
               await store.markOpenTasksFailed(missionId).catch(() => undefined);
               await persistHarnessLessonFromLedger(request, root, missionId, outcome.detail).catch(() => undefined);
             }
+            maybeAnnounce(outcome.status, request, outcome.detail);
             return store.recordMissionEvent(request, outcome.status, root, missionId, outcome.detail).catch(() => undefined);
           }
           return undefined;
@@ -235,6 +257,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
             const detail = error instanceof Error ? error.message : String(error);
             await store.markOpenTasksFailed(missionId).catch(() => undefined);
             await persistHarnessLessonFromLedger(request, root, missionId, detail).catch(() => undefined);
+            maybeAnnounce('failed', request, detail);
             return store.recordMissionEvent(request, 'failed', root, missionId, detail).catch(() => undefined);
           }
           return undefined;
@@ -426,6 +449,23 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
 
     clearFollowupQueue(): MissionQueueSnapshot {
       return followupQueue?.clear() ?? { paused: false, items: [] };
+    },
+
+    async steerMission(message: string): Promise<{ ok: boolean; error?: string }> {
+      const text = message?.trim();
+      if (!text) return { ok: false, error: 'Steering message is empty.' };
+      if (state !== 'running' || !bridge) {
+        return { ok: false, error: 'No mission is running to steer.' };
+      }
+      if (typeof bridge.steerMission !== 'function') {
+        return { ok: false, error: 'Active bridge does not support steering.' };
+      }
+      try {
+        await bridge.steerMission(text);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      }
     },
   };
 

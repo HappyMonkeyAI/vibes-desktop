@@ -227,6 +227,11 @@ export class VibesBridge extends EventEmitter {
     return this.callTool('resolve_intervention', { action, message, retryFromTaskId });
   }
 
+  /** Chat phase 2 — inject steering for the next / current task. */
+  async steerMission(message: string): Promise<string> {
+    return this.callTool('steer_mission', { message });
+  }
+
   private async callTool(name: string, args: Record<string, unknown>, timeoutMs = 30_000): Promise<string> {
     if (!this.initialized) throw new Error('bridge not initialized');
     const result = await this.client.sendRequest('tools/call', { name, arguments: args }, timeoutMs);

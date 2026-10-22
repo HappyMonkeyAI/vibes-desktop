@@ -206,13 +206,21 @@ export interface AppSettings {
   decisionMcpUrl: string;
   /** True when a bearer token is stored for the decision MCP (never returned decrypted). */
   decisionMcpHasToken: boolean;
+  /** T24 — announce mission done/failed via Agent Voice daemon. */
+  ttsAnnounceEnabled: boolean;
+  /** Daemon base URL (no path), e.g. http://127.0.0.1:4100 */
+  ttsDaemonUrl: string;
+  /** True when an AVT_TOKEN is stored (never returned decrypted). */
+  ttsDaemonHasToken: boolean;
 }
 
 /** Partial save payload — empty *ApiKey / *AuthToken fields mean keep the stored secret. */
-export type AppSettingsSaveInput = Partial<Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken'>> & {
+export type AppSettingsSaveInput = Partial<Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken' | 'ttsDaemonHasToken'>> & {
   speechServerApiKey?: string;
   /** Bearer for decision MCP; empty string omitted = keep stored. */
   decisionMcpAuthToken?: string;
+  /** Bearer for Agent Voice daemon; empty = keep stored. */
+  ttsDaemonToken?: string;
 };
 
 /** Main-process view of an optional decision MCP endpoint. */
@@ -277,7 +285,15 @@ export const channels = {
   decisionTest: 'decision:test',
   /** T35 — latest Harness²-lite lesson for a workspace (`.vibes/harness-lesson.json`). */
   harnessLessonGet: 'harness:lesson-get',
+  /** T24 — probe/post a test announcement to the Agent Voice daemon. */
+  voiceAnnounceTest: 'voice:announce-test',
+  /** Chat phase 2 — inject mid-run steering into the active mission. */
+  missionSteer: 'mission:steer',
 } as const;
+
+export type VoiceAnnounceTestResult = { ok: boolean; error?: string; id?: string };
+export type MissionSteerRequest = { message: string };
+export type MissionSteerResult = { ok: boolean; error?: string };
 
 export type HarnessLessonView = {
   lesson: string;

@@ -29,11 +29,15 @@ export const DEFAULT_SETTINGS: AppSettings = {
   speechServerHasKey: false,
   decisionMcpUrl: '',
   decisionMcpHasToken: false,
+  ttsAnnounceEnabled: false,
+  ttsDaemonUrl: 'http://127.0.0.1:4100',
+  ttsDaemonHasToken: false,
 };
 
-type Persisted = Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken'> & {
+type Persisted = Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken' | 'ttsDaemonHasToken'> & {
   speechServerApiKeyEnc?: string;
   decisionMcpAuthTokenEnc?: string;
+  ttsDaemonTokenEnc?: string;
 };
 
 function asString(value: unknown): string {
@@ -88,6 +92,27 @@ export class SettingsStore {
     }
   }
 
+  /** Decrypted Agent Voice daemon token — never over IPC. */
+  getTtsDaemonToken(): string | undefined {
+    try {
+      if (!existsSync(this.filePath)) {
+        const fromEnv = (process.env['AVT_TOKEN'] ?? '').trim();
+        return fromEnv || undefined;
+      }
+      const raw = JSON.parse(readFileSync(this.filePath, 'utf-8')) as Persisted;
+      const enc = asString(raw.ttsDaemonTokenEnc);
+      if (enc && this.cipher) {
+        const plain = this.cipher.decrypt(enc);
+        if (plain) return plain;
+      }
+      const fromEnv = (process.env['AVT_TOKEN'] ?? '').trim();
+      return fromEnv || undefined;
+    } catch {
+      const fromEnv = (process.env['AVT_TOKEN'] ?? '').trim();
+      return fromEnv || undefined;
+    }
+  }
+
   get(): AppSettings {
     try {
       if (!existsSync(this.filePath)) {
@@ -102,6 +127,8 @@ export class SettingsStore {
       const hasDecisionToken = Boolean(asString(raw.decisionMcpAuthTokenEnc))
         || Boolean((process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim());
       const decisionUrl = asString(raw.decisionMcpUrl) || (process.env['KEV_MCP_URL'] ?? '').trim();
+      const hasTtsToken = Boolean(asString(raw.ttsDaemonTokenEnc))
+        || Boolean((process.env['AVT_TOKEN'] ?? '').trim());
       return {
         vibesPath: asString(raw.vibesPath),
         contextPath: asString(raw.contextPath),
@@ -117,6 +144,11 @@ export class SettingsStore {
         speechServerHasKey: hasSpeechKey,
         decisionMcpUrl: decisionUrl,
         decisionMcpHasToken: hasDecisionToken,
+        ttsAnnounceEnabled: typeof raw.ttsAnnounceEnabled === 'boolean'
+          ? raw.ttsAnnounceEnabled
+          : DEFAULT_SETTINGS.ttsAnnounceEnabled,
+        ttsDaemonUrl: asString(raw.ttsDaemonUrl) || DEFAULT_SETTINGS.ttsDaemonUrl,
+        ttsDaemonHasToken: hasTtsToken,
       };
     } catch {
       return { ...DEFAULT_SETTINGS };
@@ -128,15 +160,18 @@ export class SettingsStore {
       const currentView = this.get();
       let existingSpeechEnc = '';
       let existingDecisionEnc = '';
+      let existingTtsEnc = '';
       try {
         if (existsSync(this.filePath)) {
           const raw = JSON.parse(readFileSync(this.filePath, 'utf-8')) as Persisted;
           existingSpeechEnc = asString(raw.speechServerApiKeyEnc);
           existingDecisionEnc = asString(raw.decisionMcpAuthTokenEnc);
+          existingTtsEnc = asString(raw.ttsDaemonTokenEnc);
         }
       } catch {
         existingSpeechEnc = '';
         existingDecisionEnc = '';
+        existingTtsEnc = '';
       }
 
       let nextSpeechEnc = existingSpeechEnc;
@@ -147,6 +182,11 @@ export class SettingsStore {
       let nextDecisionEnc = existingDecisionEnc;
       if (typeof input.decisionMcpAuthToken === 'string' && input.decisionMcpAuthToken.length > 0 && this.cipher) {
         nextDecisionEnc = this.cipher.encrypt(input.decisionMcpAuthToken);
+      }
+
+      let nextTtsEnc = existingTtsEnc;
+      if (typeof input.ttsDaemonToken === 'string' && input.ttsDaemonToken.length > 0 && this.cipher) {
+        nextTtsEnc = this.cipher.encrypt(input.ttsDaemonToken);
       }
 
       const nextEngine = input.speechEngine === 'server' || input.speechEngine === 'yapsnap' || input.speechEngine === 'builtin'
@@ -168,6 +208,11 @@ export class SettingsStore {
         speechServerApiKeyEnc: nextSpeechEnc || undefined,
         decisionMcpUrl: asString(input.decisionMcpUrl ?? currentView.decisionMcpUrl),
         decisionMcpAuthTokenEnc: nextDecisionEnc || undefined,
+        ttsAnnounceEnabled: typeof input.ttsAnnounceEnabled === 'boolean'
+          ? input.ttsAnnounceEnabled
+          : currentView.ttsAnnounceEnabled,
+        ttsDaemonUrl: asString(input.ttsDaemonUrl ?? currentView.ttsDaemonUrl) || DEFAULT_SETTINGS.ttsDaemonUrl,
+        ttsDaemonTokenEnc: nextTtsEnc || undefined,
       };
       const dir = path.dirname(this.filePath);
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });

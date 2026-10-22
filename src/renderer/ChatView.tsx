@@ -151,7 +151,26 @@ const ChatView: React.FC = () => {
 
   const handleSend = async () => {
     const request = draft.trim();
-    if (!request || busy) return;
+    if (!request) return;
+
+    // Chat phase 2 — mid-run steering while this Chat session owns a mission.
+    if (activeMissionId) {
+      setDraft('');
+      pushMessage('user', request);
+      try {
+        const steered = await window.vibesDesktop.mission.steer({ message: request });
+        if (steered.ok) {
+          pushMessage('assistant', 'Steering queued for the next task.');
+        } else {
+          pushMessage('assistant', steered.error || 'Could not steer the running mission.');
+        }
+      } catch (error) {
+        pushMessage('assistant', error instanceof Error ? error.message : String(error));
+      }
+      return;
+    }
+
+    if (busy) return;
     if (!workspaceRoot) {
       Message.warning('Choose a working directory before chatting a mission.');
       return;
@@ -170,10 +189,10 @@ const ChatView: React.FC = () => {
       pushMessage('system', 'Planning…');
       const planResponse = await window.vibesDesktop.mission.plan({ request, workspaceRoot });
       if (planResponse.error) {
-        const busy =
+        const missionBusy =
           /already running/i.test(planResponse.error)
           || /wait for it to finish/i.test(planResponse.error);
-        if (busy) {
+        if (missionBusy) {
           const queued = await window.vibesDesktop.mission.start({
             request,
             workspaceRoot,
@@ -357,7 +376,11 @@ const ChatView: React.FC = () => {
             className={styles.input}
             value={draft}
             onChange={setDraft}
-            placeholder="Ask for a change — Chat will plan and run a mission…"
+            placeholder={
+              activeMissionId
+                ? 'Steer the running mission…'
+                : 'Ask for a change — Chat will plan and run a mission…'
+            }
             autoSize={{ minRows: 2, maxRows: 5 }}
             onPressEnter={(e) => {
               if (!e.shiftKey) {

@@ -83,6 +83,7 @@ app.whenReady().then(() => {
   const missionService = createMissionService({
     store: ledger,
     userDataPath: app.getPath('userData'),
+    settingsStore,
     vibesPath: () => {
       try { return resolveVibesPath(); } catch { return undefined; }
     },

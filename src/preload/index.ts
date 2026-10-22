@@ -21,6 +21,9 @@ import {
   type VoiceWarmResult,
   type DecisionProbeResult,
   type HarnessLessonView,
+  type MissionSteerRequest,
+  type MissionSteerResult,
+  type VoiceAnnounceTestResult,
   type WorkspaceHistoryEntry,
   type WorkspaceSelectResult,
 } from '@shared/channels';
@@ -53,6 +56,7 @@ const api = {
       ipcRenderer.invoke(channels.voiceTranscribe, request),
     warm: (): Promise<VoiceWarmResult> => ipcRenderer.invoke(channels.voiceWarm),
     testServer: (): Promise<VoiceServerTestResult> => ipcRenderer.invoke(channels.voiceTestServer),
+    testAnnounce: (): Promise<VoiceAnnounceTestResult> => ipcRenderer.invoke(channels.voiceAnnounceTest),
   },
   mission: {
     start: (request: MissionStartRequest): Promise<MissionStartResult> =>
@@ -68,6 +72,8 @@ const api = {
         ipcRenderer.invoke(channels.missionQueuePause, paused),
       clear: (): Promise<MissionQueueSnapshot> => ipcRenderer.invoke(channels.missionQueueClear),
     },
+    steer: (request: MissionSteerRequest): Promise<MissionSteerResult> =>
+      ipcRenderer.invoke(channels.missionSteer, request),
   },
   workspace: {
     select: (): Promise<WorkspaceSelectResult> => ipcRenderer.invoke(channels.workspaceSelect),
