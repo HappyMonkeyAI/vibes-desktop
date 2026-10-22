@@ -60,6 +60,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T45 Live HappyMonkeyAI bookmark delta via BrowserOS Neo ✅ 2026-10-22 — OO-Harness / Agent S4 / Bark / Flint; see LINKS + neo-delta memory
 - [x] T46 OO-Harness-lite: harness-lesson v2 helped/failed + harnessClass → Retry seed Keep/Avoid ✅ 2026-10-22
 - [x] T47 Needs-You escalate UI: vibes `intervention` TASK_STATUS → ledger needsHuman; Ops/Chat Retry step / Skip / Fail → `resolve_intervention` ✅ 2026-10-22
+- [x] T42 Decision shadow live (Unsloth): `8888/mcp/` + `system_one` + English model ✅ 2026-10-22 (also works with classic KEV `kev_evaluate`)
 
 ## P8 — Part A (harness / memory research → product)
 - [x] T29 Decision spike (probe): LAN **KEV MCP** `http://192.168.5.157:8765/mcp` — list_models + triage `kev_evaluate` (escalate ~4.5s) + shadow `kev_select_tool` (~80ms). APIs `:8008`/`:8009` not LAN-published (localhost on host). Notes in `2026-10-20-decision-model-kev-gutsy.md` ✅ 2026-10-20

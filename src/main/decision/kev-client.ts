@@ -1,9 +1,12 @@
 import type { DecisionMcpConfig } from '@shared/channels';
 
 /**
- * Minimal streamable-HTTP MCP client for kev_evaluate (T26).
+ * Minimal streamable-HTTP MCP client for decision tools (T26).
  * Session: initialize → notifications/initialized → tools/call.
  * Failures return null so the intervene gate can escalate safely.
+ *
+ * Tool names: HappyMonkey **kev-decision-mcp** exposes `kev_evaluate`;
+ * Unsloth Studio Decision API MCP exposes `system_one` (same question shape).
  */
 
 export interface KevEvaluateAnswer {
@@ -70,14 +73,62 @@ async function mcpPost(
   return { status: res.status, sessionId: nextSession, payload: parsed };
 }
 
+const INTERVENE_ARGS = {
+  questions: {
+    action: {
+      type: 'choice',
+      instructions: 'Mission triage: intervene vs continue',
+      criteria: {
+        continue: 'Keep executing; no operator needed yet',
+        escalate: 'Ask the operator / open intervention',
+        skip: 'Skip the blocked work and move on',
+      },
+    },
+  },
+} as const;
+
+/** Prefer Unsloth `system_one` when the URL looks like Studio; else KEV first. */
+export function decisionToolCandidates(url: string): string[] {
+  const u = url.toLowerCase();
+  if (u.includes('unsloth') || u.includes(':8888')) {
+    return ['system_one', 'kev_evaluate'];
+  }
+  return ['kev_evaluate', 'system_one'];
+}
+
+function parseToolResult(rpc: { result?: unknown; error?: unknown } | null): KevEvaluateResult | null {
+  if (!rpc || rpc.error) return null;
+  const result = rpc.result as {
+    structuredContent?: KevEvaluateResult;
+    content?: Array<{ type?: string; text?: string }>;
+    isError?: boolean;
+  } | null;
+  if (!result || result.isError) return null;
+  if (result.structuredContent && typeof result.structuredContent === 'object') {
+    return { ...result.structuredContent, raw: result.structuredContent };
+  }
+  const text = result.content?.find((c) => c.type === 'text')?.text;
+  if (text) {
+    try {
+      const parsed = JSON.parse(text) as KevEvaluateResult;
+      return { ...parsed, raw: parsed };
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 /**
- * Call kev_evaluate for a triage intervene-vs-continue decision.
+ * Call a System One–compatible MCP tool for triage intervene vs continue.
  * Returns null on transport / auth / shape failure (caller escalates).
  */
 export async function kevEvaluateIntervene(options: {
   config: DecisionMcpConfig;
   state: Record<string, unknown>;
   fetchImpl?: FetchLike;
+  /** Override tool probe order (tests). */
+  toolNames?: string[];
 }): Promise<KevEvaluateResult | null> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const headers: HeaderMap = {
@@ -119,57 +170,29 @@ export async function kevEvaluateIntervene(options: {
       signal: AbortSignal.timeout(10_000),
     }).catch(() => undefined);
 
-    const call = await mcpPost(
-      options.config.url,
-      headers,
-      {
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'tools/call',
-        params: {
-          name: 'kev_evaluate',
-          arguments: {
-            state: options.state,
-            questions: {
-              action: {
-                type: 'choice',
-                instructions: 'Mission triage: intervene vs continue',
-                criteria: {
-                  continue: 'Keep executing; no operator needed yet',
-                  escalate: 'Ask the operator / open intervention',
-                  skip: 'Skip the blocked work and move on',
-                },
-              },
+    const tools = options.toolNames ?? decisionToolCandidates(options.config.url);
+    for (const name of tools) {
+      const call = await mcpPost(
+        options.config.url,
+        headers,
+        {
+          jsonrpc: '2.0',
+          id: 2,
+          method: 'tools/call',
+          params: {
+            name,
+            arguments: {
+              state: options.state,
+              ...INTERVENE_ARGS,
             },
           },
         },
-      },
-      fetchImpl,
-      sessionId,
-    );
-
-    if (call.status >= 400) return null;
-    const rpc = call.payload as { result?: unknown; error?: unknown } | null;
-    if (!rpc || rpc.error) return null;
-
-    // MCP tools/call result: { content: [{type:'text', text}], structuredContent? }
-    const result = rpc.result as {
-      structuredContent?: KevEvaluateResult;
-      content?: Array<{ type?: string; text?: string }>;
-      isError?: boolean;
-    } | null;
-    if (!result || result.isError) return null;
-    if (result.structuredContent && typeof result.structuredContent === 'object') {
-      return { ...result.structuredContent, raw: result.structuredContent };
-    }
-    const text = result.content?.find((c) => c.type === 'text')?.text;
-    if (text) {
-      try {
-        const parsed = JSON.parse(text) as KevEvaluateResult;
-        return { ...parsed, raw: parsed };
-      } catch {
-        return null;
-      }
+        fetchImpl,
+        sessionId,
+      );
+      if (call.status >= 400) continue;
+      const parsed = parseToolResult(call.payload as { result?: unknown; error?: unknown } | null);
+      if (parsed) return parsed;
     }
     return null;
   } catch {

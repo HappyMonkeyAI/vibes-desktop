@@ -285,8 +285,9 @@ const SettingsTab: React.FC = () => {
               </Button>
             </div>
             <p className={styles.hint}>
-              KEV MCP is often :8765/mcp; Gutsy MCP :8766/mcp. Use the LAN MCP URL, not :8008/:8009.
-              Clear the URL and save to disable.
+              KEV MCP is often :8765/mcp; Gutsy :8766/mcp; Unsloth Studio Decision API{' '}
+              <code>http://host:8888/mcp/</code> (Bearer = Unsloth API key; tool <code>system_one</code>).
+              Use the MCP URL, not chat <code>/v1</code> or docker <code>:8008</code>. Clear URL to disable.
             </p>
           </div>
 

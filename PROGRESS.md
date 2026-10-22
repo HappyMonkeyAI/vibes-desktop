@@ -2,13 +2,23 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-22 — Live Decision via Unsloth Studio MCP
+
+**Done:** Unsloth Agent MCP `http://192.168.5.157:8888/mcp/` tool `system_one` (English / laya-english). Client tries `system_one` then `kev_evaluate`. Live shadow: escalate≈0.70 on css_orphan fixture. Settings hint updated. Key stays in Settings / env — not committed.
+
+**Evidence:** `VIBES_DECISION_LIVE=1` decision-shadow e2e green; tool-candidate unit tests.
+
+**Next:** Save Decision URL+token in app Settings; run a real mission to exercise Needs-You when escalate fires. Optional: download Kev 4B in Unsloth Decision picker for parity.
+
+---
+
 ## 2026-10-22 — T47 Needs-You escalate UI
 
 **Done:** Vibes emits `[TASK_STATUS] status=intervention` on `intervention_required` (KEV escalate / triage / task fail). Desktop ledger marks `blocked` + `needsHuman` → Needs You metric. Operations depth + Chat show Retry step / Skip / Fail → `mission:resolve-intervention` → vibes `resolve_intervention`. Chat no longer treats needsHuman-blocked as mission terminal.
 
 **Evidence:** typecheck + ledger intervention test + ipc parity.
 
-**Next:** live Decision V3 with KEV filled; optional Bark STT; Chat header human re-run.
+**Next:** (superseded) Unsloth Decision live pass same day.
 
 ---
 
