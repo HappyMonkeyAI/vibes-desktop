@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-24 — T52 scheduler soft-requeue race
+
+**Done:** Root cause of T50b `Completed 0/1` / `Scheduler deadlock … pending ()`: verification soft-requeue deleted `runningTasks` before `executeTask` finally, so the loop restarted the same task and the first finally cleared the new runner’s slot (stuck `in_progress`). Also the main loop exited while `awaiting_intervention` because failed tasks aren’t “pending”. Fix: only clear `runningTasks` in finally; keep looping while awaiting intervention or runners alive. Deadlock message now names stuck in_progress.
+
+**Evidence:** vibes tests — deps + T52 requeue race + retry + evidence-requeue — 7/7 green; pushed on `ag/completion-gates`.
+
+**Next:** T54 optional low-confidence escalate; or live mission smoke with Decision.
+
+---
+
 ## 2026-10-24 — T53 Laya Decision probe
 
 **Done:** Bookmarked Laya = System 1 engine behind Unsloth `system_one` (live `model: laya-english`). Studio MCP has no `laya_preset`/guard tools — only `system_one`. Disposition: keep current path; reject second stack; candidate **T54** low-confidence escalate. Probe script `scripts/t53-laya-probe.mjs`. Memory note written.
