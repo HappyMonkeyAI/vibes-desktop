@@ -69,6 +69,8 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [ ] T51 Optional: Kev 4B in Unsloth Decision picker; Bark STT watchlist (bookmark delta)
 - [x] T50b Live Needs-You UI ✅ 2026-10-22 — mission `8b9c0e46` completion-gate → blocked+needsHuman; CDP clicked **Skip step**; vibes completion-gate→intervene + desktop `clearNeedsHuman` shipped. Follow-up: vibes scheduler deadlock (0/1 pending) on repeat orphan drills
 - [ ] T52 Vibes scheduler deadlock: pending task with empty deps never runs (`Completed 0/1`) — seen on T50b re-runs
+- [x] T53 Laya Decision probe ✅ 2026-10-24 — Unsloth `system_one` **is** Laya (`laya-english`); no second stack; native `laya_preset`/guard deferred; note `.agent/memories/codebase_insights/2026-10-24-laya-decision-probe.md`
+- [ ] T54 Optional: escalate when System One `confidence` below threshold (probe saw continue@0.62 with conf 0.22; gate today ignores confidence per T29)
 
 ## P8 — Part A (harness / memory research → product)
 - [x] T29 Decision spike (probe): LAN **KEV MCP** `http://192.168.5.157:8765/mcp` — list_models + triage `kev_evaluate` (escalate ~4.5s) + shadow `kev_select_tool` (~80ms). APIs `:8008`/`:8009` not LAN-published (localhost on host). Notes in `2026-10-20-decision-model-kev-gutsy.md` ✅ 2026-10-20

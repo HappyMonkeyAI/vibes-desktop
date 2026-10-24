@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-24 — T53 Laya Decision probe
+
+**Done:** Bookmarked Laya = System 1 engine behind Unsloth `system_one` (live `model: laya-english`). Studio MCP has no `laya_preset`/guard tools — only `system_one`. Disposition: keep current path; reject second stack; candidate **T54** low-confidence escalate. Probe script `scripts/t53-laya-probe.mjs`. Memory note written.
+
+**Evidence:** `tools/list` 23 tools; `system_one` continue≈0.62 escalate≈0.29 conf≈0.22; GPU nearly full with MiniCPM chat.
+
+**Next:** T52 scheduler deadlock (reliability) before T54; optional tool-approve question schema when vibes has a pre-tool hook.
+
+---
+
 ## 2026-10-22 — T50b live Needs-You UI
 
 **Done:**

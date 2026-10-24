@@ -36,8 +36,10 @@ Per-role base URL / model / API key (encrypted at rest). Test connection probes 
 
 When both are set, missions get Decision config. The **vibes child** (not only the desktop probe) calls:
 
-1. **`system_one`** — Unsloth Studio System One (preferred for `:8888` / unsloth hosts)
+1. **`system_one`** — Unsloth Studio System One / **Laya** English (preferred for `:8888` / unsloth hosts)
 2. **`kev_evaluate`** — classic HappyMonkey KEV
+
+(T53: do not add a separate Laya MCP into the desktop; enrich questions on `system_one` instead. See `2026-10-24-laya-decision-probe.md`.)
 
 Outcomes: continue / escalate / skip. Escalate (and near-tie / abstention) surfaces as **Needs You**.
 
