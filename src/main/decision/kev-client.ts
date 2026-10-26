@@ -200,10 +200,11 @@ export async function kevEvaluateIntervene(options: {
   }
 }
 
-/** Pull choice + probabilities from a kev_evaluate payload. */
+/** Pull choice + probabilities (+ optional confidence) from a decision payload. */
 export function extractInterveneSignals(result: KevEvaluateResult | null): {
   choice?: string;
   probabilities?: Record<string, number>;
+  confidence?: number;
 } {
   if (!result?.answers || typeof result.answers !== 'object') return {};
   const action = result.answers.action ?? Object.values(result.answers)[0];
@@ -213,6 +214,10 @@ export function extractInterveneSignals(result: KevEvaluateResult | null): {
     probabilities:
       action.probabilities && typeof action.probabilities === 'object'
         ? action.probabilities
+        : undefined,
+    confidence:
+      typeof action.confidence === 'number' && Number.isFinite(action.confidence)
+        ? action.confidence
         : undefined,
   };
 }

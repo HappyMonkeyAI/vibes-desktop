@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-26 — T54 low-confidence escalate
+
+**Done:** Intervene gate now escalates continue/skip when System One/Laya `confidence` is present and below **0.35** (T53 probe: continue@0.62 with conf≈0.22). Classic KEV without confidence unchanged; `minConfidence: null` disables. Wired in desktop + vibes `decision-mcp`.
+
+**Evidence:** desktop `intervene-gate` tests; vibes `intervene-gate` + build.
+
+**Next:** Live mission smoke with Decision; optional T51 Kev/Bark.
+
+---
+
 ## 2026-10-24 — T52 scheduler soft-requeue race
 
 **Done:** Root cause of T50b `Completed 0/1` / `Scheduler deadlock … pending ()`: verification soft-requeue deleted `runningTasks` before `executeTask` finally, so the loop restarted the same task and the first finally cleared the new runner’s slot (stuck `in_progress`). Also the main loop exited while `awaiting_intervention` because failed tasks aren’t “pending”. Fix: only clear `runningTasks` in finally; keep looping while awaiting intervention or runners alive. Deadlock message now names stuck in_progress.

@@ -31,7 +31,7 @@ Script: `scripts/t53-laya-probe.mjs` (`KEV_MCP_URL` + `KEV_MCP_AUTH_TOKEN`).
 | Keep Unsloth `system_one` as Laya front-door | **Keep** (current) |
 | Enrich intervene / future tool-approve questions (allow/deny/escalate) on same `system_one` | **Accept** when vibes has a pre-tool hook |
 | Optional LAN `laya-serve` + `laya_preset` for guardrails | **Defer** — only if Unsloth never grows presets |
-| Escalate when `confidence` below threshold | **Candidate T54** — Laya documents `min_confidence`; our probe showed continue-win with conf 0.22 |
+| Escalate when `confidence` below threshold | **Shipped T54** — default floor 0.35; missing confidence skips the check |
 
 ## Explicit non-goals
 

@@ -47,4 +47,34 @@ describe('decideInterveneAction (T26)', () => {
     const r = decideInterveneAction({ choice: 'continue' });
     expect(r.action).toBe('escalate');
   });
+
+  it('T54 — escalates continue when System One confidence is below floor', () => {
+    const r = decideInterveneAction({
+      choice: 'continue',
+      probabilities: { continue: 0.62, escalate: 0.29, skip: 0.08 },
+      confidence: 0.22,
+    });
+    expect(r.action).toBe('escalate');
+    expect(r.reason).toMatch(/confidence 0\.220 < 0\.35/i);
+    expect(toAutoResolution(r.action)).toBeNull();
+  });
+
+  it('T54 — keeps continue when confidence meets floor', () => {
+    const r = decideInterveneAction({
+      choice: 'continue',
+      probabilities: { continue: 0.7, escalate: 0.2, skip: 0.1 },
+      confidence: 0.55,
+    });
+    expect(r.action).toBe('continue');
+  });
+
+  it('T54 — ignores confidence when minConfidence is null (classic KEV)', () => {
+    const r = decideInterveneAction({
+      choice: 'continue',
+      probabilities: { continue: 0.62, escalate: 0.29, skip: 0.08 },
+      confidence: 0.1,
+      minConfidence: null,
+    });
+    expect(r.action).toBe('continue');
+  });
 });

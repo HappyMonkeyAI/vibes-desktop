@@ -13,6 +13,10 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 - Completion-gate rejects (Owner / incomplete) open Needs You via Decision + `intervention_required`.
 - Resolving intervention clears `needsHuman` on task rows as well as the mission card.
 
+### Changed
+
+- Decision intervene gate escalates auto continue/skip when System One reports `confidence` below 0.35 (T54).
+
 ## [0.1.0] — 2026-10-22
 
 First feature cut after the Electron scaffold (`0.0.1`). Mission Control, Chat, Decision intervene, and voice announce are usable end-to-end against a local Vibes checkout + LAN LLM / Unsloth Decision.

@@ -41,7 +41,7 @@ When both are set, missions get Decision config. The **vibes child** (not only t
 
 (T53: do not add a separate Laya MCP into the desktop; enrich questions on `system_one` instead. See `2026-10-24-laya-decision-probe.md`.)
 
-Outcomes: continue / escalate / skip. Escalate (and near-tie / abstention) surfaces as **Needs You**.
+Outcomes: continue / escalate / skip. Escalate (near-tie / abstention / **low System One confidence** &lt; 0.35) surfaces as **Needs You**. Classic KEV answers without a confidence field are unchanged.
 
 Probe: Settings → Test decision MCP. Live e2e: `VIBES_DECISION_LIVE=1` (+ URL/token in env or Settings).
 One-shot persist (dev): `KEV_MCP_URL=… KEV_MCP_AUTH_TOKEN=… npx electron scripts/set-decision-settings.mjs`.
