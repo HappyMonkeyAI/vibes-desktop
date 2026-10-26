@@ -27,6 +27,18 @@ beforeEach(() => {
     speechServerHasKey: false,
     decisionMcpUrl: '',
     decisionMcpHasToken: false,
+    ttsAnnounceEnabled: false,
+    ttsDaemonUrl: 'http://127.0.0.1:4100',
+    ttsDaemonHasToken: false,
+    htmlDesignAdvisorEnabled: false,
+    htmlDesignAdvisorPython: 'python',
+    htmlDesignAdvisorWorkspace: '',
+    maxSteps: 25,
+    maxConcurrentTasks: 1,
+    yoloMode: true,
+    thinkingMode: true,
+    contextCompactionEnabled: true,
+    smallModelProfile: false,
   });
 });
 

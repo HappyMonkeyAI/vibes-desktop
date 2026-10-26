@@ -6,6 +6,8 @@ How this project reaches external capabilities. Listed ≠ mounted: verify a ser
 
 | Intent | Service | How to reach | Notes |
 |--------|---------|--------------|-------|
+| Session warm-start / project memory | Spine MCP | Cursor `mcp.json` → `spine` (`session_brief`, `get_section`, `recall`, `checkpoint`, `record_memory`); registry name `vibes-desktop` | Prefer over reading PROGRESS.md whole. Fallback: `spine brief` CLI. |
+| Running UI inventory / design drift | Spine Design MCP | Cursor `mcp.json` → `spine-design` (`design_brief`, `ensure_capture`, `check_design`); Electron adapter when needed | Complements BrowserOS neo; pixels optional. |
 | Agent runtime (plan/execute/review missions) | vibes MCP server | child process, JSON-RPC over stdio (`npx vibes-tui mcp-server` or checkout `npm run mcp-server`) | The core dependency. Env allowlist: OLLAMA_*, model keys, CONTEXT_WINDOW. |
 | LLM inference for all four roles | Ollama / OpenAI-compatible endpoint on LAN | HTTP from the vibes child process (not from this app) | Per-role endpoints configured in Roles tab → `.vibes/config.json`. This app never calls an LLM directly. |
 | Live browser / X / signed-in sites (agent tooling) | BrowserOS neo | Streamable HTTP MCP `http://127.0.0.1:9010/mcp` (Cursor `mcp.json` → `browseros-neo`) | Operator/agent browser only — **not** the Decision MCP and **not** mounted into the vibes mission child (SSE client ≠ Neo streamable-HTTP). |

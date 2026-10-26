@@ -63,6 +63,11 @@ export const ROLE_KEYS: readonly RoleKey[] = ['default', 'planner', 'executor', 
 export interface RoleEndpoint {
   baseUrl: string;
   model: string;
+  /**
+   * Token budget for this role's model (maps to vibes `CONTEXT_WINDOW` for the
+   * runtime endpoint — executor wins over default). Empty = unset.
+   */
+  contextWindow: string;
   /** Decrypted key never crosses IPC; presence only. */
   hasKey: boolean;
 }
@@ -72,6 +77,8 @@ export type RolesConfigView = Record<RoleKey, RoleEndpoint>;
 export interface RoleEndpointInput {
   baseUrl: string;
   model: string;
+  /** Token budget string (digits); empty means unset / omit from vibes write. */
+  contextWindow?: string;
   apiKey?: string;
 }
 export type RolesConfigInput = Record<RoleKey, RoleEndpointInput>;
@@ -221,7 +228,28 @@ export interface AppSettings {
   htmlDesignAdvisorPython: string;
   /** Optional HTML_DESIGN_ADVISOR_WORKSPACE (ui-design catalog root). */
   htmlDesignAdvisorWorkspace: string;
+  /**
+   * Mission runtime knobs → workspace `.vibes/config.json` on spawn (Settings → Runtime).
+   * Defaults match vibes ConfigSchema.
+   */
+  maxSteps: number;
+  maxConcurrentTasks: number;
+  yoloMode: boolean;
+  thinkingMode: boolean;
+  contextCompactionEnabled: boolean;
+  smallModelProfile: boolean;
 }
+
+/** Slice of AppSettings written into vibes native keys on mission spawn. */
+export type VibesRuntimeSettings = Pick<
+  AppSettings,
+  | 'maxSteps'
+  | 'maxConcurrentTasks'
+  | 'yoloMode'
+  | 'thinkingMode'
+  | 'contextCompactionEnabled'
+  | 'smallModelProfile'
+>;
 
 /** Partial save payload — empty *ApiKey / *AuthToken fields mean keep the stored secret. */
 export type AppSettingsSaveInput = Partial<Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken' | 'ttsDaemonHasToken'>> & {

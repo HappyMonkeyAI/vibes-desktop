@@ -6,7 +6,8 @@ import { DEFAULT_SPEECH_MODEL, DEFAULT_SPEECH_PRECISION, SPEECH_MODELS, describe
 import styles from './SettingsTab.module.css';
 
 /**
- * Settings — General (paths / prefs), Voice, and optional Decision MCP (KEV).
+ * Settings — General (paths / prefs / Decision), Runtime (vibes harness knobs),
+ * and Voice.
  */
 
 const SettingsTab: React.FC = () => {
@@ -33,6 +34,12 @@ const SettingsTab: React.FC = () => {
   const [htmlDesignAdvisorEnabled, setHtmlDesignAdvisorEnabled] = useState(false);
   const [htmlDesignAdvisorPython, setHtmlDesignAdvisorPython] = useState('python');
   const [htmlDesignAdvisorWorkspace, setHtmlDesignAdvisorWorkspace] = useState('');
+  const [maxSteps, setMaxSteps] = useState('25');
+  const [maxConcurrentTasks, setMaxConcurrentTasks] = useState('1');
+  const [yoloMode, setYoloMode] = useState(true);
+  const [thinkingMode, setThinkingMode] = useState(true);
+  const [contextCompactionEnabled, setContextCompactionEnabled] = useState(true);
+  const [smallModelProfile, setSmallModelProfile] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -90,6 +97,18 @@ const SettingsTab: React.FC = () => {
     setHtmlDesignAdvisorEnabled(Boolean(settings.htmlDesignAdvisorEnabled));
     setHtmlDesignAdvisorPython(settings.htmlDesignAdvisorPython || 'python');
     setHtmlDesignAdvisorWorkspace(settings.htmlDesignAdvisorWorkspace || '');
+    setMaxSteps(String(settings.maxSteps ?? 25));
+    setMaxConcurrentTasks(String(settings.maxConcurrentTasks ?? 1));
+    setYoloMode(settings.yoloMode !== false);
+    setThinkingMode(settings.thinkingMode !== false);
+    setContextCompactionEnabled(settings.contextCompactionEnabled !== false);
+    setSmallModelProfile(Boolean(settings.smallModelProfile));
+  };
+
+  const parsePositiveInt = (raw: string, fallback: number): number => {
+    const n = Number(raw.trim().replace(/[_\s,]/g, ''));
+    if (!Number.isFinite(n) || n <= 0) return fallback;
+    return Math.floor(n);
   };
 
   const handleSave = async () => {
@@ -116,6 +135,12 @@ const SettingsTab: React.FC = () => {
         htmlDesignAdvisorEnabled,
         htmlDesignAdvisorPython,
         htmlDesignAdvisorWorkspace,
+        maxSteps: parsePositiveInt(maxSteps, 25),
+        maxConcurrentTasks: parsePositiveInt(maxConcurrentTasks, 1),
+        yoloMode,
+        thinkingMode,
+        contextCompactionEnabled,
+        smallModelProfile,
       });
       if (result.ok) {
         Message.success('Settings saved.');
@@ -331,6 +356,62 @@ const SettingsTab: React.FC = () => {
                 html-design-advisor-mcp
               </a>
               . Sets <code>python -m html_design_advisor</code> under key <code>html-design-advisor</code>.
+            </p>
+          </div>
+
+          <Button type="primary" onClick={() => void handleSave()} loading={loading || saving} size="large" disabled={loading}>
+            Save Settings
+          </Button>
+        </Tabs.TabPane>
+
+        <Tabs.TabPane key="runtime" title="Runtime">
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Mission runtime</h3>
+            <p className={styles.hint}>
+              Written into the mission workspace <code>.vibes/config.json</code> on spawn
+              (same path as Roles / Decision). Defaults match the Vibes TUI.
+            </p>
+            <div className={styles.field}>
+              <label className={styles.label}>Max steps per task</label>
+              <Input
+                placeholder="25"
+                value={maxSteps}
+                onChange={(v) => setMaxSteps(v.replace(/[^\d_\s,]/g, ''))}
+                size="small"
+                inputMode="numeric"
+              />
+              <p className={styles.hint}>Caps how long a single task can run before the harness stops it.</p>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Max concurrent tasks</label>
+              <Input
+                placeholder="1"
+                value={maxConcurrentTasks}
+                onChange={(v) => setMaxConcurrentTasks(v.replace(/[^\d_\s,]/g, ''))}
+                size="small"
+                inputMode="numeric"
+              />
+              <p className={styles.hint}>Raise above 1 only when your local LLM can handle parallel load.</p>
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>YOLO mode (auto-approve tools)</span>
+              <Switch checked={yoloMode} onChange={setYoloMode} size="small" />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Reasoning mode</span>
+              <Switch checked={thinkingMode} onChange={setThinkingMode} size="small" />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Context compaction</span>
+              <Switch checked={contextCompactionEnabled} onChange={setContextCompactionEnabled} size="small" />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Small-model runtime profile</span>
+              <Switch checked={smallModelProfile} onChange={setSmallModelProfile} size="small" />
+            </div>
+            <p className={styles.hint}>
+              Context window lives on the Roles cards. Triage / memory / Codex knobs stay in the TUI
+              or <code>.vibes/config.json</code> for now.
             </p>
           </div>
 

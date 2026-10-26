@@ -89,3 +89,38 @@ describe('SettingsStore decision MCP fields', () => {
     expect(store.getDecisionMcpAuthToken()).toBe('mcp-secret');
   });
 });
+
+describe('SettingsStore Runtime knobs', () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), 'vibes-settings-runtime-'));
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('persists Runtime knobs with vibes-shaped defaults', () => {
+    const store = new SettingsStore(dir, cipher);
+    const defaults = store.get();
+    expect(defaults.maxSteps).toBe(25);
+    expect(defaults.maxConcurrentTasks).toBe(1);
+    expect(defaults.yoloMode).toBe(true);
+    expect(defaults.thinkingMode).toBe(true);
+    expect(defaults.contextCompactionEnabled).toBe(true);
+    expect(defaults.smallModelProfile).toBe(false);
+
+    expect(store.save({
+      maxSteps: 50,
+      maxConcurrentTasks: 3,
+      yoloMode: false,
+      thinkingMode: false,
+      contextCompactionEnabled: false,
+      smallModelProfile: true,
+    })).toBe(true);
+    const view = store.get();
+    expect(view.maxSteps).toBe(50);
+    expect(view.maxConcurrentTasks).toBe(3);
+    expect(view.yoloMode).toBe(false);
+    expect(view.thinkingMode).toBe(false);
+    expect(view.contextCompactionEnabled).toBe(false);
+    expect(view.smallModelProfile).toBe(true);
+  });
+});

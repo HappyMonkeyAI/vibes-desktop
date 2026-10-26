@@ -14,7 +14,12 @@ Minimize friction, maximize momentum. Deliver a focused desktop app for Vibes wi
 - **[Adaptive escalation]** Start with the least expensive adequate model; after two materially unsuccessful repair attempts, escalate one reasoning tier with the task evidence.
 - **[Steer]** Acknowledge and adapt to user steering mid-turn.
 - **[Thrust]** Batch safe tool calls; sequential for risky/destructive ones.
-- **[Sanity]** Every session starts with grounding: read README.md, CONTEXT.md, MCP.md (and MCP.local.md if present), this file, PROGRESS.md, then TASKS.md.
+- **[Sanity]** Every session starts with grounding. Prefer Spine when available (below); otherwise read README.md, CONTEXT.md, MCP.md (and MCP.local.md if present), this file, PROGRESS.md, then TASKS.md.
+
+## Session start and end (Spine)
+
+If the `spine` MCP is available, call `session_brief(project="vibes-desktop")` (or the absolute path of this repo) first and use `get_section` / `recall` instead of reading PROGRESS.md or CONTEXT.md whole. Without the MCP, run `spine brief` from the repo root. If neither works, ground normally.
+Before you stop, call `checkpoint` with agent `cursor`, what was done, what's next and any blockers. Save durable why/gotcha/decision facts with `record_memory`. For UI work, prefer `spine-design` (`design_brief` / `ensure_capture`) over ad-hoc screenshots when that server is mounted.
 
 ## LTM Architecture
 

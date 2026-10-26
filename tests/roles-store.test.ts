@@ -2,7 +2,7 @@ import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, rmSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { RolesStore, type Cipher } from '../src/main/roles/store';
+import { RolesStore, normalizeContextWindow, type Cipher } from '../src/main/roles/store';
 
 /** A reversible fake cipher so tests exercise the encrypt/decrypt round-trip without Electron. */
 const fakeCipher: Cipher = {
@@ -22,25 +22,26 @@ describe('RolesStore (T7)', () => {
     const store = new RolesStore(path.join(dir, 'fresh'), fakeCipher);
     const view = store.view();
     for (const role of ['default', 'planner', 'executor', 'reviewer', 'triage'] as const) {
-      expect(view[role]).toEqual({ baseUrl: '', model: '', hasKey: false });
+      expect(view[role]).toEqual({ baseUrl: '', model: '', contextWindow: '', hasKey: false });
     }
   });
 
   it('persists endpoints and reports key presence without leaking the decrypted key', () => {
     const store = new RolesStore(dir, fakeCipher);
     store.save({
-      default: { baseUrl: 'http://a/v1', model: 'm-a', apiKey: 'secret-a' },
+      default: { baseUrl: 'http://a/v1', model: 'm-a', contextWindow: '8192', apiKey: 'secret-a' },
       planner: { baseUrl: '', model: '', apiKey: '' },
       executor: { baseUrl: '', model: '', apiKey: '' },
       reviewer: { baseUrl: '', model: '', apiKey: '' },
       triage: { baseUrl: '', model: '', apiKey: '' },
     });
     const view = store.view();
-    expect(view.default).toEqual({ baseUrl: 'http://a/v1', model: 'm-a', hasKey: true });
+    expect(view.default).toEqual({ baseUrl: 'http://a/v1', model: 'm-a', contextWindow: '8192', hasKey: true });
     // The on-disk file must NOT contain the plaintext key.
     const raw = readFileSync(path.join(dir, 'roles-config.json'), 'utf-8');
     expect(raw).not.toContain('secret-a');
     expect(raw).toContain('enc:');
+    expect(raw).toContain('"contextWindow": "8192"');
   });
 
   it('round-trips a decrypted key via getKey', () => {
@@ -52,13 +53,18 @@ describe('RolesStore (T7)', () => {
     const store = new RolesStore(dir, fakeCipher);
     // Change only the model; leave apiKey blank → keep 'secret-a'.
     store.save({
-      default: { baseUrl: 'http://a/v1', model: 'm-b', apiKey: '' },
+      default: { baseUrl: 'http://a/v1', model: 'm-b', contextWindow: '16384', apiKey: '' },
       planner: { baseUrl: '', model: '', apiKey: '' },
       executor: { baseUrl: '', model: '', apiKey: '' },
       reviewer: { baseUrl: '', model: '', apiKey: '' },
       triage: { baseUrl: '', model: '', apiKey: '' },
     });
-    expect(store.view().default).toEqual({ baseUrl: 'http://a/v1', model: 'm-b', hasKey: true });
+    expect(store.view().default).toEqual({
+      baseUrl: 'http://a/v1',
+      model: 'm-b',
+      contextWindow: '16384',
+      hasKey: true,
+    });
     expect(store.getKey('default')).toBe('secret-a');
   });
 
@@ -67,6 +73,35 @@ describe('RolesStore (T7)', () => {
     mkdirSync(corruptDir, { recursive: true });
     writeFileSync(path.join(corruptDir, 'roles-config.json'), '{ not json', 'utf-8');
     const store = new RolesStore(corruptDir, fakeCipher);
-    expect(store.view().default).toEqual({ baseUrl: '', model: '', hasKey: false });
+    expect(store.view().default).toEqual({ baseUrl: '', model: '', contextWindow: '', hasKey: false });
+  });
+
+  it('normalizes contextWindow on save and ignores junk', () => {
+    const store = new RolesStore(path.join(dir, 'ctx'), fakeCipher);
+    store.save({
+      default: { baseUrl: 'http://a/v1', model: 'm', contextWindow: '32_768', apiKey: '' },
+      planner: { baseUrl: '', model: '', contextWindow: 'nope', apiKey: '' },
+      executor: { baseUrl: '', model: '', apiKey: '' },
+      reviewer: { baseUrl: '', model: '', apiKey: '' },
+      triage: { baseUrl: '', model: '', apiKey: '' },
+    });
+    expect(store.view().default.contextWindow).toBe('32768');
+    expect(store.view().planner.contextWindow).toBe('');
+  });
+});
+
+describe('normalizeContextWindow', () => {
+  it('accepts positive integers and light separators', () => {
+    expect(normalizeContextWindow('8192')).toBe('8192');
+    expect(normalizeContextWindow('32_768')).toBe('32768');
+    expect(normalizeContextWindow('128,000')).toBe('128000');
+    expect(normalizeContextWindow(4096)).toBe('4096');
+  });
+
+  it('rejects zero, negative, and non-numeric', () => {
+    expect(normalizeContextWindow('0')).toBe('');
+    expect(normalizeContextWindow('-1')).toBe('');
+    expect(normalizeContextWindow('abc')).toBe('');
+    expect(normalizeContextWindow('')).toBe('');
   });
 });

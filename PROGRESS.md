@@ -2,6 +2,26 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-26 — T56 Settings → Runtime
+
+**Done:** New Settings **Runtime** tab for high-value TUI knobs (`MAX_STEPS`, `MAX_CONCURRENT_TASKS`, `YOLO_MODE`, `THINKING_MODE`, `CONTEXT_COMPACTION_ENABLED`, `SMALL_MODEL_PROFILE`). Persisted in app settings; merged into workspace `.vibes/config.json` on mission spawn (same path as Roles/Decision).
+
+**Evidence:** settings / vibes-config / config-writer tests; typecheck.
+
+**Next:** Optional triage/memory Runtime slice; T51; live Decision smoke.
+
+---
+
+## 2026-10-26 — T55 Roles context window
+
+**Done:** Each Roles card has a Context window (tokens) field. Persisted in `roles-config.json`; save writes vibes `CONTEXT_WINDOW` from executor (else default). Planner/reviewer/triage values are stored with a UI note that vibes’ runtime budget is still global.
+
+**Evidence:** `roles-store` + `vibes-config` + `config-writer` tests; `npm run typecheck` green.
+
+**Next:** Optional T51; live Decision smoke; per-role CONTEXT in vibes if/when needed.
+
+---
+
 ## 2026-10-26 — T54 low-confidence escalate
 
 **Done:** Intervene gate now escalates continue/skip when System One/Laya `confidence` is present and below **0.35** (T53 probe: continue@0.62 with conf≈0.22). Classic KEV without confidence unchanged; `minConfidence: null` disables. Wired in desktop + vibes `decision-mcp`.

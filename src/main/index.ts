@@ -90,8 +90,15 @@ app.whenReady().then(() => {
     },
     createBridge: (workspaceRoot) => {
       const decision = resolveDecisionMcpConfig(settingsStore);
-      writeVibesConfig(workspaceRoot, rolesStore.input(), decision);
       const settings = settingsStore.get();
+      writeVibesConfig(workspaceRoot, rolesStore.input(), decision, {
+        maxSteps: settings.maxSteps,
+        maxConcurrentTasks: settings.maxConcurrentTasks,
+        yoloMode: settings.yoloMode,
+        thinkingMode: settings.thinkingMode,
+        contextCompactionEnabled: settings.contextCompactionEnabled,
+        smallModelProfile: settings.smallModelProfile,
+      });
       writeVibesMcpJson(workspaceRoot, {
         enabled: settings.htmlDesignAdvisorEnabled,
         pythonCommand: settings.htmlDesignAdvisorPython || 'python',

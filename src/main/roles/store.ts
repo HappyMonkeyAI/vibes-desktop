@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { RoleEndpointInput, RolesConfigInput, RolesConfigView } from '@shared/channels';
+import type { RoleEndpoint, RoleEndpointInput, RolesConfigInput, RolesConfigView } from '@shared/channels';
 
 /**
  * T7 — persistent per-role endpoint store. Mirrors the fork's rolesConfigStore:
@@ -24,16 +24,29 @@ const ENC_PREFIX = 'enc:';
 
 const CONFIG_FILE_NAME = 'roles-config.json';
 
-type StoredEndpoint = { baseUrl: string; model: string; apiKey: string };
+type StoredEndpoint = { baseUrl: string; model: string; contextWindow: string; apiKey: string };
 type StoredConfig = Record<keyof RolesConfigView, StoredEndpoint>;
 
 export const EMPTY_ROLES_CONFIG: StoredConfig = {
-  default: { baseUrl: '', model: '', apiKey: '' },
-  planner: { baseUrl: '', model: '', apiKey: '' },
-  executor: { baseUrl: '', model: '', apiKey: '' },
-  reviewer: { baseUrl: '', model: '', apiKey: '' },
-  triage: { baseUrl: '', model: '', apiKey: '' },
+  default: { baseUrl: '', model: '', contextWindow: '', apiKey: '' },
+  planner: { baseUrl: '', model: '', contextWindow: '', apiKey: '' },
+  executor: { baseUrl: '', model: '', contextWindow: '', apiKey: '' },
+  reviewer: { baseUrl: '', model: '', contextWindow: '', apiKey: '' },
+  triage: { baseUrl: '', model: '', contextWindow: '', apiKey: '' },
 };
+
+/** Digits-only positive int as string; anything else becomes empty (unset). */
+export function normalizeContextWindow(raw: unknown): string {
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
+    return String(Math.floor(raw));
+  }
+  if (typeof raw !== 'string') return '';
+  const digits = raw.trim().replace(/[_\s,]/g, '');
+  if (!/^\d+$/.test(digits)) return '';
+  const n = Number(digits);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return String(n);
+}
 
 function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
@@ -85,6 +98,7 @@ export class RolesStore {
         return {
           baseUrl: asString(entry.baseUrl),
           model: asString(entry.model),
+          contextWindow: normalizeContextWindow(entry.contextWindow),
           apiKey: decryptKey(this.cipher, asString(entry.apiKey)),
         };
       };
@@ -103,9 +117,10 @@ export class RolesStore {
   /** The view shape: key reduced to a presence flag — a decrypted key never leaves main. */
   view(): RolesConfigView {
     const config = this.load();
-    const toView = (e: StoredEndpoint): { baseUrl: string; model: string; hasKey: boolean } => ({
+    const toView = (e: StoredEndpoint): RoleEndpoint => ({
       baseUrl: e.baseUrl,
       model: e.model,
+      contextWindow: e.contextWindow,
       hasKey: e.apiKey.length > 0,
     });
     return {
@@ -124,12 +139,14 @@ export class RolesStore {
     const encryptStored = (e: StoredEndpoint): StoredEndpoint => ({
       baseUrl: e.baseUrl,
       model: e.model,
+      contextWindow: e.contextWindow,
       apiKey: encryptKey(cipher, e.apiKey),
     });
     const existing = this.load();
     const mergeRole = (existingRole: StoredEndpoint, inputRole: RoleEndpointInput): StoredEndpoint => ({
       baseUrl: (inputRole.baseUrl ?? '').trim(),
       model: (inputRole.model ?? '').trim(),
+      contextWindow: normalizeContextWindow(inputRole.contextWindow),
       // An empty submitted key means "don't touch what's already encrypted".
       apiKey: inputRole.apiKey && inputRole.apiKey.length > 0 ? inputRole.apiKey : existingRole.apiKey,
     });
@@ -164,7 +181,12 @@ export class RolesStore {
   /** Full decrypted config as the input shape — feeds the native config writer (T13). */
   input(): RolesConfigInput {
     const config = this.load();
-    const toInput = (e: StoredEndpoint): RoleEndpointInput => ({ baseUrl: e.baseUrl, model: e.model, apiKey: e.apiKey });
+    const toInput = (e: StoredEndpoint): RoleEndpointInput => ({
+      baseUrl: e.baseUrl,
+      model: e.model,
+      contextWindow: e.contextWindow,
+      apiKey: e.apiKey,
+    });
     return {
       default: toInput(config.default),
       planner: toInput(config.planner),

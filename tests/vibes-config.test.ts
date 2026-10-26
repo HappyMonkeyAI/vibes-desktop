@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { toVibesConfig, omitEmpty, normalizeOpenAiBaseUrl } from '../src/main/roles/vibes-config';
-import type { RolesConfigInput } from '@shared/channels';
+import { toVibesConfig, toVibesRuntimeConfig, omitEmpty, normalizeOpenAiBaseUrl } from '../src/main/roles/vibes-config';
+import type { RolesConfigInput, VibesRuntimeSettings } from '@shared/channels';
 
 const full: RolesConfigInput = {
-  default: { baseUrl: 'http://default:11434/v1', model: 'd-model', apiKey: 'dk' },
-  planner: { baseUrl: 'http://planner:8080/v1', model: 'p-model', apiKey: 'pk' },
-  executor: { baseUrl: 'http://exec:9000/v1', model: 'e-model', apiKey: 'ek' },
-  reviewer: { baseUrl: 'http://reviewer:7000/v1', model: 'r-model', apiKey: 'rk' },
-  triage: { baseUrl: 'http://triage:6000/v1', model: 't-model', apiKey: 'tk' },
+  default: { baseUrl: 'http://default:11434/v1', model: 'd-model', contextWindow: '8192', apiKey: 'dk' },
+  planner: { baseUrl: 'http://planner:8080/v1', model: 'p-model', contextWindow: '4096', apiKey: 'pk' },
+  executor: { baseUrl: 'http://exec:9000/v1', model: 'e-model', contextWindow: '16384', apiKey: 'ek' },
+  reviewer: { baseUrl: 'http://reviewer:7000/v1', model: 'r-model', contextWindow: '8192', apiKey: 'rk' },
+  triage: { baseUrl: 'http://triage:6000/v1', model: 't-model', contextWindow: '4096', apiKey: 'tk' },
 };
 
 describe('toVibesConfig (T9 mapping)', () => {
@@ -24,6 +24,22 @@ describe('toVibesConfig (T9 mapping)', () => {
     expect(cfg.OLLAMA_BASE_URL).toBe('http://default:11434/v1');
     expect(cfg.OLLAMA_MODEL).toBe('d-model');
     expect(cfg.OLLAMA_API_KEY).toBe('dk');
+    expect(cfg.CONTEXT_WINDOW).toBe('8192');
+  });
+
+  it('writes CONTEXT_WINDOW from executor, falling back to default', () => {
+    expect(toVibesConfig(full).CONTEXT_WINDOW).toBe('16384');
+    const fromDefault = toVibesConfig({
+      ...full,
+      executor: { baseUrl: 'http://exec:9000/v1', model: 'e-model', contextWindow: '', apiKey: 'ek' },
+    });
+    expect(fromDefault.CONTEXT_WINDOW).toBe('8192');
+    const unset = toVibesConfig({
+      ...full,
+      default: { ...full.default, contextWindow: '' },
+      executor: { ...full.executor, contextWindow: '' },
+    });
+    expect(unset.CONTEXT_WINDOW).toBe('');
   });
 
   it('gives planner/reviewer/triage their own prefixed keys', () => {
@@ -103,5 +119,31 @@ describe('omitEmpty (T9)', () => {
   it('keeps explicit "false" flags (they are real values, not blanks)', () => {
     const out = omitEmpty({ ENABLE_REVIEWER: 'false', OLLAMA_MODEL: 'm' } as never);
     expect(out).toEqual({ ENABLE_REVIEWER: 'false', OLLAMA_MODEL: 'm' });
+  });
+});
+
+describe('toVibesRuntimeConfig (T56)', () => {
+  const runtime: VibesRuntimeSettings = {
+    maxSteps: 40,
+    maxConcurrentTasks: 2,
+    yoloMode: false,
+    thinkingMode: true,
+    contextCompactionEnabled: false,
+    smallModelProfile: true,
+  };
+
+  it('maps Settings Runtime knobs to vibes native keys', () => {
+    expect(toVibesRuntimeConfig(runtime)).toEqual({
+      MAX_STEPS: '40',
+      MAX_CONCURRENT_TASKS: '2',
+      YOLO_MODE: 'false',
+      THINKING_MODE: 'enabled',
+      CONTEXT_COMPACTION_ENABLED: 'false',
+      SMALL_MODEL_PROFILE: 'true',
+    });
+  });
+
+  it('emits THINKING_MODE false when reasoning is off', () => {
+    expect(toVibesRuntimeConfig({ ...runtime, thinkingMode: false }).THINKING_MODE).toBe('false');
   });
 });

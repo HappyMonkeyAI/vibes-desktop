@@ -35,7 +35,24 @@ export const DEFAULT_SETTINGS: AppSettings = {
   htmlDesignAdvisorEnabled: false,
   htmlDesignAdvisorPython: 'python',
   htmlDesignAdvisorWorkspace: '',
+  // Vibes ConfigSchema defaults — written to workspace .vibes/config.json on spawn.
+  maxSteps: 25,
+  maxConcurrentTasks: 1,
+  yoloMode: true,
+  thinkingMode: true,
+  contextCompactionEnabled: true,
+  smallModelProfile: false,
 };
+
+function asPositiveInt(value: unknown, fallback: number): number {
+  const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value.trim()) : NaN;
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.floor(n);
+}
+
+function asBool(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
 
 type Persisted = Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken' | 'ttsDaemonHasToken'> & {
   speechServerApiKeyEnc?: string;
@@ -158,6 +175,12 @@ export class SettingsStore {
         htmlDesignAdvisorPython: asString(raw.htmlDesignAdvisorPython)
           || DEFAULT_SETTINGS.htmlDesignAdvisorPython,
         htmlDesignAdvisorWorkspace: asString(raw.htmlDesignAdvisorWorkspace),
+        maxSteps: asPositiveInt(raw.maxSteps, DEFAULT_SETTINGS.maxSteps),
+        maxConcurrentTasks: asPositiveInt(raw.maxConcurrentTasks, DEFAULT_SETTINGS.maxConcurrentTasks),
+        yoloMode: asBool(raw.yoloMode, DEFAULT_SETTINGS.yoloMode),
+        thinkingMode: asBool(raw.thinkingMode, DEFAULT_SETTINGS.thinkingMode),
+        contextCompactionEnabled: asBool(raw.contextCompactionEnabled, DEFAULT_SETTINGS.contextCompactionEnabled),
+        smallModelProfile: asBool(raw.smallModelProfile, DEFAULT_SETTINGS.smallModelProfile),
       };
     } catch {
       return { ...DEFAULT_SETTINGS };
@@ -229,6 +252,21 @@ export class SettingsStore {
           || DEFAULT_SETTINGS.htmlDesignAdvisorPython,
         htmlDesignAdvisorWorkspace: asString(
           input.htmlDesignAdvisorWorkspace ?? currentView.htmlDesignAdvisorWorkspace,
+        ),
+        maxSteps: asPositiveInt(input.maxSteps ?? currentView.maxSteps, DEFAULT_SETTINGS.maxSteps),
+        maxConcurrentTasks: asPositiveInt(
+          input.maxConcurrentTasks ?? currentView.maxConcurrentTasks,
+          DEFAULT_SETTINGS.maxConcurrentTasks,
+        ),
+        yoloMode: asBool(input.yoloMode ?? currentView.yoloMode, DEFAULT_SETTINGS.yoloMode),
+        thinkingMode: asBool(input.thinkingMode ?? currentView.thinkingMode, DEFAULT_SETTINGS.thinkingMode),
+        contextCompactionEnabled: asBool(
+          input.contextCompactionEnabled ?? currentView.contextCompactionEnabled,
+          DEFAULT_SETTINGS.contextCompactionEnabled,
+        ),
+        smallModelProfile: asBool(
+          input.smallModelProfile ?? currentView.smallModelProfile,
+          DEFAULT_SETTINGS.smallModelProfile,
         ),
       };
       const dir = path.dirname(this.filePath);

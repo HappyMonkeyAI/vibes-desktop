@@ -38,11 +38,11 @@ export function emptySnapshot(): LedgerSnapshot {
 /** Five unconfigured role endpoints (P0 default; T7 makes this persistent). */
 export function emptyRolesView(): RolesConfigView {
   return {
-    default: { baseUrl: '', model: '', hasKey: false },
-    planner: { baseUrl: '', model: '', hasKey: false },
-    executor: { baseUrl: '', model: '', hasKey: false },
-    reviewer: { baseUrl: '', model: '', hasKey: false },
-    triage: { baseUrl: '', model: '', hasKey: false },
+    default: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
+    planner: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
+    executor: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
+    reviewer: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
+    triage: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
   };
 }
 

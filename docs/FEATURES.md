@@ -25,7 +25,11 @@ Operator-facing map of what ships in **0.1.x**. Design intent lives in [DESIGN.m
 
 ### Roles
 
-Per-role base URL / model / API key (encrypted at rest). Test connection probes the OpenAI-compatible endpoint. Writes merge into workspace `.vibes/config.json`.
+Per-role base URL / model / **context window** (tokens) / API key (encrypted at rest). Test connection probes the OpenAI-compatible endpoint. Writes merge into workspace `.vibes/config.json` — executor’s context window (else Default’s) becomes vibes’ global `CONTEXT_WINDOW`.
+
+### Runtime
+
+Settings → **Runtime** passes the high-value TUI harness knobs into `.vibes/config.json` on mission spawn: `MAX_STEPS`, `MAX_CONCURRENT_TASKS`, `YOLO_MODE`, `THINKING_MODE`, `CONTEXT_COMPACTION_ENABLED`, `SMALL_MODEL_PROFILE`. Triage / memory / Codex stay TUI-or-file for now.
 
 ### Decision (intervene gate)
 

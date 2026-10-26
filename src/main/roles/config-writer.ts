@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { DecisionMcpConfig, RolesConfigInput } from '@shared/channels';
-import { omitEmpty, toVibesConfig, type VibesConfigKey } from './vibes-config';
+import type { DecisionMcpConfig, RolesConfigInput, VibesRuntimeSettings } from '@shared/channels';
+import { omitEmpty, toVibesConfig, toVibesRuntimeConfig, type VibesConfigKey } from './vibes-config';
 
 /**
  * T9 — write the native `.vibes/config.json` into a workspace so a spawned vibes
@@ -24,6 +24,7 @@ export function writeVibesConfig(
   workspaceRoot: string,
   input: RolesConfigInput,
   decision?: DecisionMcpConfig | null,
+  runtime?: VibesRuntimeSettings | null,
 ): string | null {
   if (!workspaceRoot || !path.isAbsolute(workspaceRoot)) return null;
   const target = vibesConfigPath(workspaceRoot);
@@ -48,10 +49,12 @@ export function writeVibesConfig(
           // Explicit off so a prior mission's token does not linger in the workspace file.
           ENABLE_DECISION_INTERVENE_GATE: 'false',
         };
+    const runtimeFields = runtime ? toVibesRuntimeConfig(runtime) : {};
     const merged: Partial<Record<VibesConfigKey, string>> = {
       ...existing,
       ...omitEmpty(toVibesConfig(input)),
       ...omitEmpty(decisionFields as Record<VibesConfigKey, string>),
+      ...runtimeFields,
     };
     // When decision is off, strip secrets from the workspace config.
     if (!decision) {
