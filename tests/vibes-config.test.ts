@@ -122,7 +122,7 @@ describe('omitEmpty (T9)', () => {
   });
 });
 
-describe('toVibesRuntimeConfig (T56)', () => {
+describe('toVibesRuntimeConfig (T56/T57)', () => {
   const runtime: VibesRuntimeSettings = {
     maxSteps: 40,
     maxConcurrentTasks: 2,
@@ -130,6 +130,11 @@ describe('toVibesRuntimeConfig (T56)', () => {
     thinkingMode: true,
     contextCompactionEnabled: false,
     smallModelProfile: true,
+    triageEnabled: true,
+    triageInterval: 3,
+    triageAutoSteer: false,
+    memoryEnabled: true,
+    localMemory: true,
   };
 
   it('maps Settings Runtime knobs to vibes native keys', () => {
@@ -140,6 +145,11 @@ describe('toVibesRuntimeConfig (T56)', () => {
       THINKING_MODE: 'enabled',
       CONTEXT_COMPACTION_ENABLED: 'false',
       SMALL_MODEL_PROFILE: 'true',
+      TRIAGE_ENABLED: 'true',
+      TRIAGE_INTERVAL: '3',
+      TRIAGE_AUTO_STEER: 'false',
+      MEMORY_ENABLED: 'true',
+      LOCAL_MEMORY: 'true',
     });
   });
 

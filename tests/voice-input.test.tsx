@@ -39,6 +39,11 @@ beforeEach(() => {
     thinkingMode: true,
     contextCompactionEnabled: true,
     smallModelProfile: false,
+    triageEnabled: false,
+    triageInterval: 5,
+    triageAutoSteer: true,
+    memoryEnabled: true,
+    localMemory: false,
   });
 });
 

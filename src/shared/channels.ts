@@ -238,6 +238,14 @@ export interface AppSettings {
   thinkingMode: boolean;
   contextCompactionEnabled: boolean;
   smallModelProfile: boolean;
+  /** Observer that watches task progress (needs Triage role endpoint for full effect). */
+  triageEnabled: boolean;
+  /** Run triage every N completed tasks. */
+  triageInterval: number;
+  triageAutoSteer: boolean;
+  memoryEnabled: boolean;
+  /** Prefer local JSONL memory over remote mem0. */
+  localMemory: boolean;
 }
 
 /** Slice of AppSettings written into vibes native keys on mission spawn. */
@@ -249,6 +257,11 @@ export type VibesRuntimeSettings = Pick<
   | 'thinkingMode'
   | 'contextCompactionEnabled'
   | 'smallModelProfile'
+  | 'triageEnabled'
+  | 'triageInterval'
+  | 'triageAutoSteer'
+  | 'memoryEnabled'
+  | 'localMemory'
 >;
 
 /** Partial save payload — empty *ApiKey / *AuthToken fields mean keep the stored secret. */

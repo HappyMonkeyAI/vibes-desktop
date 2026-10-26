@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-26 — T57 Runtime II (triage + memory)
+
+**Done:** Settings → Runtime gains triage observer (`TRIAGE_ENABLED` / `INTERVAL` / `AUTO_STEER`) and memory (`MEMORY_ENABLED`, `LOCAL_MEMORY`). Same spawn write path as T56.
+
+**Evidence:** settings / vibes-config / config-writer tests; typecheck.
+
+**Next:** Live Decision smoke; optional T51; Codex / MCP registry UI later.
+
+---
+
 ## 2026-10-26 — T56 Settings → Runtime
 
 **Done:** New Settings **Runtime** tab for high-value TUI knobs (`MAX_STEPS`, `MAX_CONCURRENT_TASKS`, `YOLO_MODE`, `THINKING_MODE`, `CONTEXT_COMPACTION_ENABLED`, `SMALL_MODEL_PROFILE`). Persisted in app settings; merged into workspace `.vibes/config.json` on mission spawn (same path as Roles/Decision).

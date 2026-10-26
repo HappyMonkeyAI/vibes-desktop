@@ -43,7 +43,12 @@ export type VibesConfigKey =
   | 'YOLO_MODE'
   | 'THINKING_MODE'
   | 'CONTEXT_COMPACTION_ENABLED'
-  | 'SMALL_MODEL_PROFILE';
+  | 'SMALL_MODEL_PROFILE'
+  | 'TRIAGE_ENABLED'
+  | 'TRIAGE_INTERVAL'
+  | 'TRIAGE_AUTO_STEER'
+  | 'MEMORY_ENABLED'
+  | 'LOCAL_MEMORY';
 
 /**
  * OpenAI-compatible providers serve under a version prefix (Ollama, LM Studio,
@@ -116,6 +121,11 @@ export function toVibesConfig(input: RolesConfigInput): Record<VibesConfigKey, s
     THINKING_MODE: '',
     CONTEXT_COMPACTION_ENABLED: '',
     SMALL_MODEL_PROFILE: '',
+    TRIAGE_ENABLED: '',
+    TRIAGE_INTERVAL: '',
+    TRIAGE_AUTO_STEER: '',
+    MEMORY_ENABLED: '',
+    LOCAL_MEMORY: '',
   };
 }
 
@@ -173,8 +183,8 @@ function boolFlag(on: boolean): string {
 }
 
 /**
- * Map Settings → Runtime knobs to vibes native keys. Always emits all six so a
- * Desktop save is the source of truth (including explicit `false` flags).
+ * Map Settings → Runtime knobs to vibes native keys. Always emits the full
+ * Runtime slice so Desktop is the source of truth (including explicit `false`).
  */
 export function toVibesRuntimeConfig(runtime: VibesRuntimeSettings): Partial<Record<VibesConfigKey, string>> {
   const maxSteps = Number.isFinite(runtime.maxSteps) && runtime.maxSteps > 0
@@ -183,6 +193,9 @@ export function toVibesRuntimeConfig(runtime: VibesRuntimeSettings): Partial<Rec
   const maxConcurrent = Number.isFinite(runtime.maxConcurrentTasks) && runtime.maxConcurrentTasks > 0
     ? String(Math.floor(runtime.maxConcurrentTasks))
     : '1';
+  const triageInterval = Number.isFinite(runtime.triageInterval) && runtime.triageInterval > 0
+    ? String(Math.floor(runtime.triageInterval))
+    : '5';
   return {
     MAX_STEPS: maxSteps,
     MAX_CONCURRENT_TASKS: maxConcurrent,
@@ -190,5 +203,10 @@ export function toVibesRuntimeConfig(runtime: VibesRuntimeSettings): Partial<Rec
     THINKING_MODE: runtime.thinkingMode ? 'enabled' : 'false',
     CONTEXT_COMPACTION_ENABLED: boolFlag(runtime.contextCompactionEnabled),
     SMALL_MODEL_PROFILE: boolFlag(runtime.smallModelProfile),
+    TRIAGE_ENABLED: boolFlag(runtime.triageEnabled),
+    TRIAGE_INTERVAL: triageInterval,
+    TRIAGE_AUTO_STEER: boolFlag(runtime.triageAutoSteer),
+    MEMORY_ENABLED: boolFlag(runtime.memoryEnabled),
+    LOCAL_MEMORY: boolFlag(runtime.localMemory),
   };
 }

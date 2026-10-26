@@ -98,6 +98,11 @@ app.whenReady().then(() => {
         thinkingMode: settings.thinkingMode,
         contextCompactionEnabled: settings.contextCompactionEnabled,
         smallModelProfile: settings.smallModelProfile,
+        triageEnabled: settings.triageEnabled,
+        triageInterval: settings.triageInterval,
+        triageAutoSteer: settings.triageAutoSteer,
+        memoryEnabled: settings.memoryEnabled,
+        localMemory: settings.localMemory,
       });
       writeVibesMcpJson(workspaceRoot, {
         enabled: settings.htmlDesignAdvisorEnabled,

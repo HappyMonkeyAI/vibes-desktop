@@ -66,6 +66,11 @@ describe('writeVibesConfig (T9)', () => {
       thinkingMode: false,
       contextCompactionEnabled: true,
       smallModelProfile: false,
+      triageEnabled: true,
+      triageInterval: 4,
+      triageAutoSteer: true,
+      memoryEnabled: false,
+      localMemory: false,
     });
     const written = JSON.parse(readFileSync(target!, 'utf-8')) as Record<string, string>;
     expect(written.MAX_STEPS).toBe('12');
@@ -74,5 +79,10 @@ describe('writeVibesConfig (T9)', () => {
     expect(written.THINKING_MODE).toBe('false');
     expect(written.CONTEXT_COMPACTION_ENABLED).toBe('true');
     expect(written.SMALL_MODEL_PROFILE).toBe('false');
+    expect(written.TRIAGE_ENABLED).toBe('true');
+    expect(written.TRIAGE_INTERVAL).toBe('4');
+    expect(written.TRIAGE_AUTO_STEER).toBe('true');
+    expect(written.MEMORY_ENABLED).toBe('false');
+    expect(written.LOCAL_MEMORY).toBe('false');
   });
 });

@@ -42,6 +42,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   thinkingMode: true,
   contextCompactionEnabled: true,
   smallModelProfile: false,
+  triageEnabled: false,
+  triageInterval: 5,
+  triageAutoSteer: true,
+  memoryEnabled: true,
+  localMemory: false,
 };
 
 function asPositiveInt(value: unknown, fallback: number): number {
@@ -181,6 +186,11 @@ export class SettingsStore {
         thinkingMode: asBool(raw.thinkingMode, DEFAULT_SETTINGS.thinkingMode),
         contextCompactionEnabled: asBool(raw.contextCompactionEnabled, DEFAULT_SETTINGS.contextCompactionEnabled),
         smallModelProfile: asBool(raw.smallModelProfile, DEFAULT_SETTINGS.smallModelProfile),
+        triageEnabled: asBool(raw.triageEnabled, DEFAULT_SETTINGS.triageEnabled),
+        triageInterval: asPositiveInt(raw.triageInterval, DEFAULT_SETTINGS.triageInterval),
+        triageAutoSteer: asBool(raw.triageAutoSteer, DEFAULT_SETTINGS.triageAutoSteer),
+        memoryEnabled: asBool(raw.memoryEnabled, DEFAULT_SETTINGS.memoryEnabled),
+        localMemory: asBool(raw.localMemory, DEFAULT_SETTINGS.localMemory),
       };
     } catch {
       return { ...DEFAULT_SETTINGS };
@@ -268,6 +278,17 @@ export class SettingsStore {
           input.smallModelProfile ?? currentView.smallModelProfile,
           DEFAULT_SETTINGS.smallModelProfile,
         ),
+        triageEnabled: asBool(input.triageEnabled ?? currentView.triageEnabled, DEFAULT_SETTINGS.triageEnabled),
+        triageInterval: asPositiveInt(
+          input.triageInterval ?? currentView.triageInterval,
+          DEFAULT_SETTINGS.triageInterval,
+        ),
+        triageAutoSteer: asBool(
+          input.triageAutoSteer ?? currentView.triageAutoSteer,
+          DEFAULT_SETTINGS.triageAutoSteer,
+        ),
+        memoryEnabled: asBool(input.memoryEnabled ?? currentView.memoryEnabled, DEFAULT_SETTINGS.memoryEnabled),
+        localMemory: asBool(input.localMemory ?? currentView.localMemory, DEFAULT_SETTINGS.localMemory),
       };
       const dir = path.dirname(this.filePath);
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });

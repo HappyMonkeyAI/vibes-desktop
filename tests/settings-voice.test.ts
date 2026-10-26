@@ -106,6 +106,11 @@ describe('SettingsStore Runtime knobs', () => {
     expect(defaults.thinkingMode).toBe(true);
     expect(defaults.contextCompactionEnabled).toBe(true);
     expect(defaults.smallModelProfile).toBe(false);
+    expect(defaults.triageEnabled).toBe(false);
+    expect(defaults.triageInterval).toBe(5);
+    expect(defaults.triageAutoSteer).toBe(true);
+    expect(defaults.memoryEnabled).toBe(true);
+    expect(defaults.localMemory).toBe(false);
 
     expect(store.save({
       maxSteps: 50,
@@ -114,6 +119,11 @@ describe('SettingsStore Runtime knobs', () => {
       thinkingMode: false,
       contextCompactionEnabled: false,
       smallModelProfile: true,
+      triageEnabled: true,
+      triageInterval: 2,
+      triageAutoSteer: false,
+      memoryEnabled: false,
+      localMemory: true,
     })).toBe(true);
     const view = store.get();
     expect(view.maxSteps).toBe(50);
@@ -122,5 +132,10 @@ describe('SettingsStore Runtime knobs', () => {
     expect(view.thinkingMode).toBe(false);
     expect(view.contextCompactionEnabled).toBe(false);
     expect(view.smallModelProfile).toBe(true);
+    expect(view.triageEnabled).toBe(true);
+    expect(view.triageInterval).toBe(2);
+    expect(view.triageAutoSteer).toBe(false);
+    expect(view.memoryEnabled).toBe(false);
+    expect(view.localMemory).toBe(true);
   });
 });

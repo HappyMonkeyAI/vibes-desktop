@@ -40,6 +40,11 @@ const SettingsTab: React.FC = () => {
   const [thinkingMode, setThinkingMode] = useState(true);
   const [contextCompactionEnabled, setContextCompactionEnabled] = useState(true);
   const [smallModelProfile, setSmallModelProfile] = useState(false);
+  const [triageEnabled, setTriageEnabled] = useState(false);
+  const [triageInterval, setTriageInterval] = useState('5');
+  const [triageAutoSteer, setTriageAutoSteer] = useState(true);
+  const [memoryEnabled, setMemoryEnabled] = useState(true);
+  const [localMemory, setLocalMemory] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -103,6 +108,11 @@ const SettingsTab: React.FC = () => {
     setThinkingMode(settings.thinkingMode !== false);
     setContextCompactionEnabled(settings.contextCompactionEnabled !== false);
     setSmallModelProfile(Boolean(settings.smallModelProfile));
+    setTriageEnabled(Boolean(settings.triageEnabled));
+    setTriageInterval(String(settings.triageInterval ?? 5));
+    setTriageAutoSteer(settings.triageAutoSteer !== false);
+    setMemoryEnabled(settings.memoryEnabled !== false);
+    setLocalMemory(Boolean(settings.localMemory));
   };
 
   const parsePositiveInt = (raw: string, fallback: number): number => {
@@ -141,6 +151,11 @@ const SettingsTab: React.FC = () => {
         thinkingMode,
         contextCompactionEnabled,
         smallModelProfile,
+        triageEnabled,
+        triageInterval: parsePositiveInt(triageInterval, 5),
+        triageAutoSteer,
+        memoryEnabled,
+        localMemory,
       });
       if (result.ok) {
         Message.success('Settings saved.');
@@ -409,9 +424,58 @@ const SettingsTab: React.FC = () => {
               <span className={styles.rowLabel}>Small-model runtime profile</span>
               <Switch checked={smallModelProfile} onChange={setSmallModelProfile} size="small" />
             </div>
+          </div>
+
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Triage observer</h3>
             <p className={styles.hint}>
-              Context window lives on the Roles cards. Triage / memory / Codex knobs stay in the TUI
-              or <code>.vibes/config.json</code> for now.
+              Pair with a Triage role endpoint on the Roles tab. When on, vibes watches progress
+              every N tasks and can auto-steer.
+            </p>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Triage observer</span>
+              <Switch checked={triageEnabled} onChange={setTriageEnabled} size="small" />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Triage interval (tasks)</label>
+              <Input
+                placeholder="5"
+                value={triageInterval}
+                onChange={(v) => setTriageInterval(v.replace(/[^\d_\s,]/g, ''))}
+                size="small"
+                inputMode="numeric"
+                disabled={!triageEnabled}
+              />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Triage auto-steer</span>
+              <Switch
+                checked={triageAutoSteer}
+                onChange={setTriageAutoSteer}
+                size="small"
+                disabled={!triageEnabled}
+              />
+            </div>
+          </div>
+
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Memory</h3>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Memory enabled</span>
+              <Switch checked={memoryEnabled} onChange={setMemoryEnabled} size="small" />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Local memory (JSONL)</span>
+              <Switch
+                checked={localMemory}
+                onChange={setLocalMemory}
+                size="small"
+                disabled={!memoryEnabled}
+              />
+            </div>
+            <p className={styles.hint}>
+              Local memory keeps preferences offline in the workspace. Context window is on Roles;
+              Codex RAG paths stay in the TUI or <code>.vibes/config.json</code>.
             </p>
           </div>
 
