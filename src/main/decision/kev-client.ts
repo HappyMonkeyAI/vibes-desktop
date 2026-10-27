@@ -96,13 +96,37 @@ export function decisionToolCandidates(url: string): string[] {
   return ['kev_evaluate', 'system_one'];
 }
 
+type McpToolResultBody = {
+  structuredContent?: KevEvaluateResult & { detail?: string };
+  content?: Array<{ type?: string; text?: string }>;
+  isError?: boolean;
+};
+
+/** Operator-facing error text from a failed tools/call (e.g. Unsloth sk-unsloth hint). */
+export function extractToolErrorDetail(rpc: { result?: unknown; error?: unknown } | null): string | null {
+  if (!rpc) return null;
+  if (rpc.error && typeof rpc.error === 'object') {
+    const err = rpc.error as { message?: string };
+    if (typeof err.message === 'string' && err.message.trim()) return err.message.trim();
+  }
+  const result = rpc.result as McpToolResultBody | null;
+  if (!result) return null;
+  const structuredDetail = result.structuredContent?.detail;
+  if (typeof structuredDetail === 'string' && structuredDetail.trim()) return structuredDetail.trim();
+  const text = result.content?.find((c) => c.type === 'text')?.text;
+  if (!text) return null;
+  try {
+    const parsed = JSON.parse(text) as { detail?: string };
+    if (typeof parsed.detail === 'string' && parsed.detail.trim()) return parsed.detail.trim();
+  } catch {
+    if (result.isError && text.trim()) return text.trim();
+  }
+  return null;
+}
+
 function parseToolResult(rpc: { result?: unknown; error?: unknown } | null): KevEvaluateResult | null {
   if (!rpc || rpc.error) return null;
-  const result = rpc.result as {
-    structuredContent?: KevEvaluateResult;
-    content?: Array<{ type?: string; text?: string }>;
-    isError?: boolean;
-  } | null;
+  const result = rpc.result as McpToolResultBody | null;
   if (!result || result.isError) return null;
   if (result.structuredContent && typeof result.structuredContent === 'object') {
     return { ...result.structuredContent, raw: result.structuredContent };
@@ -129,6 +153,8 @@ export async function kevEvaluateIntervene(options: {
   fetchImpl?: FetchLike;
   /** Override tool probe order (tests). */
   toolNames?: string[];
+  /** Captures tool isError / detail text when parse fails (Settings probe). */
+  onToolError?: (detail: string) => void;
 }): Promise<KevEvaluateResult | null> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const headers: HeaderMap = {
@@ -171,6 +197,7 @@ export async function kevEvaluateIntervene(options: {
     }).catch(() => undefined);
 
     const tools = options.toolNames ?? decisionToolCandidates(options.config.url);
+    let lastDetail: string | null = null;
     for (const name of tools) {
       const call = await mcpPost(
         options.config.url,
@@ -191,13 +218,52 @@ export async function kevEvaluateIntervene(options: {
         sessionId,
       );
       if (call.status >= 400) continue;
-      const parsed = parseToolResult(call.payload as { result?: unknown; error?: unknown } | null);
+      const payload = call.payload as { result?: unknown; error?: unknown } | null;
+      const parsed = parseToolResult(payload);
       if (parsed) return parsed;
+      lastDetail = extractToolErrorDetail(payload) ?? lastDetail;
     }
+    if (lastDetail && options.onToolError) options.onToolError(lastDetail);
     return null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Settings → Test decision MCP: run a real tools/call (not only bare GET).
+ * Surfaces Unsloth “sk-unsloth” / API-key errors so a classic KEV token is not a false pass.
+ */
+export async function probeDecisionTools(options: {
+  config: DecisionMcpConfig;
+  fetchImpl?: FetchLike;
+}): Promise<{ ok: boolean; error?: string; detail?: string }> {
+  let toolError: string | undefined;
+  const result = await kevEvaluateIntervene({
+    config: options.config,
+    state: { open_question: 'Settings probe — escalate or continue?', symptom: 'connectivity_check' },
+    fetchImpl: options.fetchImpl,
+    onToolError: (detail) => {
+      toolError = detail;
+    },
+  });
+  if (result) {
+    const model = typeof result.model === 'string' ? result.model : undefined;
+    return {
+      ok: true,
+      detail: model
+        ? `Decision tool answered (model ${model}).`
+        : 'Decision tool answered. Gate is on when URL + token stay set.',
+    };
+  }
+  if (toolError) {
+    return { ok: false, error: toolError };
+  }
+  return {
+    ok: false,
+    error:
+      'Decision MCP reachable but tools/call failed — check URL (Unsloth :8888 needs an sk-unsloth… API key; classic KEV uses :8765).',
+  };
 }
 
 /** Pull choice + probabilities (+ optional confidence) from a decision payload. */

@@ -155,7 +155,10 @@ export class SettingsStore {
     const hasSpeechKey = Boolean(asString(raw.speechServerApiKeyEnc));
     const hasDecisionToken = Boolean(asString(raw.decisionMcpAuthTokenEnc))
       || Boolean((process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim());
-    const decisionUrl = asString(raw.decisionMcpUrl) || (process.env['KEV_MCP_URL'] ?? '').trim();
+    // Empty string is intentional clear — only fall back to env when the key was never stored.
+    const decisionUrl = Object.prototype.hasOwnProperty.call(raw, 'decisionMcpUrl')
+      ? asString(raw.decisionMcpUrl)
+      : (process.env['KEV_MCP_URL'] ?? '').trim();
     const hasTtsToken = Boolean(asString(raw.ttsDaemonTokenEnc))
       || Boolean((process.env['AVT_TOKEN'] ?? '').trim());
     return {

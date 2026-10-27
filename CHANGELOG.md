@@ -17,6 +17,7 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 ### Changed
 
 - Installer metadata: author, homepage, repository, copyright; NSIS artifact `Vibes Desktop Setup <version>.exe`; `forceCodeSigning: false` until a cert is configured.
+- Settings → Test decision MCP on Unsloth `:8888` runs a real `system_one` tools/call and surfaces `sk-unsloth…` API-key errors (no false “reachable” with a classic KEV token).
 
 ## [0.1.1] — 2026-10-27
 
