@@ -68,7 +68,17 @@ Default: builtin Whisper (downloads ONNX on first talk). Alternatives: OpenAI-co
 - Full Needs You / Decision story needs your LAN Decision MCP.
 - Codex RAG paths and multi-MCP marketplace UI are out of scope for 0.1.x.
 - Bring your own models — nothing is bundled except optional Whisper weights on first use.
-- Live Decision smoke requires `KEV_MCP_URL` + token (or Settings) and a reachable MCP — skipped when those are absent.
+- Live Decision smoke requires `KEV_MCP_URL` + token (or Settings / `UNSLOTH_API_KEY` for `:8888`) and a reachable MCP.
+
+## Public beta (0.2.x) readiness
+
+| Gate | Status |
+|------|--------|
+| First-run (Vibes path → model → workspace) | Done (T60–T64) |
+| First mission without tribal knowledge | Live-proven on LM Studio `:1234` (T65) |
+| Branded NSIS installer | Done (icon); **unsigned** until `CSC_*` cert |
+| Decision / Needs You when configured | Blocked without Unsloth `sk-unsloth-…` or classic KEV `:8765` |
+| Version cut `0.2.0` | After Decision smoke + (ideally) signed build |
 
 ## Verify
 

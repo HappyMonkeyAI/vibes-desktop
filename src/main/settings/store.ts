@@ -120,8 +120,19 @@ export class SettingsStore {
   getDecisionMcpAuthToken(): string | undefined {
     const fromFile = decryptStored(this.cipher, asString(this.readRaw()?.decisionMcpAuthTokenEnc));
     if (fromFile) return fromFile;
-    const fromEnv = (process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim();
-    return fromEnv || undefined;
+    const fromKev = (process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim();
+    if (fromKev) return fromKev;
+    // Unsloth Studio Decision MCP accepts the Studio API key; allow the same env names Studio uses.
+    const url = asString(this.readRaw()?.decisionMcpUrl) || (process.env['KEV_MCP_URL'] ?? '').trim();
+    const studio = url.toLowerCase().includes('unsloth') || url.toLowerCase().includes(':8888');
+    if (studio) {
+      return (
+        (process.env['UNSLOTH_API_KEY'] ?? '').trim()
+        || (process.env['UNSLOTH_STUDIO_API_KEY'] ?? '').trim()
+        || undefined
+      );
+    }
+    return undefined;
   }
 
   /** Decrypted Agent Voice daemon token — never over IPC. */
@@ -146,19 +157,32 @@ export class SettingsStore {
   get(): AppSettings {
     const raw = this.readRaw();
     if (!raw) {
+      const decisionMcpUrl = (process.env['KEV_MCP_URL'] ?? '').trim();
+      const studio = decisionMcpUrl.toLowerCase().includes('unsloth')
+        || decisionMcpUrl.toLowerCase().includes(':8888');
       return {
         ...DEFAULT_SETTINGS,
-        decisionMcpUrl: (process.env['KEV_MCP_URL'] ?? '').trim(),
-        decisionMcpHasToken: Boolean((process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim()),
+        decisionMcpUrl,
+        decisionMcpHasToken: Boolean(
+          (process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim()
+          || (studio && ((process.env['UNSLOTH_API_KEY'] ?? '').trim()
+            || (process.env['UNSLOTH_STUDIO_API_KEY'] ?? '').trim())),
+        ),
       };
     }
     const hasSpeechKey = Boolean(asString(raw.speechServerApiKeyEnc));
-    const hasDecisionToken = Boolean(asString(raw.decisionMcpAuthTokenEnc))
-      || Boolean((process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim());
     // Empty string is intentional clear — only fall back to env when the key was never stored.
     const decisionUrl = Object.prototype.hasOwnProperty.call(raw, 'decisionMcpUrl')
       ? asString(raw.decisionMcpUrl)
       : (process.env['KEV_MCP_URL'] ?? '').trim();
+    const studioUrl = decisionUrl.toLowerCase().includes('unsloth')
+      || decisionUrl.toLowerCase().includes(':8888');
+    const hasDecisionToken = Boolean(asString(raw.decisionMcpAuthTokenEnc))
+      || Boolean((process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim())
+      || Boolean(
+        studioUrl && ((process.env['UNSLOTH_API_KEY'] ?? '').trim()
+          || (process.env['UNSLOTH_STUDIO_API_KEY'] ?? '').trim()),
+      );
     const hasTtsToken = Boolean(asString(raw.ttsDaemonTokenEnc))
       || Boolean((process.env['AVT_TOKEN'] ?? '').trim());
     return {
