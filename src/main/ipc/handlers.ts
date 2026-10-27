@@ -10,7 +10,7 @@ import type { MissionService } from '../mission/service';
 import { testConnection } from '../roles/test-connection';
 import { runVoiceDoctor } from '../voice/doctor';
 import { spawnYapsnap, transcribeFile, voiceTempDir } from '../voice/transcribe';
-import { transcribeViaServer, probeSpeechServer } from '../voice/speech-server';
+import { audioExtensionForMime, transcribeViaServer, probeSpeechServer } from '../voice/speech-server';
 import { warmYapsnapModels } from '../voice/warm';
 import type { WorkspaceHistoryStore } from '../workspace/history';
 import { DEFAULT_SETTINGS, type SettingsStore } from '../settings/store';
@@ -104,7 +104,7 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
         const dir = voiceTempDir();
         mkdirSync(dir, { recursive: true });
         const id = randomBytes(8).toString('hex');
-        const inputPath = path.join(dir, `${id}.webm`);
+        const inputPath = path.join(dir, `${id}.${audioExtensionForMime(request.mime)}`);
         const outPath = path.join(dir, `${id}.txt`);
         writeFileSync(inputPath, Buffer.from(request.audioBase64, 'base64'));
         if (settings.speechEngine === 'server') {

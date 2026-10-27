@@ -20,7 +20,7 @@ export interface Cipher {
 }
 
 /** Prefix marking a stored value as our ciphertext; lets us tolerate legacy plaintext. */
-const ENC_PREFIX = 'enc:';
+export const ENC_PREFIX = 'enc:';
 
 const CONFIG_FILE_NAME = 'roles-config.json';
 
@@ -40,7 +40,7 @@ function asString(value: unknown): string {
 }
 
 /** Decrypt a stored key, tolerating plaintext (pre-encryption) values. */
-function decryptKey(cipher: Cipher, encoded: string): string {
+export function decryptKey(cipher: Cipher, encoded: string): string {
   if (!encoded) return '';
   if (!encoded.startsWith(ENC_PREFIX)) return encoded; // legacy plaintext
   try {
@@ -51,7 +51,7 @@ function decryptKey(cipher: Cipher, encoded: string): string {
 }
 
 /** Encrypt a key for storage, falling back to plaintext when no store is up. */
-function encryptKey(cipher: Cipher, key: string): string {
+export function encryptKey(cipher: Cipher, key: string): string {
   if (!key) return '';
   if (!cipher.isAvailable()) return key;
   try {

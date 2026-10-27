@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import type { VoiceTranscribeResult } from '@shared/channels';
 
 /**
@@ -8,6 +9,28 @@ import type { VoiceTranscribeResult } from '@shared/channels';
 
 const REQUEST_TIMEOUT_MS = 120_000;
 const ERROR_BODY_CHARS = 300;
+
+/** Audio container extension ↔ MIME type. MediaRecorder captures default to webm. */
+const AUDIO_TYPES: Record<string, string> = {
+  webm: 'audio/webm',
+  ogg: 'audio/ogg',
+  wav: 'audio/wav',
+  m4a: 'audio/mp4',
+  mp3: 'audio/mpeg',
+};
+
+/** File extension for a recorder MIME type (`audio/webm;codecs=opus` → `webm`). */
+export function audioExtensionForMime(mime: string | undefined): string {
+  const base = (mime ?? '').split(';')[0].trim().toLowerCase();
+  if (base === 'audio/x-wav' || base === 'audio/wave') return 'wav';
+  const match = Object.entries(AUDIO_TYPES).find(([, type]) => type === base);
+  return match ? match[0] : 'webm';
+}
+
+/** MIME type for an audio file path, from its extension (unknown → webm). */
+export function audioMimeForPath(filePath: string): string {
+  return AUDIO_TYPES[path.extname(filePath).slice(1).toLowerCase()] ?? AUDIO_TYPES.webm;
+}
 
 export function isSupportedSpeechEndpoint(url: string): boolean {
   try {
@@ -44,7 +67,7 @@ export type ServerTranscribeOptions = {
   model: string;
   language?: string;
   apiKey?: string;
-  /** Absolute path to a wav (preferred) or other audio file the server accepts. */
+  /** Absolute path to the captured audio; its extension sets the upload's name and type. */
   filePath: string;
   fetchImpl?: typeof fetch;
 };
@@ -70,7 +93,10 @@ export async function transcribeViaServer(options: ServerTranscribeOptions): Pro
   }
 
   const form = new FormData();
-  const file = new File([new Uint8Array(bytes)], 'utterance.wav', { type: 'audio/wav' });
+  // Label the upload with its real container — servers that trust the name or
+  // Content-Type (e.g. whisper.cpp) fail to decode webm sent as wav.
+  const ext = path.extname(options.filePath).slice(1).toLowerCase() || 'webm';
+  const file = new File([new Uint8Array(bytes)], `utterance.${ext}`, { type: audioMimeForPath(options.filePath) });
   form.set('file', file);
   form.set('model', options.model.trim());
   form.set('response_format', 'json');

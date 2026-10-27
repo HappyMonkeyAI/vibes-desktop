@@ -2,6 +2,14 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 (review) — Speech fixes from code review (T29)
+
+**Done:** Reviewed `f3926aa..9198904`; fixed the three critical findings. (1) `SettingsStore.migrateSpeechEngine()` runs the yapsnap→builtin move once per pre-migration file (`speechEngineMigrated` marker) — previously every launch reverted a user's yapsnap choice. (2) Server engine uploads the capture with its real extension/MIME (`utterance.webm`, `audio/webm`) instead of mislabelling webm as wav; handler names the temp file from the recorder MIME. (3) Settings key storage reuses Roles' `encryptKey`/`decryptKey` (plaintext fallback, `enc:` prefix) so a missing keyring no longer fails the whole save; unprefixed ciphertext from the previous release still reads.
+
+**Evidence:** unit — new tests in `tests/settings-voice.test.ts` (no-keyring save, legacy key, migration once/keeps yapsnap/no file) and `tests/speech-server.test.ts` (form file name/type, model, language, bearer, HTTP error, unreachable). `npm test` 118 passed / 3 skipped; `npm run typecheck` clean. V1: no channel added or removed. V3 not run (no live speech server exercised).
+
+**What's next:** T30 (bundle ORT WASM — confirmed CDN default in transformers v4), T31–T33 from the review.
+
 ## 2026-10-20 (theme) — Contrast pass: dark inputs + stronger light
 
 **Done:** Dark composer/selects use `--input-bg` `#0b101b` + light text (no white Arco fill). Light mode: cooler gray page `#e8ecf2`, darker text/borders, white cards with visible borders/shadows.

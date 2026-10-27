@@ -46,3 +46,10 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 ## P7 — Roadmap (next)
 - [ ] T26 External MCP servers for missions: configure/register local MCP tools (e.g. html-design-advisor) so plan steps can call them — naming a path in the prompt is not enough
 - [ ] T21 V3 live mission pass (checklist + logs + failure detail without DevTools) — still owed from P5
+
+## P8 — Code review follow-ups (2026-10-27)
+- [x] T29 Speech fixes: one-time yapsnap→builtin migration; server upload labelled with real container (webm, not wav); settings key falls back to plaintext without OS keyring instead of failing the save ✅ 2026-10-27
+- [ ] T30 Bundle onnxruntime-web WASM locally (`env.backends.onnx.wasm.wasmPaths`) — transformers v4 loads it from cdn.jsdelivr.net by default; add a renderer CSP (connect-src huggingface.co only)
+- [ ] T31 Speech server hardening: warn on non-loopback `http:` with an API key; size cap on `voice:transcribe` audio; allow clearing the stored key; probe should not treat `/health` 404 as reachable; temp capture cleanup in `finally`
+- [ ] T32 Ledger: validate `[TASK_STATUS]` status against STATUS_MAP; close seeded pending rows when a mission ends `done`
+- [ ] T33 Voice worker: a failed load of another model must not fail the next request; hold-to-talk keyboard (Space) + stop mic stream on unmount
