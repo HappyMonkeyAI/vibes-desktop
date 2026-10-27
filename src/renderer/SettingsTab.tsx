@@ -45,6 +45,8 @@ const SettingsTab: React.FC = () => {
   const [triageAutoSteer, setTriageAutoSteer] = useState(true);
   const [memoryEnabled, setMemoryEnabled] = useState(true);
   const [localMemory, setLocalMemory] = useState(false);
+  const [doubleCheckCompletion, setDoubleCheckCompletion] = useState(true);
+  const [adversarialAudit, setAdversarialAudit] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -113,6 +115,8 @@ const SettingsTab: React.FC = () => {
     setTriageAutoSteer(settings.triageAutoSteer !== false);
     setMemoryEnabled(settings.memoryEnabled !== false);
     setLocalMemory(Boolean(settings.localMemory));
+    setDoubleCheckCompletion(settings.doubleCheckCompletion !== false);
+    setAdversarialAudit(settings.adversarialAudit !== false);
   };
 
   const parsePositiveInt = (raw: string, fallback: number): number => {
@@ -170,6 +174,8 @@ const SettingsTab: React.FC = () => {
         triageAutoSteer,
         memoryEnabled,
         localMemory,
+        doubleCheckCompletion,
+        adversarialAudit,
       });
       if (result.ok) {
         Message.success('Settings saved.');
@@ -489,6 +495,25 @@ const SettingsTab: React.FC = () => {
                 disabled={!triageEnabled}
               />
             </div>
+          </div>
+
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Completion gates</h3>
+            <p className={styles.hint}>
+              Reliability helpers written into <code>.vibes/config.json</code> on spawn.
+            </p>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Double-check completion</span>
+              <Switch checked={doubleCheckCompletion} onChange={setDoubleCheckCompletion} size="small" />
+            </div>
+            <p className={styles.hint}>Re-verify evidence before marking a mission done.</p>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Adversarial audit</span>
+              <Switch checked={adversarialAudit} onChange={setAdversarialAudit} size="small" />
+            </div>
+            <p className={styles.hint}>
+              Final Owner-style audit pass — configure a Reviewer role endpoint or vibes may skip/fail the audit.
+            </p>
           </div>
 
           <div className={styles.section}>

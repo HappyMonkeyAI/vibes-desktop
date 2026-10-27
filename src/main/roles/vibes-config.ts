@@ -106,8 +106,8 @@ export function toVibesConfig(input: RolesConfigInput): Record<VibesConfigKey, s
     TRIAGE_BASE_URL: normalizeOpenAiBaseUrl(triage.baseUrl ?? ''),
     TRIAGE_API_KEY: triage.apiKey ?? '',
     ENABLE_REVIEWER: reviewerConfigured ? 'true' : 'false',
+    // Defaults when Runtime slice is absent; Settings → Runtime overwrites on spawn.
     ENABLE_ADVERSARIAL_AUDIT: reviewerConfigured ? 'true' : 'false',
-    // Always on: deterministic evidence re-check before mission success (Cline-style).
     ENABLE_DOUBLE_CHECK_COMPLETION: 'true',
     // Decision MCP is injected by writeVibesConfig when Settings has URL+token;
     // empty here so omitEmpty drops them from a roles-only save.
@@ -208,5 +208,7 @@ export function toVibesRuntimeConfig(runtime: VibesRuntimeSettings): Partial<Rec
     TRIAGE_AUTO_STEER: boolFlag(runtime.triageAutoSteer),
     MEMORY_ENABLED: boolFlag(runtime.memoryEnabled),
     LOCAL_MEMORY: boolFlag(runtime.localMemory),
+    ENABLE_DOUBLE_CHECK_COMPLETION: boolFlag(runtime.doubleCheckCompletion),
+    ENABLE_ADVERSARIAL_AUDIT: boolFlag(runtime.adversarialAudit),
   };
 }

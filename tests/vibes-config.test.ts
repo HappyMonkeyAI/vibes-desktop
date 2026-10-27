@@ -135,6 +135,8 @@ describe('toVibesRuntimeConfig (T56/T57)', () => {
     triageAutoSteer: false,
     memoryEnabled: true,
     localMemory: true,
+    doubleCheckCompletion: true,
+    adversarialAudit: false,
   };
 
   it('maps Settings Runtime knobs to vibes native keys', () => {
@@ -150,6 +152,8 @@ describe('toVibesRuntimeConfig (T56/T57)', () => {
       TRIAGE_AUTO_STEER: 'false',
       MEMORY_ENABLED: 'true',
       LOCAL_MEMORY: 'true',
+      ENABLE_DOUBLE_CHECK_COMPLETION: 'true',
+      ENABLE_ADVERSARIAL_AUDIT: 'false',
     });
   });
 

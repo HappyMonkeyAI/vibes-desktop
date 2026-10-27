@@ -99,6 +99,8 @@ app.whenReady().then(() => {
         triageAutoSteer: settings.triageAutoSteer,
         memoryEnabled: settings.memoryEnabled,
         localMemory: settings.localMemory,
+        doubleCheckCompletion: settings.doubleCheckCompletion,
+        adversarialAudit: settings.adversarialAudit,
       });
       writeVibesMcpJson(workspaceRoot, {
         enabled: settings.htmlDesignAdvisorEnabled,

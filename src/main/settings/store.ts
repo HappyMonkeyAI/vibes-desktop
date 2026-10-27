@@ -48,6 +48,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   triageAutoSteer: true,
   memoryEnabled: true,
   localMemory: false,
+  doubleCheckCompletion: true,
+  adversarialAudit: true,
   setupComplete: false,
 };
 
@@ -222,6 +224,8 @@ export class SettingsStore {
       triageAutoSteer: asBool(raw.triageAutoSteer, DEFAULT_SETTINGS.triageAutoSteer),
       memoryEnabled: asBool(raw.memoryEnabled, DEFAULT_SETTINGS.memoryEnabled),
       localMemory: asBool(raw.localMemory, DEFAULT_SETTINGS.localMemory),
+      doubleCheckCompletion: asBool(raw.doubleCheckCompletion, DEFAULT_SETTINGS.doubleCheckCompletion),
+      adversarialAudit: asBool(raw.adversarialAudit, DEFAULT_SETTINGS.adversarialAudit),
       // Existing installs with a vibes path are treated as already set up.
       setupComplete: asBool(
         raw.setupComplete,
@@ -316,6 +320,14 @@ export class SettingsStore {
         ),
         memoryEnabled: asBool(input.memoryEnabled ?? currentView.memoryEnabled, DEFAULT_SETTINGS.memoryEnabled),
         localMemory: asBool(input.localMemory ?? currentView.localMemory, DEFAULT_SETTINGS.localMemory),
+        doubleCheckCompletion: asBool(
+          input.doubleCheckCompletion ?? currentView.doubleCheckCompletion,
+          DEFAULT_SETTINGS.doubleCheckCompletion,
+        ),
+        adversarialAudit: asBool(
+          input.adversarialAudit ?? currentView.adversarialAudit,
+          DEFAULT_SETTINGS.adversarialAudit,
+        ),
         setupComplete: asBool(input.setupComplete ?? currentView.setupComplete, DEFAULT_SETTINGS.setupComplete),
         speechEngineMigrated: true,
       };
