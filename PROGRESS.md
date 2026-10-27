@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 — T58 closed beta 0.1.1
+
+**Done:** Bump `0.1.1`; CHANGELOG from Unreleased; [docs/BETA.md](docs/BETA.md) setup; README pointer; NSIS `dist`; tag `v0.1.1` (requires Vibes + local LLM).
+
+**Evidence:** package version; installer artifact; release notes.
+
+**Next:** Invite closed beta; live Decision smoke if not done in-cut; public packaging later.
+
+---
+
 ## 2026-10-26 — T57 Runtime II (triage + memory)
 
 **Done:** Settings → Runtime gains triage observer (`TRIAGE_ENABLED` / `INTERVAL` / `AUTO_STEER`) and memory (`MEMORY_ENABLED`, `LOCAL_MEMORY`). Same spawn write path as T56.

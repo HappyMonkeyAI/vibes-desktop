@@ -1,6 +1,6 @@
 {
   "name": "vibes-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Focused desktop app for orchestrating Vibes missions: voice input, live activity ledger, mission control UI.",
   "main": "./out/main/index.js",
