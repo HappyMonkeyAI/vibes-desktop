@@ -2,6 +2,14 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 (deps + packaging) — Audit fixes; packaged build verified
+
+**Done:** `npm audit fix` (in-range, lockfile only): electron 44.7.0 → 44.9.3 (GHSA-jr5w-w6x2-84p9, compromised eMudhra intermediates — ships with the app), undici and fast-uri patch bumps (build/test tooling only: @electron/get, node-gyp, jsdom, ajv). `npm audit`: 0 vulnerabilities.
+
+**Evidence:** unit 133 passed / 3 skipped; typecheck clean. live — `electron-builder --win --dir` → `dist/win-unpacked/Vibes Desktop.exe` driven over CDP: page served from `resources/app.asar/out/renderer/`, CSP meta present, ORT WASM loaded from inside the asar, whisper-tiny.en transcription OK, 0 jsdelivr requests. NSIS installer itself not run (would install on this machine).
+
+**Blocked:** T21 V3 live mission pass — this machine has no vibes checkout (`src/mcp/server.ts`), no `VIBES_PATH`, and no local LLM on 11434/1234/8080; app userData has never been configured here. Needs the dev machine or a configured checkout + model.
+
 ## 2026-10-27 (review) — Follow-ups T31–T33
 
 **Done:**
