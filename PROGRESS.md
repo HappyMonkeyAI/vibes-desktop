@@ -2,7 +2,15 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
-## 2026-10-27 (review) — Speech fixes from code review (T29)
+## 2026-10-27 (security) — Bundle onnxruntime WASM; renderer CSP (T30)
+
+**Done:** `voice-worker.ts` overrides Transformers.js' default `wasmPaths` (cdn.jsdelivr.net) with the asyncify WASM + factory imported as bundled assets via a `ort-dist` alias (onnxruntime-web's exports map hides `dist/`). Build-only Vite plugin injects a CSP meta into `out/renderer/index.html`; dev is unaffected (React refresh preamble + HMR). Theme boot script moved from inline to `public/theme-boot.js` so script-src stays `'self'`.
+
+**Evidence:** live — built app (`electron .`, file://) driven over CDP: page renders dark with CSP meta and no CSP violations; worker transcribed 1 s of silence with whisper-tiny.en q8 (54 s incl. first download); worker requests: HF config/weights (huggingface.co, us.aws.cdn.hf.co), ORT `.wasm`/`.mjs` from `file:///…/out/renderer/assets/`, **0 jsdelivr requests**. Unit: 118 passed / 3 skipped; typecheck clean.
+
+**Notes:** Transformers logs a harmless "Failed to cache … Request scheme 'file' is unsupported" warning (Cache API can't store file: URLs; the WASM still loads). The CSP governs the document; whether a file:-URL worker inherits it is not relied on — the `wasmPaths` override is what removes the CDN. Not yet checked inside the NSIS installer's asar.
+
+
 
 **Done:** Reviewed `f3926aa..9198904`; fixed the three critical findings. (1) `SettingsStore.migrateSpeechEngine()` runs the yapsnap→builtin move once per pre-migration file (`speechEngineMigrated` marker) — previously every launch reverted a user's yapsnap choice. (2) Server engine uploads the capture with its real extension/MIME (`utterance.webm`, `audio/webm`) instead of mislabelling webm as wav; handler names the temp file from the recorder MIME. (3) Settings key storage reuses Roles' `encryptKey`/`decryptKey` (plaintext fallback, `enc:` prefix) so a missing keyring no longer fails the whole save; unprefixed ciphertext from the previous release still reads.
 

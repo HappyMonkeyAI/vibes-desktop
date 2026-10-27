@@ -25,7 +25,8 @@ Electron desktop app (main + preload + renderer, three process types). The app i
 ## Rules (high signal)
 
 - Three process types, never mixed: `src/main/` (no DOM), `src/preload/` (contextBridge only), `src/renderer/` (no Node APIs). All cross-process traffic goes through the IPC bridge in preload.
-- Voice pipeline is strictly local: mic capture → wav file → yapsnap CLI → text. No audio ever leaves the machine; no cloud STT, no Web Speech API.
+- Voice pipeline is local by default: builtin Whisper (Transformers.js in a renderer worker; model weights download from Hugging Face on first talk), or yapsnap CLI. The optional `server` engine posts audio to a user-configured OpenAI-compatible endpoint (ADR-0002). No Web Speech API.
+- No runtime code from third-party CDNs: the onnxruntime WASM ships in the renderer bundle (`voice-worker.ts` sets `wasmPaths`), and built HTML carries a CSP (`electron.vite.config.ts` `RENDERER_CSP`; script-src 'self', remote connect only to Hugging Face). New remote hosts need a CSP change and a reason.
 - The Vibes child process gets a minimal env (allowlist of OLLAMA_*/model keys) and its own cwd = the mission workspace. Never inherit the whole app environment.
 - Activity log entries are append-only JSONL in appData; the UI reads a snapshot + subscribes to new lines. No database.
 - Per-role endpoint config (default/planner/executor/reviewer/triage, each: baseUrl/model/apiKey) mirrors `.vibes/config.json` semantics so the app and the TUI stay interchangeable.

@@ -4,8 +4,19 @@
  * and is cached afterwards (same approach as ZeroG Terminal).
  */
 import { env, pipeline, type AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
+import ortWasmUrl from 'ort-dist/ort-wasm-simd-threaded.asyncify.wasm?url';
+import ortFactoryUrl from 'ort-dist/ort-wasm-simd-threaded.asyncify.mjs?url';
 
 env.allowLocalModels = false;
+// Transformers.js defaults the onnxruntime WASM runtime to cdn.jsdelivr.net,
+// i.e. executable code fetched from a third party at runtime. Point it at the
+// copies bundled with the app (same build transformers picks by default).
+if (env.backends.onnx.wasm) {
+  env.backends.onnx.wasm.wasmPaths = {
+    wasm: new URL(ortWasmUrl, self.location.href).href,
+    mjs: new URL(ortFactoryUrl, self.location.href).href,
+  };
+}
 
 export type WorkerConfig = {
   model: string;
