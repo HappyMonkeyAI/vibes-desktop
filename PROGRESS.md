@@ -6,9 +6,9 @@ Newest first. Each entry: date, what was done, evidence, what's next, open quest
 
 **Done:** Bump `0.1.1`; CHANGELOG from Unreleased; [docs/BETA.md](docs/BETA.md) setup; README pointer; NSIS `dist`; tag `v0.1.1` (requires Vibes + local LLM).
 
-**Evidence:** package version; installer artifact; release notes.
+**Evidence:** package `0.1.1`; `dist/Vibes Desktop Setup 0.1.1.exe` (~219 MB); tag `v0.1.1`; GitHub release with installer. Decision offline tests 13/13 (+1 live skipped — no KEV env in cut session).
 
-**Next:** Invite closed beta; live Decision smoke if not done in-cut; public packaging later.
+**Next:** Invite closed beta testers; live Decision smoke when Unsloth/KEV up; public packaging later.
 
 ---
 
