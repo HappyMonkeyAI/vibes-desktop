@@ -44,6 +44,7 @@ beforeEach(() => {
     triageAutoSteer: true,
     memoryEnabled: true,
     localMemory: false,
+    setupComplete: true,
   });
 });
 

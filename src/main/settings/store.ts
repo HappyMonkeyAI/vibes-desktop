@@ -48,6 +48,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   triageAutoSteer: true,
   memoryEnabled: true,
   localMemory: false,
+  setupComplete: false,
 };
 
 function asPositiveInt(value: unknown, fallback: number): number {
@@ -194,6 +195,11 @@ export class SettingsStore {
       triageAutoSteer: asBool(raw.triageAutoSteer, DEFAULT_SETTINGS.triageAutoSteer),
       memoryEnabled: asBool(raw.memoryEnabled, DEFAULT_SETTINGS.memoryEnabled),
       localMemory: asBool(raw.localMemory, DEFAULT_SETTINGS.localMemory),
+      // Existing installs with a vibes path are treated as already set up.
+      setupComplete: asBool(
+        raw.setupComplete,
+        Boolean(asString(raw.vibesPath).trim()),
+      ),
     };
   }
 
@@ -283,6 +289,7 @@ export class SettingsStore {
         ),
         memoryEnabled: asBool(input.memoryEnabled ?? currentView.memoryEnabled, DEFAULT_SETTINGS.memoryEnabled),
         localMemory: asBool(input.localMemory ?? currentView.localMemory, DEFAULT_SETTINGS.localMemory),
+        setupComplete: asBool(input.setupComplete ?? currentView.setupComplete, DEFAULT_SETTINGS.setupComplete),
         speechEngineMigrated: true,
       };
       const dir = path.dirname(this.filePath);

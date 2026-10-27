@@ -182,6 +182,27 @@ describe('SettingsStore key storage without an OS keyring', () => {
   });
 });
 
+describe('SettingsStore.setupComplete', () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), 'vibes-settings-setup-'));
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('defaults false on a fresh file, true when vibesPath already set', () => {
+    const fresh = new SettingsStore(dir, cipher);
+    expect(fresh.get().setupComplete).toBe(false);
+    writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({ vibesPath: 'C:/vibes' }));
+    expect(new SettingsStore(dir, cipher).get().setupComplete).toBe(true);
+  });
+
+  it('persists an explicit setupComplete flag', () => {
+    const store = new SettingsStore(dir, cipher);
+    expect(store.save({ setupComplete: true })).toBe(true);
+    expect(store.get().setupComplete).toBe(true);
+  });
+});
+
 describe('SettingsStore.migrateSpeechEngine', () => {
   let dir: string;
   beforeEach(() => {
