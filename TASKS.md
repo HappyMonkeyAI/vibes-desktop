@@ -1,4 +1,4 @@
-# TASKS.md — Task Board
+﻿# TASKS.md — Task Board
 
 Status: `todo` → `doing` → `review` → `done`. One task per line; evidence links in PROGRESS.md.
 
@@ -71,6 +71,8 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T56 Settings → Runtime subpage: MAX_STEPS / concurrent / YOLO / thinking / compaction / small-model → `.vibes/config.json` on spawn ✅ 2026-10-26
 - [x] T57 Runtime II: triage observer + LOCAL_MEMORY / MEMORY_ENABLED → `.vibes/config.json` on spawn ✅ 2026-10-26
 - [x] T58 Cut closed beta **0.1.1** — CHANGELOG, BETA.md, NSIS dist, tag `v0.1.1` ✅ 2026-10-27
+- [ ] T59 Merge PR #6 → `main` after folding security/review PRs (#2–#5)
+- [x] T29b/T30b Speech migration + local ORT WASM/CSP merged into release branch ✅ 2026-10-27
 - [x] T50b Live Needs-You UI ✅ 2026-10-22 — mission `8b9c0e46` completion-gate → blocked+needsHuman; CDP clicked **Skip step**; vibes completion-gate→intervene + desktop `clearNeedsHuman` shipped. Follow-up: vibes scheduler deadlock (0/1 pending) on repeat orphan drills
 - [x] T52 Vibes scheduler deadlock ✅ 2026-10-24 — soft-requeue deleted `runningTasks` before `finally` → second start raced → stuck `in_progress`; also loop exited during `awaiting_intervention`. Fix on vibes `ag/completion-gates`; tests `scheduler-t52-requeue-race` + deps stuck-in_progress
 - [x] T53 Laya Decision probe ✅ 2026-10-24 — Unsloth `system_one` **is** Laya (`laya-english`); no second stack; native `laya_preset`/guard deferred; note `.agent/memories/codebase_insights/2026-10-24-laya-decision-probe.md`

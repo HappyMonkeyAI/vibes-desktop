@@ -1,15 +1,16 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { AppSettings, AppSettingsSaveInput, SpeechEngine } from '@shared/channels';
-import type { Cipher } from '../roles/store';
+import { ENC_PREFIX, decryptKey, encryptKey, type Cipher } from '../roles/store';
 
 /**
  * Persistent app settings (Settings tab). Stored as JSON in userData; a missing
  * or corrupt file resolves to the defaults rather than throwing — a machine that
  * has never saved settings must still boot.
  *
- * Speech-server and decision-MCP secrets are encrypted via the injected Cipher
- * (same OS safeStorage path as Roles) and never returned decrypted over IPC.
+ * Speech-server, decision-MCP, and TTS secrets are encrypted via the injected
+ * Cipher (same OS safeStorage path and plaintext fallback as Roles) and never
+ * returned decrypted over IPC.
  */
 
 const SETTINGS_FILE_NAME = 'settings.json';
@@ -63,6 +64,8 @@ type Persisted = Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken' 
   speechServerApiKeyEnc?: string;
   decisionMcpAuthTokenEnc?: string;
   ttsDaemonTokenEnc?: string;
+  /** Set once the yapsnap → builtin default migration has run for this file. */
+  speechEngineMigrated?: boolean;
 };
 
 function asString(value: unknown): string {
@@ -74,6 +77,20 @@ function asEngine(value: unknown): SpeechEngine {
   return 'builtin';
 }
 
+/** Decrypt a stored secret; tolerate enc: prefix, legacy ciphertext, or plaintext. */
+function decryptStored(cipher: Cipher | null, stored: string): string | undefined {
+  if (!stored) return undefined;
+  if (stored.startsWith(ENC_PREFIX)) {
+    return cipher ? decryptKey(cipher, stored) || undefined : undefined;
+  }
+  if (!cipher) return stored;
+  try {
+    return cipher.decrypt(stored) || undefined;
+  } catch {
+    return stored;
+  }
+}
+
 export class SettingsStore {
   private filePath: string;
   private cipher: Cipher | null;
@@ -83,152 +100,127 @@ export class SettingsStore {
     this.cipher = cipher;
   }
 
+  /** The raw persisted JSON, or null when missing/corrupt. */
+  private readRaw(): (Partial<Persisted> & Record<string, unknown>) | null {
+    try {
+      if (!existsSync(this.filePath)) return null;
+      return JSON.parse(readFileSync(this.filePath, 'utf-8')) as Partial<Persisted> & Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+
   /** Decrypted speech-server key for main-process use only — never over IPC. */
   getSpeechServerApiKey(): string | undefined {
-    try {
-      if (!existsSync(this.filePath)) return undefined;
-      const raw = JSON.parse(readFileSync(this.filePath, 'utf-8')) as Persisted;
-      const enc = asString(raw.speechServerApiKeyEnc);
-      if (!enc || !this.cipher) return undefined;
-      return this.cipher.decrypt(enc) || undefined;
-    } catch {
-      return undefined;
-    }
+    return decryptStored(this.cipher, asString(this.readRaw()?.speechServerApiKeyEnc));
   }
 
   /** Decrypted decision MCP bearer for main-process use only — never over IPC. */
   getDecisionMcpAuthToken(): string | undefined {
-    try {
-      if (!existsSync(this.filePath)) {
-        const fromEnv = (process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim();
-        return fromEnv || undefined;
-      }
-      const raw = JSON.parse(readFileSync(this.filePath, 'utf-8')) as Persisted;
-      const enc = asString(raw.decisionMcpAuthTokenEnc);
-      if (enc && this.cipher) {
-        const plain = this.cipher.decrypt(enc);
-        if (plain) return plain;
-      }
-      const fromEnv = (process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim();
-      return fromEnv || undefined;
-    } catch {
-      const fromEnv = (process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim();
-      return fromEnv || undefined;
-    }
+    const fromFile = decryptStored(this.cipher, asString(this.readRaw()?.decisionMcpAuthTokenEnc));
+    if (fromFile) return fromFile;
+    const fromEnv = (process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim();
+    return fromEnv || undefined;
   }
 
   /** Decrypted Agent Voice daemon token — never over IPC. */
   getTtsDaemonToken(): string | undefined {
-    try {
-      if (!existsSync(this.filePath)) {
-        const fromEnv = (process.env['AVT_TOKEN'] ?? '').trim();
-        return fromEnv || undefined;
-      }
-      const raw = JSON.parse(readFileSync(this.filePath, 'utf-8')) as Persisted;
-      const enc = asString(raw.ttsDaemonTokenEnc);
-      if (enc && this.cipher) {
-        const plain = this.cipher.decrypt(enc);
-        if (plain) return plain;
-      }
-      const fromEnv = (process.env['AVT_TOKEN'] ?? '').trim();
-      return fromEnv || undefined;
-    } catch {
-      const fromEnv = (process.env['AVT_TOKEN'] ?? '').trim();
-      return fromEnv || undefined;
-    }
+    const fromFile = decryptStored(this.cipher, asString(this.readRaw()?.ttsDaemonTokenEnc));
+    if (fromFile) return fromFile;
+    const fromEnv = (process.env['AVT_TOKEN'] ?? '').trim();
+    return fromEnv || undefined;
+  }
+
+  /**
+   * One-time move off the old yapsnap default to builtin Whisper. Runs only for
+   * a settings file that predates the migration marker, so a user who
+   * re-selects yapsnap afterwards keeps it across launches.
+   */
+  migrateSpeechEngine(): void {
+    const raw = this.readRaw();
+    if (!raw || raw.speechEngineMigrated === true) return;
+    this.save(raw.speechEngine === 'yapsnap' ? { speechEngine: 'builtin' } : {});
   }
 
   get(): AppSettings {
-    try {
-      if (!existsSync(this.filePath)) {
-        return {
-          ...DEFAULT_SETTINGS,
-          decisionMcpUrl: (process.env['KEV_MCP_URL'] ?? '').trim(),
-          decisionMcpHasToken: Boolean((process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim()),
-        };
-      }
-      const raw = JSON.parse(readFileSync(this.filePath, 'utf-8')) as Persisted & Record<string, unknown>;
-      const hasSpeechKey = Boolean(asString(raw.speechServerApiKeyEnc));
-      const hasDecisionToken = Boolean(asString(raw.decisionMcpAuthTokenEnc))
-        || Boolean((process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim());
-      const decisionUrl = asString(raw.decisionMcpUrl) || (process.env['KEV_MCP_URL'] ?? '').trim();
-      const hasTtsToken = Boolean(asString(raw.ttsDaemonTokenEnc))
-        || Boolean((process.env['AVT_TOKEN'] ?? '').trim());
+    const raw = this.readRaw();
+    if (!raw) {
       return {
-        vibesPath: asString(raw.vibesPath),
-        contextPath: asString(raw.contextPath),
-        memoryPath: asString(raw.memoryPath),
-        autoSave: typeof raw.autoSave === 'boolean' ? raw.autoSave : DEFAULT_SETTINGS.autoSave,
-        verboseLogging: typeof raw.verboseLogging === 'boolean' ? raw.verboseLogging : DEFAULT_SETTINGS.verboseLogging,
-        speechEngine: asEngine(raw.speechEngine),
-        speechModel: asString(raw.speechModel) || DEFAULT_SETTINGS.speechModel,
-        speechPrecision: asString(raw.speechPrecision) || DEFAULT_SETTINGS.speechPrecision,
-        speechLang: asString(raw.speechLang) || DEFAULT_SETTINGS.speechLang,
-        speechServerUrl: asString(raw.speechServerUrl) || DEFAULT_SETTINGS.speechServerUrl,
-        speechServerModel: asString(raw.speechServerModel) || DEFAULT_SETTINGS.speechServerModel,
-        speechServerHasKey: hasSpeechKey,
-        decisionMcpUrl: decisionUrl,
-        decisionMcpHasToken: hasDecisionToken,
-        ttsAnnounceEnabled: typeof raw.ttsAnnounceEnabled === 'boolean'
-          ? raw.ttsAnnounceEnabled
-          : DEFAULT_SETTINGS.ttsAnnounceEnabled,
-        ttsDaemonUrl: asString(raw.ttsDaemonUrl) || DEFAULT_SETTINGS.ttsDaemonUrl,
-        ttsDaemonHasToken: hasTtsToken,
-        htmlDesignAdvisorEnabled: typeof raw.htmlDesignAdvisorEnabled === 'boolean'
-          ? raw.htmlDesignAdvisorEnabled
-          : DEFAULT_SETTINGS.htmlDesignAdvisorEnabled,
-        htmlDesignAdvisorPython: asString(raw.htmlDesignAdvisorPython)
-          || DEFAULT_SETTINGS.htmlDesignAdvisorPython,
-        htmlDesignAdvisorWorkspace: asString(raw.htmlDesignAdvisorWorkspace),
-        maxSteps: asPositiveInt(raw.maxSteps, DEFAULT_SETTINGS.maxSteps),
-        maxConcurrentTasks: asPositiveInt(raw.maxConcurrentTasks, DEFAULT_SETTINGS.maxConcurrentTasks),
-        yoloMode: asBool(raw.yoloMode, DEFAULT_SETTINGS.yoloMode),
-        thinkingMode: asBool(raw.thinkingMode, DEFAULT_SETTINGS.thinkingMode),
-        contextCompactionEnabled: asBool(raw.contextCompactionEnabled, DEFAULT_SETTINGS.contextCompactionEnabled),
-        smallModelProfile: asBool(raw.smallModelProfile, DEFAULT_SETTINGS.smallModelProfile),
-        triageEnabled: asBool(raw.triageEnabled, DEFAULT_SETTINGS.triageEnabled),
-        triageInterval: asPositiveInt(raw.triageInterval, DEFAULT_SETTINGS.triageInterval),
-        triageAutoSteer: asBool(raw.triageAutoSteer, DEFAULT_SETTINGS.triageAutoSteer),
-        memoryEnabled: asBool(raw.memoryEnabled, DEFAULT_SETTINGS.memoryEnabled),
-        localMemory: asBool(raw.localMemory, DEFAULT_SETTINGS.localMemory),
+        ...DEFAULT_SETTINGS,
+        decisionMcpUrl: (process.env['KEV_MCP_URL'] ?? '').trim(),
+        decisionMcpHasToken: Boolean((process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim()),
       };
-    } catch {
-      return { ...DEFAULT_SETTINGS };
     }
+    const hasSpeechKey = Boolean(asString(raw.speechServerApiKeyEnc));
+    const hasDecisionToken = Boolean(asString(raw.decisionMcpAuthTokenEnc))
+      || Boolean((process.env['KEV_MCP_AUTH_TOKEN'] ?? '').trim());
+    const decisionUrl = asString(raw.decisionMcpUrl) || (process.env['KEV_MCP_URL'] ?? '').trim();
+    const hasTtsToken = Boolean(asString(raw.ttsDaemonTokenEnc))
+      || Boolean((process.env['AVT_TOKEN'] ?? '').trim());
+    return {
+      vibesPath: asString(raw.vibesPath),
+      contextPath: asString(raw.contextPath),
+      memoryPath: asString(raw.memoryPath),
+      autoSave: typeof raw.autoSave === 'boolean' ? raw.autoSave : DEFAULT_SETTINGS.autoSave,
+      verboseLogging: typeof raw.verboseLogging === 'boolean' ? raw.verboseLogging : DEFAULT_SETTINGS.verboseLogging,
+      speechEngine: asEngine(raw.speechEngine),
+      speechModel: asString(raw.speechModel) || DEFAULT_SETTINGS.speechModel,
+      speechPrecision: asString(raw.speechPrecision) || DEFAULT_SETTINGS.speechPrecision,
+      speechLang: asString(raw.speechLang) || DEFAULT_SETTINGS.speechLang,
+      speechServerUrl: asString(raw.speechServerUrl) || DEFAULT_SETTINGS.speechServerUrl,
+      speechServerModel: asString(raw.speechServerModel) || DEFAULT_SETTINGS.speechServerModel,
+      speechServerHasKey: hasSpeechKey,
+      decisionMcpUrl: decisionUrl,
+      decisionMcpHasToken: hasDecisionToken,
+      ttsAnnounceEnabled: typeof raw.ttsAnnounceEnabled === 'boolean'
+        ? raw.ttsAnnounceEnabled
+        : DEFAULT_SETTINGS.ttsAnnounceEnabled,
+      ttsDaemonUrl: asString(raw.ttsDaemonUrl) || DEFAULT_SETTINGS.ttsDaemonUrl,
+      ttsDaemonHasToken: hasTtsToken,
+      htmlDesignAdvisorEnabled: typeof raw.htmlDesignAdvisorEnabled === 'boolean'
+        ? raw.htmlDesignAdvisorEnabled
+        : DEFAULT_SETTINGS.htmlDesignAdvisorEnabled,
+      htmlDesignAdvisorPython: asString(raw.htmlDesignAdvisorPython)
+        || DEFAULT_SETTINGS.htmlDesignAdvisorPython,
+      htmlDesignAdvisorWorkspace: asString(raw.htmlDesignAdvisorWorkspace),
+      maxSteps: asPositiveInt(raw.maxSteps, DEFAULT_SETTINGS.maxSteps),
+      maxConcurrentTasks: asPositiveInt(raw.maxConcurrentTasks, DEFAULT_SETTINGS.maxConcurrentTasks),
+      yoloMode: asBool(raw.yoloMode, DEFAULT_SETTINGS.yoloMode),
+      thinkingMode: asBool(raw.thinkingMode, DEFAULT_SETTINGS.thinkingMode),
+      contextCompactionEnabled: asBool(raw.contextCompactionEnabled, DEFAULT_SETTINGS.contextCompactionEnabled),
+      smallModelProfile: asBool(raw.smallModelProfile, DEFAULT_SETTINGS.smallModelProfile),
+      triageEnabled: asBool(raw.triageEnabled, DEFAULT_SETTINGS.triageEnabled),
+      triageInterval: asPositiveInt(raw.triageInterval, DEFAULT_SETTINGS.triageInterval),
+      triageAutoSteer: asBool(raw.triageAutoSteer, DEFAULT_SETTINGS.triageAutoSteer),
+      memoryEnabled: asBool(raw.memoryEnabled, DEFAULT_SETTINGS.memoryEnabled),
+      localMemory: asBool(raw.localMemory, DEFAULT_SETTINGS.localMemory),
+    };
   }
 
   save(input: AppSettingsSaveInput): boolean {
     try {
       const currentView = this.get();
-      let existingSpeechEnc = '';
-      let existingDecisionEnc = '';
-      let existingTtsEnc = '';
-      try {
-        if (existsSync(this.filePath)) {
-          const raw = JSON.parse(readFileSync(this.filePath, 'utf-8')) as Persisted;
-          existingSpeechEnc = asString(raw.speechServerApiKeyEnc);
-          existingDecisionEnc = asString(raw.decisionMcpAuthTokenEnc);
-          existingTtsEnc = asString(raw.ttsDaemonTokenEnc);
-        }
-      } catch {
-        existingSpeechEnc = '';
-        existingDecisionEnc = '';
-        existingTtsEnc = '';
+      const existing = this.readRaw();
+
+      let nextSpeechEnc = asString(existing?.speechServerApiKeyEnc);
+      if (typeof input.speechServerApiKey === 'string' && input.speechServerApiKey.length > 0) {
+        nextSpeechEnc = this.cipher
+          ? encryptKey(this.cipher, input.speechServerApiKey)
+          : input.speechServerApiKey;
       }
 
-      let nextSpeechEnc = existingSpeechEnc;
-      if (typeof input.speechServerApiKey === 'string' && input.speechServerApiKey.length > 0 && this.cipher) {
-        nextSpeechEnc = this.cipher.encrypt(input.speechServerApiKey);
+      let nextDecisionEnc = asString(existing?.decisionMcpAuthTokenEnc);
+      if (typeof input.decisionMcpAuthToken === 'string' && input.decisionMcpAuthToken.length > 0) {
+        nextDecisionEnc = this.cipher
+          ? encryptKey(this.cipher, input.decisionMcpAuthToken)
+          : input.decisionMcpAuthToken;
       }
 
-      let nextDecisionEnc = existingDecisionEnc;
-      if (typeof input.decisionMcpAuthToken === 'string' && input.decisionMcpAuthToken.length > 0 && this.cipher) {
-        nextDecisionEnc = this.cipher.encrypt(input.decisionMcpAuthToken);
-      }
-
-      let nextTtsEnc = existingTtsEnc;
-      if (typeof input.ttsDaemonToken === 'string' && input.ttsDaemonToken.length > 0 && this.cipher) {
-        nextTtsEnc = this.cipher.encrypt(input.ttsDaemonToken);
+      let nextTtsEnc = asString(existing?.ttsDaemonTokenEnc);
+      if (typeof input.ttsDaemonToken === 'string' && input.ttsDaemonToken.length > 0) {
+        nextTtsEnc = this.cipher
+          ? encryptKey(this.cipher, input.ttsDaemonToken)
+          : input.ttsDaemonToken;
       }
 
       const nextEngine = input.speechEngine === 'server' || input.speechEngine === 'yapsnap' || input.speechEngine === 'builtin'
@@ -289,6 +281,7 @@ export class SettingsStore {
         ),
         memoryEnabled: asBool(input.memoryEnabled ?? currentView.memoryEnabled, DEFAULT_SETTINGS.memoryEnabled),
         localMemory: asBool(input.localMemory ?? currentView.localMemory, DEFAULT_SETTINGS.localMemory),
+        speechEngineMigrated: true,
       };
       const dir = path.dirname(this.filePath);
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });

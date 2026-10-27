@@ -1,6 +1,16 @@
-# PROGRESS.md — Session Log
+﻿# PROGRESS.md — Session Log
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
+
+## 2026-10-27 — Merge security #2/#3 into release (toward PR #6)
+
+**Done:** Opened [PR #6](https://github.com/SPhillips1337/vibes-desktop/pull/6) (`cursor/decision-retry-research-links` → `main`). Merged `ag/t30-local-ort-wasm` (local ORT WASM + CSP + speech migration/keyring fallback) into the release branch; resolved settings store + docs conflicts.
+
+**Evidence:** conflict-free tree; settings/voice tests pending green.
+
+**Next:** Fold #4/#5 (T31–T33 + deps audit); CI green; merge #6 to `main`.
+
+---
 
 ## 2026-10-27 — T58 closed beta 0.1.1
 

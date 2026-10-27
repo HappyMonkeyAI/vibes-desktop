@@ -10,19 +10,7 @@
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      // Synchronous before first paint: dark Mission Control is default (DESIGN.md /
-      // Stitch). Honor a stored preference when present.
-      (function () {
-        var mode = 'dark';
-        try {
-          var stored = localStorage.getItem('vibes-theme');
-          if (stored === 'light' || stored === 'dark') mode = stored;
-        } catch (e) {}
-        document.documentElement.setAttribute('data-theme', mode);
-        document.documentElement.setAttribute('arco-theme', mode);
-      })();
-    </script>
+    <script src="./theme-boot.js"></script>
     <script type="module" src="./main.tsx"></script>
   </body>
 </html>

@@ -56,14 +56,10 @@ app.whenReady().then(() => {
   const workspaceHistoryStore = new WorkspaceHistoryStore(app.getPath('userData'));
   // App settings (Settings tab) — speech-server key uses the same OS cipher as Roles.
   const settingsStore = new SettingsStore(app.getPath('userData'), makeSafeCipher());
-  // Soft-migrate: previous default was yapsnap CLI; builtin Whisper downloads on
-  // first talk (ZeroG-style) and does not require pip. Users can re-select yapsnap.
-  {
-    const current = settingsStore.get();
-    if (current.speechEngine === 'yapsnap') {
-      settingsStore.save({ speechEngine: 'builtin' });
-    }
-  }
+  // One-time soft-migrate: previous default was yapsnap CLI; builtin Whisper
+  // downloads on first talk (ZeroG-style) and does not require pip. A user who
+  // re-selects yapsnap afterwards keeps it (the store records the migration).
+  settingsStore.migrateSpeechEngine();
   // T13/T14 — mission lifecycle. The bridge factory writes the native config before
   // each spawn so a child always reads the per-role endpoints we just saved.
   // writeVibesConfig itself refuses non-absolute roots, so a bad value can never
