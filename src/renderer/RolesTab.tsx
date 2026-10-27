@@ -6,9 +6,10 @@ import styles from './RolesTab.module.css';
 
 /**
  * T7 — per-role endpoint configuration. Five forms (default / planner / executor /
- * reviewer / triage), each with base URL, model, and an API key field that only
- * appears when a key is stored for that role. A saved key never round-trips: the
- * view carries a presence flag, and an empty submitted key means "keep what's stored".
+ * reviewer / triage), each with base URL, model, context window, and an API key
+ * field. A saved key never round-trips: the view carries a presence flag, and an
+ * empty submitted key means "keep what's stored". Context window maps to vibes'
+ * global CONTEXT_WINDOW (executor wins over default).
  */
 
 const ROLE_LABELS: Record<RoleKey, string> = {
@@ -29,15 +30,27 @@ const ROLE_COLORS: Record<RoleKey, string> = {
   triage: '#ff9f43',
 };
 
-type RoleDraft = { baseUrl: string; model: string; apiKey: string; hasKey: boolean };
+type RoleDraft = { baseUrl: string; model: string; contextWindow: string; apiKey: string; hasKey: boolean };
 type Draft = Record<RoleKey, RoleDraft>;
+type RoleFieldKey = 'baseUrl' | 'model' | 'contextWindow' | 'apiKey';
 
 function toDraft(view: RolesConfigView): Draft {
   const draft = {} as Draft;
   for (const role of ROLE_KEYS) {
-    draft[role] = { baseUrl: view[role].baseUrl, model: view[role].model, apiKey: '', hasKey: view[role].hasKey };
+    draft[role] = {
+      baseUrl: view[role].baseUrl,
+      model: view[role].model,
+      contextWindow: view[role].contextWindow ?? '',
+      apiKey: '',
+      hasKey: view[role].hasKey,
+    };
   }
   return draft;
+}
+
+/** Allow digits and light separators while typing; persist path normalizes. */
+function sanitizeContextWindowInput(value: string): string {
+  return value.replace(/[^\d_\s,]/g, '');
 }
 
 type RoleFieldsProps = {
@@ -45,10 +58,10 @@ type RoleFieldsProps = {
   draft: RoleDraft;
   inputSize: 'small' | 'default';
   fieldsClassName: string;
-  onChange: (field: 'baseUrl' | 'model' | 'apiKey', value: string) => void;
+  onChange: (field: RoleFieldKey, value: string) => void;
 };
 
-const RoleFields: React.FC<RoleFieldsProps> = ({ draft, inputSize, fieldsClassName, onChange }) => (
+const RoleFields: React.FC<RoleFieldsProps> = ({ role, draft, inputSize, fieldsClassName, onChange }) => (
   <div className={fieldsClassName}>
     <div className={styles.field}>
       <label className={styles.label}>Base URL</label>
@@ -67,6 +80,23 @@ const RoleFields: React.FC<RoleFieldsProps> = ({ draft, inputSize, fieldsClassNa
         onChange={(v) => onChange('model', v)}
         size={inputSize}
       />
+    </div>
+    <div className={styles.field}>
+      <label className={styles.label}>
+        Context window <span className={styles.labelHint}>(tokens)</span>
+      </label>
+      <Input
+        placeholder="32768"
+        value={draft.contextWindow}
+        onChange={(v) => onChange('contextWindow', sanitizeContextWindowInput(v))}
+        size={inputSize}
+        inputMode="numeric"
+      />
+      {(role === 'planner' || role === 'reviewer' || role === 'triage') && (
+        <span className={styles.fieldHint}>
+          Stored per role; vibes runtime budget uses Default / Executor.
+        </span>
+      )}
     </div>
     <div className={`${styles.field} ${styles.fieldFull}`}>
       <label className={styles.label}>
@@ -107,7 +137,7 @@ const RolesTab: React.FC = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const updateField = useCallback((role: RoleKey, field: 'baseUrl' | 'model' | 'apiKey', value: string) => {
+  const updateField = useCallback((role: RoleKey, field: RoleFieldKey, value: string) => {
     setDraft((prev) => (prev ? { ...prev, [role]: { ...prev[role], [field]: value } } : prev));
   }, []);
 
@@ -139,7 +169,12 @@ const RolesTab: React.FC = () => {
     try {
       const input = {} as Record<RoleKey, RoleEndpointInput>;
       for (const role of ROLE_KEYS) {
-        input[role] = { baseUrl: draft[role].baseUrl, model: draft[role].model, apiKey: draft[role].apiKey };
+        input[role] = {
+          baseUrl: draft[role].baseUrl,
+          model: draft[role].model,
+          contextWindow: draft[role].contextWindow,
+          apiKey: draft[role].apiKey,
+        };
       }
       const res = await window.vibesDesktop.roles.save(input);
       if (res.ok) {
@@ -177,7 +212,8 @@ const RolesTab: React.FC = () => {
       <div className={styles.header}>
         <h2 className={styles.title}>Role Endpoints</h2>
         <p className={styles.subtitle}>
-          Configure the base URL, model, and API key for each role. The executor runs on the default endpoint.
+          Configure the base URL, model, context window, and API key for each role. The executor runs on the
+          default endpoint; its context window (or Default&apos;s) becomes vibes&apos; CONTEXT_WINDOW.
           Use the expand control on a card for a larger editor on small screens.
         </p>
       </div>

@@ -16,10 +16,17 @@ const PLAN_OK = JSON.stringify([{ id: 1, name: 'Write code', status: 'pending' }
 const EXEC_OK = 'Mission completed. Completed 1/1 tasks.';
 
 /** A fake bridge that streams task-status events and resolves execution on demand. */
-function makeFakeBridge(opts: { planError?: Error; execError?: Error; planResponse?: string; execResponse?: string; stream?: Array<{ name: string; status: 'in-progress' | 'complete' | 'failed' }> } = {}) {
+function makeFakeBridge(opts: {
+  planError?: Error;
+  execError?: Error;
+  planResponse?: string;
+  execResponse?: string;
+  stream?: Array<{ name: string; status: 'in-progress' | 'complete' | 'failed' | 'intervention'; detail?: string }>;
+} = {}) {
   const ee = new EventEmitter();
   let started = false;
   let stopped = false;
+  const interventions: Array<{ action: string; message?: string }> = [];
   return {
     on: (event: string, cb: (event?: unknown) => void) => {
       ee.on(event, cb);
@@ -39,10 +46,15 @@ function makeFakeBridge(opts: { planError?: Error; execError?: Error; planRespon
       if (opts.execError) throw opts.execError;
       return opts.execResponse ?? EXEC_OK;
     },
+    resolveIntervention: async (action: string, message?: string) => {
+      interventions.push({ action, message });
+      return `resolved:${action}`;
+    },
     stop: async () => {
       stopped = true;
     },
-    _state: () => ({ started, stopped }),
+    _state: () => ({ started, stopped, interventions }),
+    _emit: (event: string, payload: unknown) => ee.emit(event, payload),
   };
 }
 
@@ -77,6 +89,31 @@ describe('MissionService (T13/T14)', () => {
     const missionRow = snap.entries.find((e) => e.title === 'Build a thing')!;
     expect(missionRow.status).toBe('done'); // child reported Mission completed. Completed 1/1
     expect(missionRow.detail).toContain('Mission completed');
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('closes a seeded plan step the completed mission never reported as idle, not pending', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const service = createMissionService({
+      store,
+      createBridge: () =>
+        makeFakeBridge({
+          planResponse: JSON.stringify([
+            { id: 1, name: 'Write code', status: 'pending' },
+            { id: 2, name: 'Write docs', status: 'pending' },
+          ]),
+          stream: [{ name: 'Write code', status: 'complete' }],
+        }),
+    });
+
+    await service.startMission({ request: 'Build a thing', workspaceRoot: dir });
+    await new Promise((r) => setTimeout(r, 30)); // allow background execution to finish
+
+    const snap = await store.snapshot();
+    expect(snap.entries.find((e) => e.title === 'Write code')!.status).toBe('done');
+    expect(snap.entries.find((e) => e.title === 'Write docs')!.status).toBe('idle');
+    expect(snap.entries.find((e) => e.title === 'Build a thing')!.status).toBe('done');
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -344,6 +381,57 @@ describe('MissionService (T13/T14)', () => {
     const row = snap.entries.find((e) => e.title === 'Lost plan')!;
     expect(row.status).toBe('failed');
     expect(row.detail).toContain('No mission has been planned');
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('T50 — intervention TASK_STATUS → Needs You; resolveIntervention clears needsHuman', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    let resolveExec: (v: string) => void = () => undefined;
+    const execGate = new Promise<string>((r) => (resolveExec = r));
+    let bridge: ReturnType<typeof makeFakeBridge>;
+    const service = createMissionService({
+      store,
+      createBridge: () => {
+        bridge = makeFakeBridge();
+        bridge.executePlanned = () => execGate;
+        return bridge;
+      },
+    });
+
+    const started = await service.startMission({ request: 'Needs You fixture', workspaceRoot: dir });
+    expect(started.started).toBe(true);
+    await new Promise((r) => setTimeout(r, 30));
+
+    bridge!._emit('task-status', {
+      name: 'Fix CSS orphan',
+      status: 'intervention',
+      detail: 'Escalate: css_orphan — retry or skip?',
+    });
+    await new Promise((r) => setTimeout(r, 40));
+
+    let snap = await store.snapshot();
+    const mission = snap.entries.find((e) => e.title === 'Needs You fixture')!;
+    expect(mission.status).toBe('blocked');
+    expect(mission.needsHuman).toBe(true);
+    expect(mission.detail).toContain('css_orphan');
+    const task = snap.entries.find((e) => e.title === 'Fix CSS orphan')!;
+    expect(task.needsHuman).toBe(true);
+
+    const resolved = await service.resolveIntervention({ action: 'skip' });
+    expect(resolved.ok).toBe(true);
+    expect(bridge!._state().interventions).toEqual([{ action: 'skip', message: undefined }]);
+
+    snap = await store.snapshot();
+    const after = snap.entries.find((e) => e.title === 'Needs You fixture')!;
+    expect(after.needsHuman).toBeFalsy();
+    expect(after.status).toBe('running');
+    expect(after.detail).toContain('Intervention: skip');
+    const taskAfter = snap.entries.find((e) => e.title === 'Fix CSS orphan')!;
+    expect(taskAfter.needsHuman).toBeFalsy();
+
+    resolveExec(EXEC_OK);
+    await new Promise((r) => setTimeout(r, 40));
     rmSync(dir, { recursive: true, force: true });
   });
 });

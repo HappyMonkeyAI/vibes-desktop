@@ -63,6 +63,11 @@ export const ROLE_KEYS: readonly RoleKey[] = ['default', 'planner', 'executor', 
 export interface RoleEndpoint {
   baseUrl: string;
   model: string;
+  /**
+   * Token budget for this role's model (maps to vibes `CONTEXT_WINDOW` for the
+   * runtime endpoint — executor wins over default). Empty = unset.
+   */
+  contextWindow: string;
   /** Decrypted key never crosses IPC; presence only. */
   hasKey: boolean;
 }
@@ -72,6 +77,8 @@ export type RolesConfigView = Record<RoleKey, RoleEndpoint>;
 export interface RoleEndpointInput {
   baseUrl: string;
   model: string;
+  /** Token budget string (digits); empty means unset / omit from vibes write. */
+  contextWindow?: string;
   apiKey?: string;
 }
 export type RolesConfigInput = Record<RoleKey, RoleEndpointInput>;
@@ -123,12 +130,25 @@ export interface MissionStartRequest {
   /** When true, execute the plan already reviewed by the user (kept alive by mission:plan)
    *  instead of planning again. Falls back to a fresh plan when no pending plan matches. */
   acceptPlan?: boolean;
+  /** When a mission is already running, enqueue this request (crash-safe FIFO) instead of rejecting. */
+  enqueueIfBusy?: boolean;
 }
 export interface MissionStartResult {
   started: boolean;
   alreadyRunning: boolean;
   /** Present when the start was rejected or failed for a reason the user can act on. */
   error?: string;
+  /** Minted when start succeeds — Chat / depth panels bind ledger rows to this id. */
+  missionId?: string;
+  /** True when enqueueIfBusy parked the request behind the active mission. */
+  queued?: boolean;
+  queueId?: string;
+  queueDepth?: number;
+}
+
+export interface MissionQueueSnapshot {
+  paused: boolean;
+  items: Array<{ id: string; request: string; workspaceRoot: string; createdAt: number }>;
 }
 
 /** Mission plan response from the planner API. */
@@ -186,12 +206,84 @@ export interface AppSettings {
   speechServerModel: string;
   /** True when an API key is stored for the speech server (never returned decrypted). */
   speechServerHasKey: boolean;
+  /**
+   * Streamable-HTTP MCP URL for a KEV-compatible decision server
+   * (e.g. http://192.168.5.157:8765/mcp). Empty = decision model off.
+   */
+  decisionMcpUrl: string;
+  /** True when a bearer token is stored for the decision MCP (never returned decrypted). */
+  decisionMcpHasToken: boolean;
+  /** T24 — announce mission done/failed via Agent Voice daemon. */
+  ttsAnnounceEnabled: boolean;
+  /** Daemon base URL (no path), e.g. http://127.0.0.1:4100 */
+  ttsDaemonUrl: string;
+  /** True when an AVT_TOKEN is stored (never returned decrypted). */
+  ttsDaemonHasToken: boolean;
+  /**
+   * When true, mission spawn merges `html-design-advisor` into workspace
+   * `.vibes/mcp.json` (stdio: python -m html_design_advisor).
+   */
+  htmlDesignAdvisorEnabled: boolean;
+  /** Python executable for the advisor (default `python`). */
+  htmlDesignAdvisorPython: string;
+  /** Optional HTML_DESIGN_ADVISOR_WORKSPACE (ui-design catalog root). */
+  htmlDesignAdvisorWorkspace: string;
+  /**
+   * Mission runtime knobs → workspace `.vibes/config.json` on spawn (Settings → Runtime).
+   * Defaults match vibes ConfigSchema.
+   */
+  maxSteps: number;
+  maxConcurrentTasks: number;
+  yoloMode: boolean;
+  thinkingMode: boolean;
+  contextCompactionEnabled: boolean;
+  smallModelProfile: boolean;
+  /** Observer that watches task progress (needs Triage role endpoint for full effect). */
+  triageEnabled: boolean;
+  /** Run triage every N completed tasks. */
+  triageInterval: number;
+  triageAutoSteer: boolean;
+  memoryEnabled: boolean;
+  /** Prefer local JSONL memory over remote mem0. */
+  localMemory: boolean;
 }
 
-/** Partial save payload — empty speechServerApiKey means keep the stored key. */
-export type AppSettingsSaveInput = Partial<Omit<AppSettings, 'speechServerHasKey'>> & {
+/** Slice of AppSettings written into vibes native keys on mission spawn. */
+export type VibesRuntimeSettings = Pick<
+  AppSettings,
+  | 'maxSteps'
+  | 'maxConcurrentTasks'
+  | 'yoloMode'
+  | 'thinkingMode'
+  | 'contextCompactionEnabled'
+  | 'smallModelProfile'
+  | 'triageEnabled'
+  | 'triageInterval'
+  | 'triageAutoSteer'
+  | 'memoryEnabled'
+  | 'localMemory'
+>;
+
+/** Partial save — empty *ApiKey/*AuthToken keep stored secrets; clearSpeechServerApiKey removes it. */
+export type AppSettingsSaveInput = Partial<Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken' | 'ttsDaemonHasToken'>> & {
   speechServerApiKey?: string;
+  clearSpeechServerApiKey?: boolean;
+  /** Bearer for decision MCP; empty string omitted = keep stored. */
+  decisionMcpAuthToken?: string;
+  /** Bearer for Agent Voice daemon; empty = keep stored. */
+  ttsDaemonToken?: string;
 };
+
+/** Main-process view of an optional decision MCP endpoint. */
+export type DecisionMcpConfig = {
+  url: string;
+  token: string;
+};
+
+/** True when Settings (or env fallback) has both a URL and a token. */
+export function isDecisionModelConfigured(settings: Pick<AppSettings, 'decisionMcpUrl' | 'decisionMcpHasToken'>): boolean {
+  return Boolean(settings.decisionMcpUrl.trim() && settings.decisionMcpHasToken);
+}
 
 /** Result of warming / pre-fetching the local yapsnap model cache. */
 export interface VoiceWarmResult {
@@ -204,6 +296,13 @@ export interface VoiceWarmResult {
 export interface VoiceServerTestResult {
   ok: boolean;
   error?: string;
+}
+
+/** Probe result for the optional decision MCP (KEV / GUTSY). */
+export interface DecisionProbeResult {
+  ok: boolean;
+  error?: string;
+  detail?: string;
 }
 
 /** Wire shape for the `ledger:new-entry` push event (main → renderer). */
@@ -224,6 +323,9 @@ export const channels = {
   missionStop: 'mission:stop',
   missionPlan: 'mission:plan',
   missionCancelPlan: 'mission:cancel-plan',
+  missionQueueGet: 'mission:queue-get',
+  missionQueuePause: 'mission:queue-pause',
+  missionQueueClear: 'mission:queue-clear',
   workspaceSelect: 'workspace:select',
   workspaceHistorySave: 'workspace:history:save',
   workspaceHistoryGet: 'workspace:history:get',
@@ -231,6 +333,34 @@ export const channels = {
   ledgerArchive: 'ledger:archive',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
+  decisionTest: 'decision:test',
+  /** T35 — latest Harness²-lite lesson for a workspace (`.vibes/harness-lesson.json`). */
+  harnessLessonGet: 'harness:lesson-get',
+  /** T24 — probe/post a test announcement to the Agent Voice daemon. */
+  voiceAnnounceTest: 'voice:announce-test',
+  /** Chat phase 2 — inject mid-run steering into the active mission. */
+  missionSteer: 'mission:steer',
+  /** Needs-You — resolve pending vibes intervention (retry/skip/fail/reply). */
+  missionResolveIntervention: 'mission:resolve-intervention',
 } as const;
+
+export type VoiceAnnounceTestResult = { ok: boolean; error?: string; id?: string };
+export type MissionSteerRequest = { message: string };
+export type MissionSteerResult = { ok: boolean; error?: string };
+export type MissionInterventionAction = 'retry' | 'skip' | 'fail' | 'reply';
+export type MissionResolveInterventionRequest = {
+  action: MissionInterventionAction;
+  message?: string;
+};
+export type MissionResolveInterventionResult = { ok: boolean; error?: string };
+
+export type HarnessLessonView = {
+  lesson: string;
+  missionTitle: string;
+  at: number;
+  helped?: string;
+  failed?: string;
+  harnessClass?: string | null;
+} | null;
 
 export type ChannelName = (typeof channels)[keyof typeof channels];

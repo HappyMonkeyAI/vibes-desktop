@@ -10,9 +10,10 @@ Electron desktop app (main + preload + renderer, three process types). The app i
 | UI | React 19 + Arco Design (`@arco-design/web-react`) + UnoCSS | Ported from wayland-fork mission-control page |
 | Build | Vite (renderer) + tsc (main/preload) | Bun optional for dev speed |
 | Realtime | Electron IPC (contextBridge), no socket.io | Single local user, no server |
-| Agent runtime | `vibes` MCP server (`npx vibes-tui mcp-server` or a checkout's `npm run mcp-server`) | Spawned per mission; JSON-RPC over stdio |
-| Voice input | yapsnap CLI (sherpa-onnx, CPU-only) | Mic → wav → text; offline after first model fetch |
-| Config storage | electron-store (JSON) in appData | Per-role endpoints mirror `.vibes/config.json` keys |
+| Agent runtime | `vibes` MCP server (checkout via Settings `vibesPath` / `VIBES_PATH`, or packaged path) | Spawned **per mission** via tsx on `src/mcp/server.ts`; JSON-RPC over stdio |
+| Voice input | Builtin Whisper ONNX (default); optional OpenAI-compatible ASR server; yapsnap legacy | Hold-to-talk; see ADR-0002 |
+| Decision (optional) | Settings `decisionMcpUrl` + encrypted bearer | On only when both set; probe IPC; **not yet** wired into mission tool calls (T26) |
+| Config storage | JSON in appData (+ safeStorage for secrets) | Per-role endpoints mirror `.vibes/config.json` keys |
 
 ## Architecture decisions
 
@@ -25,7 +26,9 @@ Electron desktop app (main + preload + renderer, three process types). The app i
 ## Rules (high signal)
 
 - Three process types, never mixed: `src/main/` (no DOM), `src/preload/` (contextBridge only), `src/renderer/` (no Node APIs). All cross-process traffic goes through the IPC bridge in preload.
-- Voice pipeline is strictly local: mic capture → wav file → yapsnap CLI → text. No audio ever leaves the machine; no cloud STT, no Web Speech API.
+- Voice pipeline is local by default: builtin Whisper (Transformers.js in a renderer worker; model weights download from Hugging Face on first talk), or yapsnap CLI. The optional `server` engine posts audio to a user-configured OpenAI-compatible endpoint (ADR-0002). No Web Speech API.
+- No runtime code from third-party CDNs: the onnxruntime WASM ships in the renderer bundle (`voice-worker.ts` sets `wasmPaths`), and built HTML carries a CSP (`electron.vite.config.ts` `RENDERER_CSP`; script-src 'self', remote connect only to Hugging Face). New remote hosts need a CSP change and a reason.
+- Scheduler ghost-done: evidence handoff must requeue (not leave `done` without `completedTasks`). Live checkout is whatever Settings/`VIBES_PATH` points at — keep that tree in sync with `local-ai-planner` scheduler fixes.
 - The Vibes child process gets a minimal env (allowlist of OLLAMA_*/model keys) and its own cwd = the mission workspace. Never inherit the whole app environment.
 - Activity log entries are append-only JSONL in appData; the UI reads a snapshot + subscribes to new lines. No database.
 - Per-role endpoint config (default/planner/executor/reviewer/triage, each: baseUrl/model/apiKey) mirrors `.vibes/config.json` semantics so the app and the TUI stay interchangeable.

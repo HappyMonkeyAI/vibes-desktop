@@ -343,9 +343,38 @@
   color: var(--text-dim);
 }
 
+.cardFooter {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
 .missionDate {
   font-size: 10px;
   color: var(--text-dim);
+}
+
+.missionId {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.depthMetaId {
+  grid-column: 1 / -1;
+}
+
+.missionIdFull {
+  display: block;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  user-select: all;
+  word-break: break-all;
 }
 
 /* ---- Depth panel ---- */
@@ -407,6 +436,37 @@
   display: flex;
   gap: 8px;
   margin-left: auto;
+}
+
+.interveneBanner {
+  margin: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid color-mix(in srgb, #fb7185 40%, var(--color-border-1));
+  background: color-mix(in srgb, #fb7185 10%, var(--surface-row));
+  flex-shrink: 0;
+}
+
+.interveneTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fb7185;
+  margin-bottom: 6px;
+}
+
+.interveneBody {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.interveneActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .depthStatus {

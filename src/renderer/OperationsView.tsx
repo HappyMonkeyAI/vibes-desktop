@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { ActivityGroup, LedgerEntry, LedgerSnapshot, WorkspaceHistoryEntry } from '@shared/channels';
 import { classify } from '@shared/classify';
+import { formatHarnessLessonForRetry } from '@shared/harnessLesson';
+import { buildRetryRequest } from '@shared/missionRetry';
 import { Button, Input, Modal, Message, Select } from '@arco-design/web-react';
 import { Plus, Close } from '@icon-park/react';
 import VoiceInput from './VoiceInput';
@@ -61,6 +63,10 @@ type MissionCard = {
   tasks: LedgerEntry[];
   /** Synthetic rows (e.g. Mission Scheduler) kept for failure detail, not progress. */
   systemFailures: LedgerEntry[];
+  /** True when vibes is awaiting resolve_intervention (Needs You). */
+  needsHuman?: boolean;
+  /** Intervention question / escalate reason from ledger detail. */
+  interventionDetail?: string;
 };
 
 type LogLine = { at: number; text: string };
@@ -87,9 +93,13 @@ const progressOf = (tasks: LedgerEntry[]) => {
   return { done, total: planTasks.length };
 };
 
+/** Short form for cards; full UUID stays in logs / depth panel for fault tracing. */
+const shortMissionId = (id: string): string => id.slice(0, 8);
+
 const logTextFor = (entry: LedgerEntry): string => {
   const kind = entry.kind === 'mission' ? 'MISSION' : 'TASK';
-  const base = `[${kind}] ${entry.status.toUpperCase()} — ${entry.title}`;
+  const idTag = entry.kind === 'mission' && entry.missionId ? ` id=${entry.missionId}` : '';
+  const base = `[${kind}${idTag}] ${entry.status.toUpperCase()} — ${entry.title}`;
   return entry.detail ? `${base} — ${entry.detail}` : base;
 };
 
@@ -324,17 +334,64 @@ const OperationsView: React.FC = () => {
     if (starting) return;
     setStarting(true);
     try {
+      const root = card.workspaceRoot || workspaceRoot || '';
+      // T35 — load persisted harness lesson from `.vibes` when present.
+      const persisted = root
+        ? await window.vibesDesktop.harness.latestLesson(root).catch(() => null)
+        : null;
+      // T31 — forget-except-best: seed planner with prior failure + done steps only.
+      const request = buildRetryRequest({
+        title: card.title,
+        missionDetail: card.detail,
+        systemFailures: card.systemFailures,
+        failedTasks: card.tasks.filter((t) => t.status === 'failed' || t.status === 'blocked'),
+        doneTaskTitles: card.tasks.filter((t) => t.status === 'done').map((t) => t.title),
+        harnessLesson: persisted
+          ? formatHarnessLessonForRetry(persisted)
+          : undefined,
+      });
+      setMissionRequest(request);
       const result = await window.vibesDesktop.mission.start({
-        request: card.title,
-        workspaceRoot: card.workspaceRoot || workspaceRoot || undefined,
+        request,
+        workspaceRoot: root || undefined,
       });
       if (result.alreadyRunning) Message.warning('A mission is already running.');
       else if (!result.started && result.error) Message.error(result.error);
-      else if (result.started) Message.success('Mission restarted');
+      else if (result.started) {
+        Message.success(
+          persisted?.lesson
+            ? 'Mission restarted with harness lesson + prior attempt'
+            : 'Mission restarted with prior-attempt lesson',
+        );
+      }
     } catch (error) {
       Message.error(error instanceof Error ? error.message : String(error));
     } finally {
       setStarting(false);
+    }
+  };
+
+  const handleResolveIntervention = async (
+    action: 'retry' | 'skip' | 'fail' | 'reply',
+    message?: string,
+  ) => {
+    try {
+      const result = await window.vibesDesktop.mission.resolveIntervention({ action, message });
+      if (result.ok) {
+        Message.success(
+          action === 'retry'
+            ? 'Retrying the failed step…'
+            : action === 'skip'
+              ? 'Skipped — mission continues.'
+              : action === 'fail'
+                ? 'Marked failed — mission stopping.'
+                : 'Reply sent to the mission.',
+        );
+      } else {
+        Message.error(result.error || 'Could not resolve intervention.');
+      }
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Could not resolve intervention.');
     }
   };
 
@@ -368,17 +425,27 @@ const OperationsView: React.FC = () => {
       const related = entry.missionId
         ? entries.filter((e) => e.kind !== 'mission' && e.missionId === entry.missionId)
         : [];
+      const planTasks = related.filter(isPlanTask);
+      const needsHuman =
+        Boolean(entry.needsHuman)
+        || planTasks.some((t) => t.needsHuman)
+        || related.some((e) => e.needsHuman);
+      const interventionDetail =
+        related.find((e) => e.needsHuman && e.detail)?.detail
+        || (entry.needsHuman ? entry.detail : undefined);
       result.push({
         id: entry.id,
         missionId: entry.missionId,
         title: entry.title,
         status: entry.status,
-        group: classify(entry),
+        group: classify({ ...entry, needsHuman }),
         workspaceRoot: entry.workspaceRoot,
         updatedAt: entry.updatedAt,
         detail: entry.detail,
-        tasks: related.filter(isPlanTask),
+        tasks: planTasks,
         systemFailures: related.filter((e) => !isPlanTask(e) && (e.status === 'failed' || e.status === 'blocked')),
+        needsHuman,
+        interventionDetail,
       });
     }
     return result;
@@ -412,8 +479,19 @@ const OperationsView: React.FC = () => {
       return;
     }
     if (!selectedCardId) {
+      const needing = cards.find((c) => c.needsHuman);
       const running = cards.find((c) => c.status === 'running' || c.status === 'verifying');
-      if (running) setSelectedCardId(running.id);
+      if (needing) setSelectedCardId(needing.id);
+      else if (running) setSelectedCardId(running.id);
+    }
+  }, [cards, selectedCardId]);
+
+  // Prefer switching selection to a Needs-You card when escalate lands mid-view.
+  useEffect(() => {
+    const needing = cards.find((c) => c.needsHuman);
+    if (needing && selectedCardId !== needing.id) {
+      const selected = cards.find((c) => c.id === selectedCardId);
+      if (!selected?.needsHuman) setSelectedCardId(needing.id);
     }
   }, [cards, selectedCardId]);
 
@@ -611,7 +689,14 @@ const OperationsView: React.FC = () => {
                         {progress.total > 0 ? `${progress.done} / ${progress.total} tasks (${pct}%)` : 'no task activity yet'}
                       </span>
                     </div>
-                    <div className={styles.missionDate}>{formatDate(card.updatedAt)}</div>
+                    <div className={styles.cardFooter}>
+                      <div className={styles.missionDate}>{formatDate(card.updatedAt)}</div>
+                      {card.missionId ? (
+                        <div className={styles.missionId} title={card.missionId}>
+                          {shortMissionId(card.missionId)}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 );
               })}
@@ -640,7 +725,7 @@ const OperationsView: React.FC = () => {
 
             {/* Actions stay above the fold on short screens — body may scroll. */}
             <div className={styles.depthActions}>
-              {(selectedCard.status === 'running' || selectedCard.status === 'verifying') && (
+              {(selectedCard.status === 'running' || selectedCard.status === 'verifying' || selectedCard.needsHuman) && (
                 <Button status="danger" size="small" onClick={() => void handleTerminateMission()}>
                   Terminate
                 </Button>
@@ -650,10 +735,40 @@ const OperationsView: React.FC = () => {
                   Archive
                 </Button>
                 <Button size="small" type="primary" loading={starting} onClick={() => void handleRetryMission(selectedCard)}>
-                  Retry
+                  Retry mission
                 </Button>
               </div>
             </div>
+
+            {selectedCard.needsHuman ? (
+              <div className={styles.interveneBanner} role="region" aria-label="Needs you">
+                <div className={styles.interveneTitle}>Needs you</div>
+                <p className={styles.interveneBody}>
+                  {selectedCard.interventionDetail
+                    || selectedCard.detail
+                    || 'The mission is waiting for an operator decision (retry, skip, or fail).'}
+                </p>
+                <div className={styles.interveneActions}>
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={() => void handleResolveIntervention('retry')}
+                  >
+                    Retry step
+                  </Button>
+                  <Button size="small" onClick={() => void handleResolveIntervention('skip')}>
+                    Skip step
+                  </Button>
+                  <Button
+                    status="danger"
+                    size="small"
+                    onClick={() => void handleResolveIntervention('fail')}
+                  >
+                    Fail mission
+                  </Button>
+                </div>
+              </div>
+            ) : null}
 
             <div className={styles.depthBody}>
               <div className={styles.depthMeta}>
@@ -669,6 +784,12 @@ const OperationsView: React.FC = () => {
                       : '—'}
                   </div>
                 </div>
+                {selectedCard.missionId ? (
+                  <div className={styles.depthMetaId}>
+                    <div className={styles.fieldLabel}>Mission ID</div>
+                    <code className={styles.missionIdFull}>{selectedCard.missionId}</code>
+                  </div>
+                ) : null}
               </div>
 
               {showFailurePanel ? (

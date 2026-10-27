@@ -1,6 +1,331 @@
-# PROGRESS.md — Session Log
+﻿# PROGRESS.md — Session Log
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
+
+## 2026-10-27 — Fold #4/#5 into release (toward PR #6)
+
+**Done:** Merged `ag/deps-audit-fix` (includes T31–T33 + electron/undici/fast-uri audit) into the release branch after #2/#3. Conflicts resolved (channels clear-key, mission done→idle + harness lesson, settings clearSpeechServerApiKey).
+
+**Evidence:** see prior #4/#5 PR notes; release-branch tests after merge.
+
+**Next:** CI green on [PR #6](https://github.com/SPhillips1337/vibes-desktop/pull/6); merge to `main`.
+
+---
+
+## 2026-10-27 (deps + packaging) — Audit fixes; packaged build verified
+
+**Done:** `npm audit fix` (in-range, lockfile only): electron 44.7.0 → 44.9.3, undici and fast-uri patch bumps. `npm audit`: 0 vulnerabilities. Packaged win-unpacked CDP: CSP + ORT from asar, 0 jsdelivr.
+
+---
+
+## 2026-10-27 (review) — Follow-ups T31–T33
+
+**Done:** Speech-server non-loopback http+key blocked; ~25 MB capture cap; temp cleanup; probe matrix; clear key; unknown TASK_STATUS dropped; unreported→idle on done; worker load isolation; Space/Enter PTT; mic release on unmount.
+
+---
+
+## 2026-10-27 — Merge security #2/#3 into release (toward PR #6)
+
+**Done:** Opened [PR #6](https://github.com/SPhillips1337/vibes-desktop/pull/6). Merged `ag/t30-local-ort-wasm` into the release branch.
+
+**Next:** Fold #4/#5; merge #6 to `main`.
+
+---
+
+## 2026-10-27 — T58 closed beta 0.1.1
+
+**Done:** Bump `0.1.1`; CHANGELOG from Unreleased; [docs/BETA.md](docs/BETA.md) setup; README pointer; NSIS `dist`; tag `v0.1.1` (requires Vibes + local LLM).
+
+**Evidence:** package `0.1.1`; `dist/Vibes Desktop Setup 0.1.1.exe` (~219 MB); tag `v0.1.1`; GitHub release with installer. Decision offline tests 13/13 (+1 live skipped — no KEV env in cut session).
+
+**Next:** Invite closed beta testers; live Decision smoke when Unsloth/KEV up; public packaging later.
+
+---
+
+## 2026-10-26 — T57 Runtime II (triage + memory)
+
+**Done:** Settings → Runtime gains triage observer (`TRIAGE_ENABLED` / `INTERVAL` / `AUTO_STEER`) and memory (`MEMORY_ENABLED`, `LOCAL_MEMORY`). Same spawn write path as T56.
+
+**Evidence:** settings / vibes-config / config-writer tests; typecheck.
+
+**Next:** Live Decision smoke; optional T51; Codex / MCP registry UI later.
+
+---
+
+## 2026-10-26 — T56 Settings → Runtime
+
+**Done:** New Settings **Runtime** tab for high-value TUI knobs (`MAX_STEPS`, `MAX_CONCURRENT_TASKS`, `YOLO_MODE`, `THINKING_MODE`, `CONTEXT_COMPACTION_ENABLED`, `SMALL_MODEL_PROFILE`). Persisted in app settings; merged into workspace `.vibes/config.json` on mission spawn (same path as Roles/Decision).
+
+**Evidence:** settings / vibes-config / config-writer tests; typecheck.
+
+**Next:** Optional triage/memory Runtime slice; T51; live Decision smoke.
+
+---
+
+## 2026-10-26 — T55 Roles context window
+
+**Done:** Each Roles card has a Context window (tokens) field. Persisted in `roles-config.json`; save writes vibes `CONTEXT_WINDOW` from executor (else default). Planner/reviewer/triage values are stored with a UI note that vibes’ runtime budget is still global.
+
+**Evidence:** `roles-store` + `vibes-config` + `config-writer` tests; `npm run typecheck` green.
+
+**Next:** Optional T51; live Decision smoke; per-role CONTEXT in vibes if/when needed.
+
+---
+
+## 2026-10-26 — T54 low-confidence escalate
+
+**Done:** Intervene gate now escalates continue/skip when System One/Laya `confidence` is present and below **0.35** (T53 probe: continue@0.62 with conf≈0.22). Classic KEV without confidence unchanged; `minConfidence: null` disables. Wired in desktop + vibes `decision-mcp`.
+
+**Evidence:** desktop `intervene-gate` tests; vibes `intervene-gate` + build.
+
+**Next:** Live mission smoke with Decision; optional T51 Kev/Bark.
+
+---
+
+## 2026-10-24 — T52 scheduler soft-requeue race
+
+**Done:** Root cause of T50b `Completed 0/1` / `Scheduler deadlock … pending ()`: verification soft-requeue deleted `runningTasks` before `executeTask` finally, so the loop restarted the same task and the first finally cleared the new runner’s slot (stuck `in_progress`). Also the main loop exited while `awaiting_intervention` because failed tasks aren’t “pending”. Fix: only clear `runningTasks` in finally; keep looping while awaiting intervention or runners alive. Deadlock message now names stuck in_progress.
+
+**Evidence:** vibes tests — deps + T52 requeue race + retry + evidence-requeue — 7/7 green; pushed on `ag/completion-gates`.
+
+**Next:** T54 optional low-confidence escalate; or live mission smoke with Decision.
+
+---
+
+## 2026-10-24 — T53 Laya Decision probe
+
+**Done:** Bookmarked Laya = System 1 engine behind Unsloth `system_one` (live `model: laya-english`). Studio MCP has no `laya_preset`/guard tools — only `system_one`. Disposition: keep current path; reject second stack; candidate **T54** low-confidence escalate. Probe script `scripts/t53-laya-probe.mjs`. Memory note written.
+
+**Evidence:** `tools/list` 23 tools; `system_one` continue≈0.62 escalate≈0.29 conf≈0.22; GPU nearly full with MiniCPM chat.
+
+**Next:** T52 scheduler deadlock (reliability) before T54; optional tool-approve question schema when vibes has a pre-tool hook.
+
+---
+
+## 2026-10-22 — T50b live Needs-You UI
+
+**Done:**
+- Live mission `8b9c0e46`: completion gate → ledger `blocked` + `needsHuman` (Needs You banner).
+- CDP clicked **Skip step** (`scripts/t50b-resolve-skip.mjs` / `t50b-cdp-needs-you.mjs` against `--remote-debugging-port=9223`).
+- Vibes: completion-gate rejects now Decision + `intervention_required` (not hard-fail only).
+- Desktop: `LedgerStore.clearNeedsHuman` clears mission **and** task rows on resolve (stuck “Mission Completion Gate” rows).
+- Unit: ledger clear + mission-service intervention tests green.
+
+**Evidence:** live CDP logs; `npm test -- tests/ledger-store.test.ts tests/mission-service.test.ts` 30/30.
+
+**Open:** Repeat orphan drills often die with vibes scheduler deadlock (`Completed 0/1`, empty deps) — tracked as T52.
+
+**Next:** T52 deadlock, or T51 optional Kev/Bark.
+
+---
+
+## 2026-10-22 — T49 release cut + T50 Decision wire
+
+**Done:**
+- **T50:** Settings Decision → Unsloth `http://192.168.5.157:8888/mcp/` (encrypted). Vibes intervene gate tries `system_one` then `kev_evaluate`. Mission-service unit: intervention → needsHuman → resolve skip. Live decision shadow green.
+- **T49:** Tag `v0.1.0` pushed; NSIS `dist/Vibes Desktop Setup 0.1.0.exe` (~219 MB).
+
+**Evidence:** vibes `08bb0ab`; desktop `4b1096b` + tag; installer on disk.
+
+**Next:** T50b — real mission escalate click-through in Ops/Chat; T51 optional Kev 4B/Bark.
+
+---
+
+## 2026-10-22 — Release hygiene (T48)
+
+**Done:** Bumped app to **0.1.0**. Added Keep-a-Changelog `CHANGELOG.md`, operator `docs/FEATURES.md` (Mission Control, Chat, Decision/`system_one`, Needs You, Voice, harness). README points at version + those docs. TASKS P9: T49 tag/installer, T50 live Needs-You, T51 optional Kev/Bark.
+
+**Evidence:** files on disk; `package.json` version `0.1.0`.
+
+**Next:** Save Decision in Settings → T50 live escalate; or T49 tag + `npm run dist` when packaging.
+
+---
+
+## 2026-10-22 — Live Decision via Unsloth Studio MCP
+
+**Done:** Unsloth Agent MCP `http://192.168.5.157:8888/mcp/` tool `system_one` (English / laya-english). Client tries `system_one` then `kev_evaluate`. Live shadow: escalate≈0.70 on css_orphan fixture. Settings hint updated. Key stays in Settings / env — not committed.
+
+**Evidence:** `VIBES_DECISION_LIVE=1` decision-shadow e2e green; tool-candidate unit tests.
+
+**Next:** Save Decision URL+token in app Settings; run a real mission to exercise Needs-You when escalate fires. Optional: download Kev 4B in Unsloth Decision picker for parity.
+
+---
+
+## 2026-10-22 — T47 Needs-You escalate UI
+
+**Done:** Vibes emits `[TASK_STATUS] status=intervention` on `intervention_required` (KEV escalate / triage / task fail). Desktop ledger marks `blocked` + `needsHuman` → Needs You metric. Operations depth + Chat show Retry step / Skip / Fail → `mission:resolve-intervention` → vibes `resolve_intervention`. Chat no longer treats needsHuman-blocked as mission terminal.
+
+**Evidence:** typecheck + ledger intervention test + ipc parity.
+
+**Next:** (superseded) Unsloth Decision live pass same day.
+
+---
+
+## 2026-10-22 — Neo bookmark delta (T45)
+
+**Done:** Neo reconnected; scanned X History → Bookmarks (~25 posts, newest Oct 21). Distilled in `2026-10-22-bookmarks-neo-delta.md` + LINKS. Top fit: OO-Harness (T46 vibes lesson schema), Agent S4 reinforces MCP registry; Bark/Flint watchlist; Épi/Lisa/OpenUI out of scope.
+
+**Also:** T46 shipped in desktop — harness-lesson.json v2 (`helped`/`failed`/`harnessClass`) + Retry Keep/Avoid lines.
+
+**Next:** (superseded) T47 Needs-You UI done same day.
+
+---
+
+## 2026-10-22 — Bookmarks + Chat queue + MCP registry
+
+1. **Bookmarks (pre-Neo):** Local Oct-18 export only; Neo was down. Notes in `2026-10-22-bookmarks-rescan.md`.
+2. **T43:** Chat queue bar — waiting list, Pause/Resume, Clear over existing `mission.queue.*`.
+3. **T44:** Settings → Mission MCP tools → HTML Design Advisor; `writeVibesMcpJson` merges/removes `html-design-advisor` in workspace `.vibes/mcp.json` on mission spawn.
+
+**Next:** (superseded) T45 Neo delta done same day.
+
+---
+
+## 2026-10-22 — T24 TTS + Chat steer + Decision shadow
+
+1. **T24:** `announceToDaemon` → Agent Voice `POST /v1/announce`; Settings Voice toggle + Test; soft announce on mission terminal.
+2. **T41 Chat steering:** `steer_mission` MCP + bridge/service IPC; Chat sends steer while `activeMissionId` set.
+3. **T42:** `decision-shadow.e2e.test.ts` (live when `VIBES_DECISION_LIVE=1` + KEV env); offline fixture always.
+
+**Evidence:** typecheck + announce/decision/settings tests green; live Decision skipped (no `KEV_MCP_*` in shell — set `VIBES_DECISION_LIVE=1` + creds for V3).
+
+**Next:** (superseded) T43 queue chrome + T44 MCP registry done same day.
+
+---
+
+## 2026-10-22 — T35 Harness²-lite lesson
+
+**Done:** On mission failure, distill one process-level lesson (`distillHarnessLesson`) and write `.vibes/harness-lesson.json`. Retry loads it via `harness:lesson-get` and puts it first in `buildRetryRequest`. Fingerprints: css_orphan, evidence/ghost, completion gate, circular deps, npm ENOENT. Tests `harness-lesson.test.ts`.
+
+**Next:** T24 TTS optional; Chat phase-2 steering; live Decision shadow.
+
+---
+
+## 2026-10-22 — T26 Decision intervene gate (KEV)
+
+**Done:** ProPerAgent-shaped gate before operator interrupt. Desktop writes `KEV_MCP_*` + `ENABLE_DECISION_INTERVENE_GATE` into workspace config and bridge env when Settings Decision is configured. Vibes `handleTaskFailure` calls `kev_evaluate` (continue/escalate/skip); auto-retry/skip when clear; escalate on near-tie / outage. Pure gate tests green (desktop + vibes).
+
+**Next:** Live shadow with Settings Decision filled; optional Chat Needs-You UI when escalate; broader MCP registry (html-design-advisor) still open.
+
+---
+
+## 2026-10-22 — Commit ratchet + T21 live e2e
+
+**Commits:** desktop `44a9442` (queue + double-check config); vibes `ag/completion-gates` `8eca3ae` (soft-pass, double-check, evidence requeue, css audit); planner `3a1736f` (gate mirror, provider-catalog left unstaged).
+
+**T21:** `VIBES_LIVE=1 VIBES_PATH=…/vibes npx vitest run tests/live-mission.e2e.test.ts` → **3/3 passed** (~53s). Live service now resolves `VIBES_PATH`. Endpoints `192.168.5.232:11434` + reviewer `192.168.5.229:1234` reachable.
+
+**Next:** T26 wire KEV Decision into intervene vs continue; or Chat header re-run in the packaged UI for human V3.
+
+---
+
+## 2026-10-22 — Cline/OpenBot cherry-picks (T38–T40)
+
+**Order:** double-check → follow-up queue → focus-chain lite.
+
+1. **T38 Double-check (vibes):** `doubleCheckMissionEvidence` before mission success; `ENABLE_DOUBLE_CHECK_COMPLETION` default on; Owner adversary prompt now uses real newlines (was `join('\\n')` — garbled reviews); re-check language in system prompt. Tests `mission-double-check.test.mjs` 6/6. Mirrored to `local-ai-planner`. Desktop writes the flag via `toVibesConfig`.
+2. **T39 Follow-up queue (desktop):** `followup-queue.ts` JSON in userData; `startMission({ enqueueIfBusy })`; drain on natural completion (not Stop); Chat queues when plan/start hits busy. IPC `mission:queue-*`. Tests `followup-queue.test.ts`.
+3. **T40 Focus chain lite:** DESIGN — RHS checklist sticky until next send.
+
+**Next:** T21 live Chat pass; optional queue pause UI in Chat chrome; commit vibes soft-pass + double-check.
+
+---
+
+## 2026-10-21 — Completion gate soft-pass on malformed owner review
+
+**Symptom:** Chat mission `75c45024-…` — all 3 tasks DONE, page correct (dark header + menu), but mission FAILED: `Owner adversary review is malformed`.
+
+**Cause:** Post-task `ENABLE_ADVERSARIAL_AUDIT` runs Owner-as-Adversary; reviewer JSON failed schema → completion gate rejected success despite done work.
+
+**Fix (Settings vibesPath `development/vibes`):** malformed / `unverified` owner reviews soft-pass; explicit `approved: false` still fails. Coerce string `line` numbers. Tests in `owner-adversary.test.mjs` (5/5 vibes + planner after `npm run build`). Child loads `src/` via tsx — restart mission / app to pick up patch.
+
+---
+
+## 2026-10-21 — Chat tab phase 1 (T36)
+
+**Done:** `Chat` tab next to Operations. Flow: compose → `mission.plan` → RHS checklist → `start({ acceptPlan: true })` → ledger-bound status → `buildChatMissionSummary` on terminal. `MissionStartResult.missionId` returned for binding. DESIGN.md Chat contract locked. Tests: `chat-summary`, `chat-view`.
+
+**Out of scope (phase 2):** interrupt/replan mid-run, steering replies, inline artifacts.
+
+---
+
+## 2026-10-21 — LINKS.md + X harness cherry-picks
+
+**Done:** Captured five user-shared X posts into `LINKS.md` + distillation `.agent/memories/codebase_insights/2026-10-21-x-links-harness-cherry.md`. Neo MCP was down; used Nitter/arXiv. Top cherry-picks: Harness²-lite lessons on Retry, ProPerAgent-style intervene-gate via KEV (T26), Chat-tab inline artifacts (Xpress). PaperLeet defer; no second engine.
+
+---
+
+## 2026-10-21 — Structural audit: css_orphan false positive on Windows / HTML
+
+**Symptom:** Footer mission `957592ad-…` — HTML task DONE; CSS task failed `css_orphan` on `styles.css` even though `index.html` has `<link href="styles.css">`.
+
+**Cause:** Global-CSS exemption used `file.split('/').pop()` — on Windows absolute paths that never equals `styles.css`. Audit also ignored HTML `<link>` as an import.
+
+**Fix:** `path.basename` for global names; scan `.html` for stylesheet hrefs into `importedAssetFiles`. Tests `structural-audit-html-css.test.mjs` green in `development/vibes`.
+
+**Retry:** footer mission (or Retry from depth) — CSS step should clear audit.
+
+---
+
+## 2026-10-21 — Evidence gate: static / broken-.git workspaces
+
+**Symptom:** Footer mission `dae2bc76-…` — task done by executor then failed: `Evidence verification failed and Git state is unavailable: … not a git repository`. Workspace `development/test` had a stub `.git` (HEAD only) + no `package.json`.
+
+**Cause:** Evidence fallback ran `npm --version` via `execFile('npm')` → Windows ENOENT (`npm.cmd`), so commands looked failed even though git was the only real message.
+
+**Fix (in Settings vibesPath `development/vibes` + `local-ai-planner`):** skip dummy npm when no build/test scripts; use `npm.cmd` on win32 when scripts exist; MCP `ensureWorkspaceGitSnapshot` repairs stub `.git` before execute. Tests: `scheduler-evidence-static` + requeue still green.
+
+**Retry:** footer mission again (new child loads patched source).
+
+---
+
+## 2026-10-21 — Roles: AgentWorld executor + prior Default as reviewer
+
+**Done:** Probed Unsloth Studio `http://192.168.5.157:8888/v1` (Bearer). Models list includes `unsloth/Qwen-AgentWorld-35B-A3B-GGUF` (quant UD-IQ4_NL). Chat completions OK (answers often land in `reasoning_content` while `content` is empty — watch executor parsing). `/v1/systemone` on `:8888` → **404** (not a Decision/System One host; keep KEV MCP `:8765`).
+
+**Roles** (`%APPDATA%/vibes-desktop/roles-config.json`):
+- **Default + Executor** → LAN Unsloth `:8888` + AgentWorld (canonical model id, no `:quant` suffix)
+- **Reviewer + Planner** → previous Default (Cloudflare tunnel + encrypted key) so ENABLE_REVIEWER stays on
+- LM Studio `google/gemma-4-e2b` on `:1234` chat → 400 (not loaded / rejected); not used as reviewer
+
+**What's next:** Restart app → Roles → Test Connection on Executor and Reviewer. Load AgentWorld in Unsloth if unloaded. If tunnel reviewer 401s, point Reviewer at a working instruct model (e.g. LM Studio `liquid/lfm2.5-1.2b` which probed OK).
+
+---
+
+## 2026-10-20 EOD — Stop here
+
+**Day rolled up:** Hybrid C + voice + plan-seed already parked earlier; Part A (bookmarks → KEV/GUTSY) + ghost-done scheduler fix closed the loop.
+
+| Track | Outcome |
+|-------|---------|
+| Hybrid C / mission UX | Depth panel, failure detail, plan-seed checklist, mission UUID on cards/logs |
+| Voice | Builtin Whisper default (ADR-0002 amend); yapsnap legacy; optional ASR server |
+| Part A / T29–T34 | KEV MCP probe on LAN `:8765`; Settings Decision (URL+token, probe treats HTTP 400 reachable); Hy Memory defer; Retry forget-except-best |
+| Scheduler / T33 | Ghost-done fix ported to **Settings vibesPath** `development/vibes` (`requeueOrFailGate` + evidence-requeue test green). App was hitting that checkout, not `local-ai-planner` |
+
+**Uncommitted / external:** `development/vibes` has uncommitted scheduler + test changes — commit there when resuming. Desktop has local WIP (decision settings, missionRetry, ops UI) — commit when ready.
+
+**Next session (pick one):**
+1. Live Retry Unsplash info-boxes mission — confirm no false circular-deps deadlock
+2. Commit desktop + vibes scheduler patches
+3. T26 — wire missions to decision MCP when Settings has URL+token
+4. T21 V3 live pass; T24 TTS later
+
+**Open:** T26 (config only today; missions still don’t call KEV tools), T21 V3, T24 TTS. Gutsy `:8766` probe OK as reachable-on-400; KEV `:8008` still localhost-on-host.
+
+---
+
+## 2026-10-20 (scheduler) — Ghost-done deadlock fix live on Settings vibesPath
+
+**Symptom:** Unsplash columns mission (`3ee5aaaf-…`) failed with “Scheduler deadlock / circular depends_on” after 1/3 tasks — CSS/verify stuck waiting on a UUID while HTML looked incomplete.
+
+**Cause:** Evidence handoff rejected executor `done` but left `status=done` without `completedTasks` credit (false circular-deps deadlock). Fix existed in `local-ai-planner`; Settings/`VIBES_PATH` points at `development/vibes`, which lacked `requeueOrFailGate`.
+
+**Done:** Ported `requeueOrFailGate` + ghost-aware `describeDependencyDeadlock` + `tests/scheduler-evidence-requeue.test.mjs` into `development/vibes`. Test green after rebuild (`got >=4 executions`). Desktop already on that checkout; one child per mission so the next start loads patched `src/` via tsx.
+
+**Evidence:** `node --test tests/scheduler-evidence-requeue.test.mjs` pass in vibes; desktop `mission-retry` 3/3.
+
+**What's next:** Retry the Unsplash row mission (Retry / forget-except-best). Expect requeue on evidence fail or a “done but not credited” message — not the circular-deps essay. T26 decision MCP wiring still open.
 
 ## 2026-10-20 (theme) — Contrast pass: dark inputs + stronger light
 

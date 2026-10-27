@@ -2,8 +2,13 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { existsSync } from 'node:fs';
 import type { LedgerStore } from '../ledger/store';
-import { VibesBridge, type TaskStatusEvent } from '../bridge/vibes-bridge';
-import type { MissionStartResult, MissionPlanResponse } from '@shared/channels';
+import { VibesBridge, type InterventionAction, type TaskStatusEvent } from '../bridge/vibes-bridge';
+import type { MissionStartResult, MissionPlanResponse, MissionQueueSnapshot, MissionResolveInterventionResult } from '@shared/channels';
+import { createFollowupQueue, type FollowupQueue } from './followup-queue';
+import { distillHarnessLessonRecord } from '@shared/harnessLesson';
+import { writeHarnessLesson } from '../harness/lesson-store';
+import { announceToDaemon, missionAnnounceText } from '../voice/announce';
+import type { SettingsStore } from '../settings/store';
 
 /**
  * T13 + T14 — the mission lifecycle service. Owns a single VibesBridge and the
@@ -27,6 +32,10 @@ export interface MissionBridge {
   planMission(description: string): Promise<string>;
   executePlanned(): Promise<string>;
   stop(): Promise<void>;
+  /** Chat phase 2 — inject mid-run steering (optional on fakes). */
+  steerMission?(message: string): Promise<string>;
+  /** Needs-You — resolve pending vibes intervention (optional on fakes). */
+  resolveIntervention?(action: InterventionAction, message?: string): Promise<string>;
 }
 
 export type MissionState = 'idle' | 'running';
@@ -37,14 +46,35 @@ export interface MissionServiceOptions {
   vibesPath?: () => string | undefined;
   /** Bridge factory — injectable so tests never spawn a real child process. */
   createBridge?: (workspaceRoot: string) => MissionBridge;
+  /** App userData path for crash-safe follow-up queue persistence (OpenBot-style). */
+  userDataPath?: string;
+  /** Inject a queue (tests); otherwise created from userDataPath when provided. */
+  followupQueue?: FollowupQueue;
+  /** Optional settings for T24 TTS announce on terminal. */
+  settingsStore?: SettingsStore;
 }
 
 export interface MissionService {
   state(): MissionState;
-  startMission(request: { request: string; workspaceRoot?: string; acceptPlan?: boolean }): Promise<MissionStartResult>;
+  startMission(request: {
+    request: string;
+    workspaceRoot?: string;
+    acceptPlan?: boolean;
+    enqueueIfBusy?: boolean;
+  }): Promise<MissionStartResult>;
   planMission(request: { request: string; workspaceRoot?: string }): Promise<MissionPlanResponse>;
   cancelPlan(): Promise<void>;
   stopMission(): Promise<{ stopped: boolean }>;
+  getFollowupQueue(): MissionQueueSnapshot;
+  setFollowupQueuePaused(paused: boolean): MissionQueueSnapshot;
+  clearFollowupQueue(): MissionQueueSnapshot;
+  /** Chat phase 2 — steer the running mission. */
+  steerMission(message: string): Promise<{ ok: boolean; error?: string }>;
+  /** Needs-You — retry / skip / fail / reply on a pending intervention. */
+  resolveIntervention(input: {
+    action: InterventionAction;
+    message?: string;
+  }): Promise<MissionResolveInterventionResult>;
 }
 
 /** Parse tasks from the plan_mission tool response. The vibes MCP server returns
@@ -105,7 +135,23 @@ export function missionOutcomeFrom(result: string): { status: 'done' | 'failed';
 }
 
 export function createMissionService(options: MissionServiceOptions): MissionService {
-  const { store, createBridge } = options;
+  const { store, createBridge, settingsStore } = options;
+  const followupQueue: FollowupQueue | null =
+    options.followupQueue
+    ?? (options.userDataPath ? createFollowupQueue(options.userDataPath) : null);
+
+  const maybeAnnounce = (status: 'done' | 'failed', title: string, detail?: string): void => {
+    if (!settingsStore) return;
+    const settings = settingsStore.get();
+    if (!settings.ttsAnnounceEnabled) return;
+    const token = settingsStore.getTtsDaemonToken()?.trim();
+    if (!token) return;
+    const text = missionAnnounceText(status, title, detail);
+    void announceToDaemon(
+      { baseUrl: settings.ttsDaemonUrl, token },
+      { text, priority: status === 'failed' ? 7 : 5, sourceName: 'vibes-desktop' },
+    ).catch(() => undefined);
+  };
   let state: MissionState = 'idle';
   let bridge: MissionBridge | null = null;
   /** A planned-but-not-yet-launched mission: its child holds the reviewed plan. */
@@ -153,14 +199,63 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
   /** Wire a bridge's live task lifecycle events into the ledger, scoped to one mission. */
   const wireLedger = (mission: MissionBridge, workspaceRoot: string, missionId: string): void => {
     mission.on('task-status', (event) => {
-      void store
-        .recordTaskStatus(
-          { name: event.name, status: event.status, detail: event.detail },
+      void (async () => {
+        const status =
+          event.status === 'intervention'
+          || event.status === 'failed'
+          || event.status === 'complete'
+          || event.status === 'in-progress'
+          || event.status === 'pending'
+            ? event.status
+            : 'failed';
+        await store.recordTaskStatus(
+          { name: event.name, status, detail: event.detail },
           workspaceRoot,
           missionId,
-        )
-        .catch(() => undefined);
+        );
+        // Escalate mission card into Needs You when vibes asks for intervention.
+        if (status === 'intervention') {
+          const snap = await store.snapshot();
+          const missionRow = snap.entries.find(
+            (e) => e.missionId === missionId && e.kind === 'mission',
+          );
+          if (missionRow) {
+            await store.recordMissionEvent(
+              missionRow.title,
+              'blocked',
+              workspaceRoot,
+              missionId,
+              event.detail || 'Operator intervention required',
+              { needsHuman: true },
+            );
+          }
+        }
+      })().catch(() => undefined);
     });
+  };
+
+  /** T35 — write one harness lesson into `.vibes/harness-lesson.json` after failure. */
+  const persistHarnessLessonFromLedger = async (
+    request: string,
+    root: string,
+    missionId: string,
+    missionDetail?: string,
+  ): Promise<void> => {
+    const snap = await store.snapshot();
+    const rows = snap.entries.filter((e) => e.missionId === missionId);
+    const failedTasks = rows
+      .filter((e) => e.kind !== 'mission' && (e.status === 'failed' || e.status === 'blocked'))
+      .map((e) => ({ title: e.title, detail: e.detail }));
+    const systemFailures = rows
+      .filter((e) => /scheduler|completion gate|mission/i.test(e.title) && e.status === 'failed')
+      .map((e) => ({ title: e.title, detail: e.detail }));
+    const lesson = distillHarnessLessonRecord({
+      missionTitle: request,
+      missionDetail,
+      failedTasks,
+      systemFailures,
+    });
+    if (lesson) writeHarnessLesson(root, lesson, request);
   };
 
   /** Dispatch execution in the background. Resolves the start call immediately
@@ -180,7 +275,11 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
             const outcome = missionOutcomeFrom(result);
             if (outcome.status === 'failed') {
               await store.markOpenTasksFailed(missionId).catch(() => undefined);
+              await persistHarnessLessonFromLedger(request, root, missionId, outcome.detail).catch(() => undefined);
+            } else if (outcome.status === 'done') {
+              await store.markUnreportedTasksIdle(missionId).catch(() => undefined);
             }
+            maybeAnnounce(outcome.status, request, outcome.detail);
             return store.recordMissionEvent(request, outcome.status, root, missionId, outcome.detail).catch(() => undefined);
           }
           return undefined;
@@ -191,6 +290,8 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
           if (!stopRequested && gen === generation) {
             const detail = error instanceof Error ? error.message : String(error);
             await store.markOpenTasksFailed(missionId).catch(() => undefined);
+            await persistHarnessLessonFromLedger(request, root, missionId, detail).catch(() => undefined);
+            maybeAnnounce('failed', request, detail);
             return store.recordMissionEvent(request, 'failed', root, missionId, detail).catch(() => undefined);
           }
           return undefined;
@@ -201,18 +302,57 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
         // stopped mission must never kill its successor's child.
         if (gen !== generation) return;
         void endBridge().finally(() => {
-          if (gen === generation) state = 'idle';
+          if (gen !== generation) return;
+          state = 'idle';
+          // Natural completion drains the crash-safe follow-up queue (not Stop).
+          if (!stopRequested) tryDrainFollowup();
         });
       });
   };
 
-  return {
+  /** Filled after `service` is created so natural-completion drain can re-enter start. */
+  let startMissionFn: MissionService['startMission'] | null = null;
+
+  /** Start the next queued request once idle (no-op when paused / empty / no store). */
+  const tryDrainFollowup = (): void => {
+    if (!followupQueue || state !== 'idle' || !startMissionFn) return;
+    const next = followupQueue.dequeueIfRunning();
+    if (!next) return;
+    void startMissionFn({
+      request: next.request,
+      workspaceRoot: next.workspaceRoot,
+      acceptPlan: false,
+    }).catch(() => undefined);
+  };
+
+  const service: MissionService = {
     state: () => state,
 
-    async startMission({ request, workspaceRoot, acceptPlan }): Promise<MissionStartResult> {
+    async startMission({ request, workspaceRoot, acceptPlan, enqueueIfBusy }): Promise<MissionStartResult> {
       // T14 guard: only one mission runs at a time. The check is synchronous and
       // happens before any await, so two rapid starts cannot both pass it.
-      if (state === 'running') return { started: false, alreadyRunning: true };
+      if (state === 'running') {
+        if (enqueueIfBusy && followupQueue) {
+          const root = workspaceRoot?.trim();
+          const text = request?.trim();
+          if (!root) {
+            return { started: false, alreadyRunning: true, error: 'Choose a working directory before queueing a mission.' };
+          }
+          if (!text) {
+            return { started: false, alreadyRunning: true, error: 'Cannot queue an empty request.' };
+          }
+          const item = followupQueue.enqueue(text, root);
+          const snap = followupQueue.snapshot();
+          return {
+            started: false,
+            alreadyRunning: true,
+            queued: true,
+            queueId: item.id,
+            queueDepth: snap.items.length,
+          };
+        }
+        return { started: false, alreadyRunning: true };
+      }
 
       // Never fall back to the app's own directory — a mission must run in an
       // explicit workspace, or it would rewrite this app's source tree.
@@ -261,7 +401,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
         // Execution streams task-status events into the ledger while it runs; the
         // returned promise resolves as soon as the mission is dispatched.
         dispatchExecution(mission, request, root, missionId, gen);
-        return { started: true, alreadyRunning: false };
+        return { started: true, alreadyRunning: false, missionId };
       } catch (error) {
         // Covers a crashed child and a planning error — both are start failures.
         const message = error instanceof Error ? error.message : String(error);
@@ -269,7 +409,7 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
         try { if (mission) await mission.stop().catch(() => undefined); } catch {}
         await endBridge();
         state = 'idle';
-        return { started: false, alreadyRunning: false, error: message };
+        return { started: false, alreadyRunning: false, error: message, missionId };
       }
     },
 
@@ -328,7 +468,64 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
       // T13: in-flight tasks of THIS mission become blocked, not silently dropped.
       await store.markInFlightBlocked(missionId).catch(() => undefined);
       state = 'idle';
+      // Stop does not auto-drain — queue stays until pause off + next natural completion
+      // or the user starts a new mission while idle (queue can be cleared/paused via IPC).
       return { stopped: hadChild };
     },
+
+    getFollowupQueue(): MissionQueueSnapshot {
+      return followupQueue?.snapshot() ?? { paused: false, items: [] };
+    },
+
+    setFollowupQueuePaused(paused: boolean): MissionQueueSnapshot {
+      return followupQueue?.setPaused(paused) ?? { paused, items: [] };
+    },
+
+    clearFollowupQueue(): MissionQueueSnapshot {
+      return followupQueue?.clear() ?? { paused: false, items: [] };
+    },
+
+    async steerMission(message: string): Promise<{ ok: boolean; error?: string }> {
+      const text = message?.trim();
+      if (!text) return { ok: false, error: 'Steering message is empty.' };
+      if (state !== 'running' || !bridge) {
+        return { ok: false, error: 'No mission is running to steer.' };
+      }
+      if (typeof bridge.steerMission !== 'function') {
+        return { ok: false, error: 'Active bridge does not support steering.' };
+      }
+      try {
+        await bridge.steerMission(text);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    },
+
+    async resolveIntervention(input): Promise<MissionResolveInterventionResult> {
+      const action = input.action;
+      if (action !== 'retry' && action !== 'skip' && action !== 'fail' && action !== 'reply') {
+        return { ok: false, error: 'Invalid intervention action.' };
+      }
+      if (state !== 'running' || !bridge) {
+        return { ok: false, error: 'No mission is waiting for intervention.' };
+      }
+      if (typeof bridge.resolveIntervention !== 'function') {
+        return { ok: false, error: 'Active bridge does not support resolve_intervention.' };
+      }
+      try {
+        await bridge.resolveIntervention(action, input.message?.trim() || undefined);
+        // Clear Needs You on mission + task rows (completion-gate rows stay blocked otherwise).
+        if (currentMissionId) {
+          await store.clearNeedsHuman(currentMissionId, `Intervention: ${action}`);
+        }
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    },
   };
+
+  startMissionFn = (req) => service.startMission(req);
+  return service;
 }

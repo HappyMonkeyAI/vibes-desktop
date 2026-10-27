@@ -9,6 +9,7 @@ import {
   type MissionPlanResponse,
   type MissionStartRequest,
   type MissionStartResult,
+  type MissionQueueSnapshot,
   type RolesConfigInput,
   type RolesConfigView,
   type TestConnectionRequest,
@@ -18,6 +19,13 @@ import {
   type VoiceTranscribeRequest,
   type VoiceTranscribeResult,
   type VoiceWarmResult,
+  type DecisionProbeResult,
+  type HarnessLessonView,
+  type MissionSteerRequest,
+  type MissionSteerResult,
+  type MissionResolveInterventionRequest,
+  type MissionResolveInterventionResult,
+  type VoiceAnnounceTestResult,
   type WorkspaceHistoryEntry,
   type WorkspaceSelectResult,
 } from '@shared/channels';
@@ -50,6 +58,7 @@ const api = {
       ipcRenderer.invoke(channels.voiceTranscribe, request),
     warm: (): Promise<VoiceWarmResult> => ipcRenderer.invoke(channels.voiceWarm),
     testServer: (): Promise<VoiceServerTestResult> => ipcRenderer.invoke(channels.voiceTestServer),
+    testAnnounce: (): Promise<VoiceAnnounceTestResult> => ipcRenderer.invoke(channels.voiceAnnounceTest),
   },
   mission: {
     start: (request: MissionStartRequest): Promise<MissionStartResult> =>
@@ -59,6 +68,18 @@ const api = {
       ipcRenderer.invoke(channels.missionPlan, request),
     /** Discard a reviewed-but-unlaunched plan (Decline / modal close). */
     cancelPlan: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.missionCancelPlan),
+    queue: {
+      get: (): Promise<MissionQueueSnapshot> => ipcRenderer.invoke(channels.missionQueueGet),
+      setPaused: (paused: boolean): Promise<MissionQueueSnapshot> =>
+        ipcRenderer.invoke(channels.missionQueuePause, paused),
+      clear: (): Promise<MissionQueueSnapshot> => ipcRenderer.invoke(channels.missionQueueClear),
+    },
+    steer: (request: MissionSteerRequest): Promise<MissionSteerResult> =>
+      ipcRenderer.invoke(channels.missionSteer, request),
+    resolveIntervention: (
+      request: MissionResolveInterventionRequest,
+    ): Promise<MissionResolveInterventionResult> =>
+      ipcRenderer.invoke(channels.missionResolveIntervention, request),
   },
   workspace: {
     select: (): Promise<WorkspaceSelectResult> => ipcRenderer.invoke(channels.workspaceSelect),
@@ -71,6 +92,13 @@ const api = {
   settings: {
     get: (): Promise<AppSettings> => ipcRenderer.invoke(channels.settingsGet),
     save: (input: AppSettingsSaveInput): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.settingsSave, input),
+  },
+  decision: {
+    test: (): Promise<DecisionProbeResult> => ipcRenderer.invoke(channels.decisionTest),
+  },
+  harness: {
+    latestLesson: (workspaceRoot: string): Promise<HarnessLessonView> =>
+      ipcRenderer.invoke(channels.harnessLessonGet, workspaceRoot),
   },
 };
 

@@ -6,7 +6,9 @@ import { LedgerStore } from './ledger/store';
 import { RolesStore } from './roles/store';
 import { makeSafeCipher } from './roles/safeCipher';
 import { writeVibesConfig } from './roles/config-writer';
+import { writeVibesMcpJson } from './roles/mcp-writer';
 import { createMissionService } from './mission/service';
+import { resolveDecisionMcpConfig } from './decision/config';
 import { VibesBridge } from './bridge/vibes-bridge';
 import { WorkspaceHistoryStore } from './workspace/history';
 import { SettingsStore } from './settings/store';
@@ -54,14 +56,10 @@ app.whenReady().then(() => {
   const workspaceHistoryStore = new WorkspaceHistoryStore(app.getPath('userData'));
   // App settings (Settings tab) — speech-server key uses the same OS cipher as Roles.
   const settingsStore = new SettingsStore(app.getPath('userData'), makeSafeCipher());
-  // Soft-migrate: previous default was yapsnap CLI; builtin Whisper downloads on
-  // first talk (ZeroG-style) and does not require pip. Users can re-select yapsnap.
-  {
-    const current = settingsStore.get();
-    if (current.speechEngine === 'yapsnap') {
-      settingsStore.save({ speechEngine: 'builtin' });
-    }
-  }
+  // One-time soft-migrate: previous default was yapsnap CLI; builtin Whisper
+  // downloads on first talk (ZeroG-style) and does not require pip. A user who
+  // re-selects yapsnap afterwards keeps it (the store records the migration).
+  settingsStore.migrateSpeechEngine();
   // T13/T14 — mission lifecycle. The bridge factory writes the native config before
   // each spawn so a child always reads the per-role endpoints we just saved.
   // writeVibesConfig itself refuses non-absolute roots, so a bad value can never
@@ -81,12 +79,39 @@ app.whenReady().then(() => {
   };
   const missionService = createMissionService({
     store: ledger,
+    userDataPath: app.getPath('userData'),
+    settingsStore,
     vibesPath: () => {
       try { return resolveVibesPath(); } catch { return undefined; }
     },
     createBridge: (workspaceRoot) => {
-      writeVibesConfig(workspaceRoot, rolesStore.input());
-      return new VibesBridge({ vibesPath: resolveVibesPath(), workspaceRoot });
+      const decision = resolveDecisionMcpConfig(settingsStore);
+      const settings = settingsStore.get();
+      writeVibesConfig(workspaceRoot, rolesStore.input(), decision, {
+        maxSteps: settings.maxSteps,
+        maxConcurrentTasks: settings.maxConcurrentTasks,
+        yoloMode: settings.yoloMode,
+        thinkingMode: settings.thinkingMode,
+        contextCompactionEnabled: settings.contextCompactionEnabled,
+        smallModelProfile: settings.smallModelProfile,
+        triageEnabled: settings.triageEnabled,
+        triageInterval: settings.triageInterval,
+        triageAutoSteer: settings.triageAutoSteer,
+        memoryEnabled: settings.memoryEnabled,
+        localMemory: settings.localMemory,
+      });
+      writeVibesMcpJson(workspaceRoot, {
+        enabled: settings.htmlDesignAdvisorEnabled,
+        pythonCommand: settings.htmlDesignAdvisorPython || 'python',
+        workspace: settings.htmlDesignAdvisorWorkspace || undefined,
+      });
+      const llmEnv: Record<string, string> = {};
+      if (decision) {
+        llmEnv.KEV_MCP_URL = decision.url;
+        llmEnv.KEV_MCP_AUTH_TOKEN = decision.token;
+        llmEnv.ENABLE_DECISION_INTERVENE_GATE = 'true';
+      }
+      return new VibesBridge({ vibesPath: resolveVibesPath(), workspaceRoot, llmEnv });
     },
   });
   createWindow();

@@ -16,7 +16,7 @@ import type { ActivityGroup, LedgerEntry, LedgerSnapshot } from '@shared/channel
 
 export interface TaskStatusInput {
   name: string;
-  status: 'pending' | 'in-progress' | 'complete' | 'failed';
+  status: 'pending' | 'in-progress' | 'complete' | 'failed' | 'intervention';
   detail?: string;
 }
 
@@ -25,6 +25,8 @@ const STATUS_MAP = {
   'in-progress': 'running',
   complete: 'done',
   failed: 'failed',
+  /** Operator must answer resolve_intervention (KEV escalate / triage / task fail). */
+  intervention: 'blocked',
 } as const;
 
 const FILE_NAME = 'ledger.jsonl';
@@ -99,15 +101,17 @@ export class LedgerStore extends EventEmitter {
       if (existing && input.status === 'pending' && existing.status !== 'pending') {
         return existing;
       }
+      const needsHuman = input.status === 'intervention';
       const entry: LedgerEntry = {
         id: existing?.id ?? crypto.randomUUID(),
-        group: classify({ status, needsHuman: false }),
+        group: classify({ status, needsHuman }),
         status,
         source: 'vibes-mission',
         title: input.name,
         detail: input.detail ?? existing?.detail,
         missionId,
         workspaceRoot: workspaceRoot || existing?.workspaceRoot,
+        needsHuman: needsHuman || undefined,
         updatedAt: Date.now(),
       };
       return this.append(entry);
@@ -124,6 +128,31 @@ export class LedgerStore extends EventEmitter {
     }
   }
 
+  /** Clear Needs You flags after resolve_intervention (mission + task rows). */
+  async clearNeedsHuman(missionId: string, detail?: string): Promise<void> {
+    await this.enqueue(async () => {
+      await this.ready;
+      const rows = [...this.entries.values()].filter(
+        (e) => e.missionId === missionId && e.needsHuman && e.source === 'vibes-mission',
+      );
+      for (const existing of rows) {
+        const status: LedgerEntry['status'] =
+          existing.kind === 'mission'
+            ? (existing.status === 'blocked' ? 'running' : existing.status)
+            : (existing.status === 'blocked' ? 'failed' : existing.status);
+        const entry: LedgerEntry = {
+          ...existing,
+          status,
+          group: classify({ status, needsHuman: false }),
+          needsHuman: undefined,
+          detail: detail ?? existing.detail,
+          updatedAt: Date.now(),
+        };
+        await this.append(entry);
+      }
+    });
+  }
+
   /** Record a mission-level event as a ledger entry. One mission = one row:
    *  upserts by (missionId, title) so the mission's lifecycle updates in place. */
   async recordMissionEvent(
@@ -132,15 +161,17 @@ export class LedgerStore extends EventEmitter {
     workspaceRoot?: string,
     missionId?: string,
     detail?: string,
+    opts?: { needsHuman?: boolean },
   ): Promise<LedgerEntry> {
     return this.enqueue(async () => {
       await this.ready;
       const existing = [...this.entries.values()].find(
         (e) => e.source === 'vibes-mission' && e.title === title && e.missionId === missionId,
       );
+      const needsHuman = Boolean(opts?.needsHuman);
       const entry: LedgerEntry = {
         id: existing?.id ?? crypto.randomUUID(),
-        group: classify({ status, needsHuman: false }),
+        group: classify({ status, needsHuman }),
         status,
         source: 'vibes-mission',
         kind: 'mission',
@@ -148,6 +179,7 @@ export class LedgerStore extends EventEmitter {
         detail: detail ?? existing?.detail,
         missionId,
         workspaceRoot: workspaceRoot || existing?.workspaceRoot,
+        needsHuman: needsHuman || undefined,
         updatedAt: Date.now(),
       };
       return this.append(entry);
@@ -195,6 +227,27 @@ export class LedgerStore extends EventEmitter {
    *  Preserves any richer step/system detail already on the row; does not stamp
    *  the mission summary onto every incomplete step. */
   async markOpenTasksFailed(missionId: string): Promise<number> {
+    return this.closeOpenTasks(missionId, 'failed', (entry) =>
+      entry.detail
+      || (entry.status === 'pending'
+        ? 'Left pending when the mission ended (dependency never became runnable).'
+        : 'Left incomplete when the mission ended.'));
+  }
+
+  /** When a mission completes, close checklist rows the child never reported
+   *  (e.g. a seeded plan step it renamed or merged). They go to `idle`, not
+   *  `done` — no task-status event proves the work ran — and not `failed`,
+   *  which would flag a completed mission as needing attention. */
+  async markUnreportedTasksIdle(missionId: string): Promise<number> {
+    return this.closeOpenTasks(missionId, 'idle', (entry) =>
+      entry.detail || 'Not reported by the mission (no task-status event before it completed).');
+  }
+
+  private async closeOpenTasks(
+    missionId: string,
+    status: 'failed' | 'idle',
+    detailFor: (entry: LedgerEntry) => string,
+  ): Promise<number> {
     return this.enqueue(async () => {
       await this.ready;
       let count = 0;
@@ -203,18 +256,14 @@ export class LedgerStore extends EventEmitter {
         if (entry.kind === 'mission') continue;
         if (entry.missionId !== missionId) continue;
         if (entry.status !== 'running' && entry.status !== 'verifying' && entry.status !== 'pending') continue;
-        const failed: LedgerEntry = {
+        const closed: LedgerEntry = {
           ...entry,
-          status: 'failed',
-          group: classify({ status: 'failed', needsHuman: false }),
-          detail:
-            entry.detail
-            || (entry.status === 'pending'
-              ? 'Left pending when the mission ended (dependency never became runnable).'
-              : 'Left incomplete when the mission ended.'),
+          status,
+          group: classify({ status, needsHuman: false }),
+          detail: detailFor(entry),
           updatedAt: Date.now(),
         };
-        await this.append(failed);
+        await this.append(closed);
         count += 1;
       }
       return count;

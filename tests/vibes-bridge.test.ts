@@ -37,6 +37,9 @@ describe('VibesBridge env allowlist (T4)', () => {
       OLLAMA_MODEL: 'qwen3.6-27b',
       OLLAMA_API_KEY: 'secret-key',
       CONTEXT_WINDOW: '8192',
+      KEV_MCP_URL: 'http://192.168.5.157:8765/mcp',
+      KEV_MCP_AUTH_TOKEN: 'tok',
+      ENABLE_DECISION_INTERVENE_GATE: 'true',
       // These must NOT leak into the child:
       GITHUB_TOKEN: 'ghp_should-not-cross',
       DATABASE_URL: 'postgres://should-not-cross',
@@ -46,6 +49,8 @@ describe('VibesBridge env allowlist (T4)', () => {
     expect(env.OLLAMA_MODEL).toBe('qwen3.6-27b');
     expect(env.OLLAMA_API_KEY).toBe('secret-key');
     expect(env.CONTEXT_WINDOW).toBe('8192');
+    expect(env.KEV_MCP_URL).toBe('http://192.168.5.157:8765/mcp');
+    expect(env.ENABLE_DECISION_INTERVENE_GATE).toBe('true');
     expect(env.GITHUB_TOKEN).toBeUndefined();
     expect(env.DATABASE_URL).toBeUndefined();
     expect(env.HERMES_VAULT_PASSWORD).toBeUndefined();
@@ -97,6 +102,13 @@ describe('VibesBridge task-status events (T4)', () => {
 
     expect(events).toEqual([]);
     expect(logs).toEqual(['[INFO] starting mission', 'random warning line']);
+  });
+
+  it('treats an unknown [TASK_STATUS] status as a plain log, not a task event', () => {
+    const { bridge, events, logs } = bridgeWithTaskEvents();
+    bridge.client.emit('log', '[TASK_STATUS] {"name": "Write tests", "status": "paused"}');
+    expect(events).toEqual([]);
+    expect(logs).toContain('[TASK_STATUS] {"name": "Write tests", "status": "paused"}');
   });
 
   it('treats a malformed [TASK_STATUS] payload as a plain log', () => {

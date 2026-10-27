@@ -22,6 +22,8 @@ const ALLOWED_VIBES_ENV_KEYS = new Set([
   'OPENROUTER_API_KEY', 'OPENROUTER_BASE_URL', 'OPENROUTER_MODEL',
   'DEEPSEEK_API_KEY', 'DEEPSEEK_BASE_URL', 'DEEPSEEK_MODEL',
   'OLLAMA_BASE_URL', 'OLLAMA_MODEL', 'OLLAMA_API_KEY', 'CONTEXT_WINDOW',
+  // T26 — optional KEV decision MCP for intervene-vs-continue gate
+  'KEV_MCP_URL', 'KEV_MCP_AUTH_TOKEN', 'ENABLE_DECISION_INTERVENE_GATE',
 ]);
 
 /** Minimal platform base env so the child can find node/tsx but sees no app secrets. */
@@ -44,8 +46,8 @@ export function buildChildEnv(llmEnv: Record<string, string> = {}): Record<strin
 
 export interface TaskStatusEvent {
   name: string;
-  status: 'in-progress' | 'complete' | 'failed';
-  /** Failure reason from the child (`error` on task_failed events). */
+  status: 'in-progress' | 'complete' | 'failed' | 'intervention' | 'pending';
+  /** Failure / intervention question from the child. */
   detail?: string;
 }
 
@@ -93,6 +95,12 @@ const PLAN_TIMEOUT_MS = 600_000; // planning can take a long time on slow local 
 const EXECUTE_TIMEOUT_MS = 3_600_000; // an hour ceiling for a full mission
 const TASK_STATUS_RE = /^\[TASK_STATUS\] (.*)$/;
 
+const TASK_STATUSES: readonly TaskStatusEvent['status'][] = ['in-progress', 'complete', 'failed'];
+
+function isTaskStatus(value: unknown): value is TaskStatusEvent['status'] {
+  return typeof value === 'string' && (TASK_STATUSES as readonly string[]).includes(value);
+}
+
 export class VibesBridge extends EventEmitter {
   readonly client = new JsonRpcClient();
   private proc: ReturnType<typeof spawn> | null = null;
@@ -113,7 +121,9 @@ export class VibesBridge extends EventEmitter {
             error?: unknown;
             detail?: unknown;
           };
-          if (typeof parsed.name === 'string' && typeof parsed.status === 'string') {
+          // Unknown statuses would map to an undefined ledger status — drop them
+          // to the plain log instead of writing a broken row.
+          if (typeof parsed.name === 'string' && isTaskStatus(parsed.status)) {
             const detail =
               typeof parsed.detail === 'string'
                 ? parsed.detail
@@ -122,7 +132,7 @@ export class VibesBridge extends EventEmitter {
                   : undefined;
             const event: TaskStatusEvent = {
               name: parsed.name,
-              status: parsed.status as TaskStatusEvent['status'],
+              status: parsed.status,
               ...(detail ? { detail } : {}),
             };
             this.emit('task-status', event);
@@ -223,6 +233,11 @@ export class VibesBridge extends EventEmitter {
 
   async resolveIntervention(action: InterventionAction, message?: string, retryFromTaskId?: string): Promise<string> {
     return this.callTool('resolve_intervention', { action, message, retryFromTaskId });
+  }
+
+  /** Chat phase 2 — inject steering for the next / current task. */
+  async steerMission(message: string): Promise<string> {
+    return this.callTool('steer_mission', { message });
   }
 
   private async callTool(name: string, args: Record<string, unknown>, timeoutMs = 30_000): Promise<string> {

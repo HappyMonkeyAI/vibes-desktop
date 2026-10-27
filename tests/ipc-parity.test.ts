@@ -65,3 +65,12 @@ describe('IPC channel parity (V1 gate)', () => {
     expect(seen).toEqual(allChannelValues);
   });
 });
+
+describe('voice:transcribe input guard (T31)', () => {
+  it('rejects an oversized capture before decoding or writing it', async () => {
+    const table = createHandlerTable();
+    const huge = 'A'.repeat(36 * 1024 * 1024); // > ~25 MB of audio as base64
+    const result = await table[channels.voiceTranscribe]({} as never, { audioBase64: huge, mime: 'audio/webm' });
+    expect(result).toEqual({ ok: false, error: expect.stringContaining('Recording too long') });
+  });
+});

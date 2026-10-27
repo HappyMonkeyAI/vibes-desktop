@@ -167,6 +167,30 @@ describe('LedgerStore (T5)', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it('markUnreportedTasksIdle closes rows a completed mission never reported, without failing them', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const missionId = 'm-done';
+    await store.recordMissionEvent('Do the thing', 'running', dir, missionId);
+    await store.seedPlannedTasks(['A', 'B', 'C'], dir, missionId);
+    await store.recordTaskStatus({ name: 'A', status: 'complete' }, dir, missionId);
+    await store.recordTaskStatus({ name: 'B', status: 'in-progress' }, dir, missionId);
+
+    const count = await store.markUnreportedTasksIdle(missionId);
+    expect(count).toBe(2);
+
+    const snap = await store.snapshot();
+    expect(snap.entries.find((e) => e.title === 'A')!.status).toBe('done');
+    for (const title of ['B', 'C']) {
+      const row = snap.entries.find((e) => e.title === title)!;
+      expect(row.status).toBe('idle');
+      expect(row.group).toBe('recent'); // not needs-you
+      expect(row.detail).toContain('Not reported by the mission');
+    }
+    expect(snap.entries.find((e) => e.kind === 'mission')!.status).toBe('running');
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it('concurrent task-status events for the same title upsert in place — one row, final status', async () => {
     const dir = tempDir();
     const store = new LedgerStore(dir);
@@ -180,6 +204,54 @@ describe('LedgerStore (T5)', () => {
     const rows = snap.entries.filter((e) => e.title === 'Write code');
     expect(rows).toHaveLength(1); // no duplicate row minted by the race
     expect(rows[0].status).toBe('done'); // final status wins
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('clearNeedsHuman drops flags on mission and task rows', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const missionId = 'm-clear';
+    await store.recordMissionEvent('Mission', 'blocked', dir, missionId, 'wait', { needsHuman: true });
+    await store.recordTaskStatus(
+      { name: 'Gate', status: 'intervention', detail: 'Escalate?' },
+      dir,
+      missionId,
+    );
+    await store.clearNeedsHuman(missionId, 'Intervention: skip');
+    const snap = await store.snapshot();
+    expect(snap.entries.every((e) => !e.needsHuman)).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('intervention status lands in Needs You with needsHuman + question detail', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const missionId = 'm-intervene';
+    await store.recordMissionEvent('Ship it', 'running', dir, missionId);
+    const row = await store.recordTaskStatus(
+      {
+        name: 'Patch CSS',
+        status: 'intervention',
+        detail: 'Retry this step, skip it, or fail the mission?',
+      },
+      dir,
+      missionId,
+    );
+    expect(row.status).toBe('blocked');
+    expect(row.needsHuman).toBe(true);
+    expect(row.group).toBe('needs-you');
+    expect(row.detail).toMatch(/Retry this step/);
+    await store.recordMissionEvent(
+      'Ship it',
+      'blocked',
+      dir,
+      missionId,
+      row.detail,
+      { needsHuman: true },
+    );
+    const snap = await store.snapshot();
+    expect(snap.groupCounts['needs-you']).toBeGreaterThanOrEqual(1);
+    expect(snap.entries.find((e) => e.kind === 'mission')!.needsHuman).toBe(true);
     rmSync(dir, { recursive: true, force: true });
   });
 });

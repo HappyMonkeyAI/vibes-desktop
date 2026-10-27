@@ -4,6 +4,7 @@ import RolesTab from './RolesTab';
 import SettingsTab from './SettingsTab';
 import { ThemeToggle } from './ThemeToggle';
 import OperationsView from './OperationsView';
+import ChatView from './ChatView';
 import styles from './MissionControl.module.css';
 
 const App: React.FC = () => {
@@ -50,6 +51,9 @@ const App: React.FC = () => {
         <Tabs defaultActiveTab="operations">
           <Tabs.TabPane key="operations" title="Operations">
             <OperationsView />
+          </Tabs.TabPane>
+          <Tabs.TabPane key="chat" title="Chat">
+            <ChatView />
           </Tabs.TabPane>
           <Tabs.TabPane key="roles" title="Roles">
             <RolesTab />
