@@ -82,3 +82,10 @@ Lessons learned while building Vibes Desktop. Imperative rules with the why; one
 ## Verification tooling (Windows)
 
 - Window-capture (`CopyFromScreen`) grabs the desktop wallpaper when the app isn't frontmost — it failed silently and returned the background image. Use CDP's `Page.captureScreenshot` instead: it captures the renderer directly with no z-order fight. Drive CDP from Node v26's global `WebSocket`; add `awaitPromise: true` to `Runtime.evaluate` for any expression that returns a Promise, or you get `{}` back.
+- Fresh `npm ci` with npm's install-script gate skips electron's postinstall: the first `electron .` prints "Downloading Electron binary..." and opens no window for a while. Wait for the CDP `/json/list` page target rather than assuming the launch failed. CDP worker traffic: `Target.setAutoAttach {autoAttach, waitForDebuggerOnStart, flatten}` then enable Network/Runtime per `sessionId` and `Runtime.runIfWaitingForDebugger`.
+- Kill only the instance you launched: find it by its debug port (`Get-NetTCPConnection -LocalPort <port>`), since `TaskStop` on the shell leaves electron.exe running and other Electron apps share the image name.
+
+## Renderer supply chain / CSP
+
+- Transformers.js sets onnxruntime `wasmPaths` to cdn.jsdelivr.net at import time. Override after import in the worker with bundled `?url` assets (alias `ort-dist` → `node_modules/onnxruntime-web/dist`; the package exports map blocks `onnxruntime-web/dist/*`). Keep the asyncify variant to match what Transformers picks.
+- CSP is injected at build only (Vite `transformIndexHtml`, `apply: 'build'`); a dev CSP breaks the React-refresh inline preamble. Inline scripts are not allowed — put boot scripts in `src/renderer/public/`.
