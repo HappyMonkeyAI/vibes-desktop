@@ -121,9 +121,23 @@ const SettingsTab: React.FC = () => {
     return Math.floor(n);
   };
 
+  const handleBrowseVibes = async () => {
+    const res = await window.vibesDesktop.workspace.select();
+    if (res.path) setVibesPath(res.path);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      const trimmedVibes = vibesPath.trim();
+      if (trimmedVibes) {
+        const check = await window.vibesDesktop.settings.validateVibesPath(trimmedVibes);
+        if (!check.ok) {
+          Message.error(check.error ?? 'Invalid Vibes path.');
+          setSaving(false);
+          return;
+        }
+      }
       const result = await window.vibesDesktop.settings.save({
         vibesPath,
         contextPath,
@@ -274,7 +288,11 @@ const SettingsTab: React.FC = () => {
             <h3 className={styles.sectionTitle}>Vibes Repo</h3>
             <div className={styles.field}>
               <label className={styles.label}>Vibes Checkout Path</label>
-              <Input placeholder="C:/path/to/vibes-repo" value={vibesPath} onChange={setVibesPath} size="small" />
+              <div className={styles.pathRow}>
+                <Input placeholder="C:/path/to/vibes-repo" value={vibesPath} onChange={setVibesPath} size="small" />
+                <Button size="small" onClick={() => void handleBrowseVibes()}>Browse</Button>
+              </div>
+              <p className={styles.hint}>Must contain <code>src/mcp/server.ts</code>. Checked on Save.</p>
             </div>
           </div>
 

@@ -28,6 +28,7 @@ import {
   type VoiceAnnounceTestResult,
   type WorkspaceHistoryEntry,
   type WorkspaceSelectResult,
+  type VibesPathValidationResult,
 } from '@shared/channels';
 
 /**
@@ -92,6 +93,8 @@ const api = {
   settings: {
     get: (): Promise<AppSettings> => ipcRenderer.invoke(channels.settingsGet),
     save: (input: AppSettingsSaveInput): Promise<{ ok: boolean }> => ipcRenderer.invoke(channels.settingsSave, input),
+    validateVibesPath: (path: string): Promise<VibesPathValidationResult> =>
+      ipcRenderer.invoke(channels.settingsValidateVibesPath, path),
   },
   decision: {
     test: (): Promise<DecisionProbeResult> => ipcRenderer.invoke(channels.decisionTest),

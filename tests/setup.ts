@@ -86,6 +86,7 @@ window.vibesDesktop = {
       setupComplete: true,
     }),
     save: vi.fn().mockResolvedValue({ ok: true }),
+    validateVibesPath: vi.fn().mockResolvedValue({ ok: true }),
   },
   decision: {
     test: vi.fn().mockResolvedValue({ ok: false, error: 'not configured' }),
