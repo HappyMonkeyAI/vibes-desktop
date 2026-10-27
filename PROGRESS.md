@@ -2,7 +2,18 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
-## 2026-10-27 (security) — Bundle onnxruntime WASM; renderer CSP (T30)
+## 2026-10-27 (review) — Follow-ups T31–T33
+
+**Done:**
+- T31: speech-server API key is never sent over `http://` to a non-loopback host (transcribe + probe); `voice:transcribe` caps captures at ~25 MB of audio; temp capture deleted in `finally`; probe requires `/health` 2xx or a 400/415/422 from an empty POST (a 404 no longer passes); Settings "Remove key" (`clearSpeechServerApiKey`).
+- T32: bridge drops `[TASK_STATUS]` lines with unknown statuses to the plain log; on a `done` mission, seeded rows never reported go to `idle` ("Not reported by the mission"), not left pending and not failed.
+- T33: a failed model load no longer fails a concurrent request for another model; hold-to-talk works with Space/Enter; mic stream released on unmount.
+
+**Evidence:** unit — 133 passed / 3 skipped (new: transport rule, probe matrix, size cap, clear key, unknown status, unreported→idle in store + service, Space hold, unmount releases mic); typecheck clean. live — built app over CDP, worker sent a nonexistent model then whisper-tiny.en: with fix `{1: error, 2: result}`; pre-fix build reproduced `{1: error, 2: same error}`.
+
+**Open:** a LAN speech server over plain http with a key now errors by design — use https or no key.
+
+
 
 **Done:** `voice-worker.ts` overrides Transformers.js' default `wasmPaths` (cdn.jsdelivr.net) with the asyncify WASM + factory imported as bundled assets via a `ort-dist` alias (onnxruntime-web's exports map hides `dist/`). Build-only Vite plugin injects a CSP meta into `out/renderer/index.html`; dev is unaffected (React refresh preamble + HMR). Theme boot script moved from inline to `public/theme-boot.js` so script-src stays `'self'`.
 

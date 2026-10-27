@@ -80,6 +80,31 @@ describe('MissionService (T13/T14)', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it('closes a seeded plan step the completed mission never reported as idle, not pending', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const service = createMissionService({
+      store,
+      createBridge: () =>
+        makeFakeBridge({
+          planResponse: JSON.stringify([
+            { id: 1, name: 'Write code', status: 'pending' },
+            { id: 2, name: 'Write docs', status: 'pending' },
+          ]),
+          stream: [{ name: 'Write code', status: 'complete' }],
+        }),
+    });
+
+    await service.startMission({ request: 'Build a thing', workspaceRoot: dir });
+    await new Promise((r) => setTimeout(r, 30)); // allow background execution to finish
+
+    const snap = await store.snapshot();
+    expect(snap.entries.find((e) => e.title === 'Write code')!.status).toBe('done');
+    expect(snap.entries.find((e) => e.title === 'Write docs')!.status).toBe('idle');
+    expect(snap.entries.find((e) => e.title === 'Build a thing')!.status).toBe('done');
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it('T14 — a second start while one is running returns alreadyRunning without spawning', async () => {
     const dir = tempDir();
     const store = new LedgerStore(dir);

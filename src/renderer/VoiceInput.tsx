@@ -22,7 +22,19 @@ const VoiceInput: React.FC<{ onTranscript: (text: string) => void }> = ({ onTran
   const [engine, setEngine] = useState<SpeechEngine>('builtin');
   const settingsRef = useRef<AppSettings | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+
+  // Release the microphone if the component goes away mid-recording.
+  useEffect(() => () => {
+    const recorder = recorderRef.current;
+    recorderRef.current = null;
+    if (recorder && recorder.state !== 'inactive') {
+      try { recorder.stop(); } catch { /* already stopping */ }
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +70,11 @@ const VoiceInput: React.FC<{ onTranscript: (text: string) => void }> = ({ onTran
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
-      recorder.onstop = () => stream.getTracks().forEach((t) => t.stop());
+      recorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (streamRef.current === stream) streamRef.current = null;
+      };
+      streamRef.current = stream;
       recorder.start();
       recorderRef.current = recorder;
       setState('recording');
@@ -174,6 +190,18 @@ const VoiceInput: React.FC<{ onTranscript: (text: string) => void }> = ({ onTran
       onMouseDown={() => void startRecording()}
       onMouseUp={() => void stopRecording()}
       onMouseLeave={() => { if (state === 'recording') void stopRecording(); }}
+      // Keyboard push-to-talk: hold Space or Enter while the button has focus.
+      onKeyDown={(e: React.KeyboardEvent) => {
+        if (e.key !== ' ' && e.key !== 'Enter') return;
+        e.preventDefault();
+        if (!e.repeat && state === 'idle') void startRecording();
+      }}
+      onKeyUp={(e: React.KeyboardEvent) => {
+        if (e.key !== ' ' && e.key !== 'Enter') return;
+        e.preventDefault();
+        void stopRecording();
+      }}
+      onBlur={() => { if (state === 'recording') void stopRecording(); }}
     >
       {label}
     </Button>

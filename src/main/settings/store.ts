@@ -112,7 +112,7 @@ export class SettingsStore {
   save(input: AppSettingsSaveInput): boolean {
     try {
       const currentView = this.get();
-      let nextEnc = asString(this.readRaw()?.speechServerApiKeyEnc);
+      let nextEnc = input.clearSpeechServerApiKey === true ? '' : asString(this.readRaw()?.speechServerApiKeyEnc);
       if (typeof input.speechServerApiKey === 'string' && input.speechServerApiKey.length > 0) {
         // encryptKey falls back to plaintext when the OS store is unavailable,
         // so a missing keyring never fails the whole settings save.

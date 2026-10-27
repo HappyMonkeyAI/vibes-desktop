@@ -32,6 +32,27 @@ export function audioMimeForPath(filePath: string): string {
   return AUDIO_TYPES[path.extname(filePath).slice(1).toLowerCase()] ?? AUDIO_TYPES.webm;
 }
 
+function isLoopbackHost(hostname: string): boolean {
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  return host === 'localhost' || host === '::1' || /^127(\.\d{1,3}){3}$/.test(host);
+}
+
+/**
+ * Why an API key must not be sent to `url`, or null when it may. A bearer key
+ * over plain http to another machine is readable by anyone on the network path.
+ */
+export function apiKeyTransportError(url: string, apiKey: string | undefined): string | null {
+  if (!apiKey?.trim()) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return null; // URL validation reports this separately
+  }
+  if (parsed.protocol !== 'http:' || isLoopbackHost(parsed.hostname)) return null;
+  return `Refusing to send the API key over unencrypted http:// to ${parsed.host}. Use https://, a loopback address, or remove the stored key.`;
+}
+
 export function isSupportedSpeechEndpoint(url: string): boolean {
   try {
     const parsed = new URL(url.trim());
@@ -84,6 +105,9 @@ export async function transcribeViaServer(options: ServerTranscribeOptions): Pro
   if (!options.model.trim()) {
     return { ok: false, error: 'Speech server model name is required.' };
   }
+
+  const keyError = apiKeyTransportError(url, options.apiKey);
+  if (keyError) return { ok: false, error: keyError };
 
   let bytes: Buffer;
   try {
@@ -142,7 +166,15 @@ export async function transcribeViaServer(options: ServerTranscribeOptions): Pro
   }
 }
 
-/** Lightweight reachability probe (GET the origin or POST empty is avoided — HEAD/GET health). */
+/** Statuses a real transcriptions route returns for an empty upload. */
+const ROUTE_EXISTS_STATUSES = new Set([400, 415, 422]);
+
+/**
+ * Reachability probe. A 2xx from `/health` (llama.cpp / qwen3-asr style) means
+ * up. Otherwise POST an empty form to the transcriptions URL itself: a 400/415/422
+ * proves the route exists and rejected the missing file. A bare 404 does not
+ * count — any web server on that port would pass.
+ */
 export async function probeSpeechServer(
   url: string,
   apiKey?: string,
@@ -151,37 +183,36 @@ export async function probeSpeechServer(
   if (!isSupportedSpeechEndpoint(url)) {
     return { ok: false, error: 'URL must be http:// or https://' };
   }
-  let origin: string;
-  try {
-    origin = new URL(url.trim()).origin;
-  } catch {
-    return { ok: false, error: 'Invalid URL' };
-  }
+  const target = url.trim();
+  const keyError = apiKeyTransportError(target, apiKey);
+  if (keyError) return { ok: false, error: keyError };
+  const origin = new URL(target).origin;
   const headers: Record<string, string> = {};
   if (apiKey?.trim()) headers.Authorization = `Bearer ${apiKey.trim()}`;
+
   try {
-    const res = await fetchImpl(`${origin}/health`, {
+    const health = await fetchImpl(`${origin}/health`, {
       method: 'GET',
       headers,
       signal: AbortSignal.timeout(10_000),
     });
-    if (res.ok) return { ok: true };
-    // Some stacks have no /health — a 404 still means the host answered.
-    if (res.status === 404) return { ok: true, error: undefined };
-    return { ok: false, error: `HTTP ${res.status} from ${origin}/health` };
+    if (health.ok) return { ok: true };
+  } catch {
+    // No /health or host down — the endpoint probe below reports which.
+  }
+
+  try {
+    const res = await fetchImpl(target, {
+      method: 'POST',
+      headers,
+      body: new FormData(),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.ok || ROUTE_EXISTS_STATUSES.has(res.status)) return { ok: true };
+    if (res.status === 401 || res.status === 403) return { ok: false, error: `HTTP ${res.status} — the server rejected the API key.` };
+    if (res.status === 404) return { ok: false, error: `HTTP 404 — no transcriptions endpoint at ${target}` };
+    return { ok: false, error: `HTTP ${res.status} from ${target}` };
   } catch (error) {
-    // Fall back: OPTIONS or GET on the transcriptions URL itself.
-    try {
-      const res = await fetchImpl(url.trim(), {
-        method: 'GET',
-        headers,
-        signal: AbortSignal.timeout(10_000),
-      });
-      // Method not allowed / bad request still proves the route exists.
-      if (res.status < 500) return { ok: true };
-      return { ok: false, error: `HTTP ${res.status}` };
-    } catch (inner) {
-      return { ok: false, error: inner instanceof Error ? inner.message : String(inner) };
-    }
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
