@@ -15,6 +15,10 @@ import { warmYapsnapModels } from '../voice/warm';
 import type { WorkspaceHistoryStore } from '../workspace/history';
 import { DEFAULT_SETTINGS, type SettingsStore } from '../settings/store';
 
+/** Base64 cap for one voice capture: ~25 MB of audio (the OpenAI transcriptions
+ *  limit), far beyond any push-to-talk clip. Guards main-process memory. */
+const MAX_AUDIO_BASE64_CHARS = Math.ceil((25 * 1024 * 1024 * 4) / 3);
+
 /**
  * Handler table: one entry per channel in the shared map. T5 wires the ledger
  * store in; T7/T8 wire the roles store and probe; mission (T13) stubs stand in
@@ -99,32 +103,40 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
     [channels.voiceTranscribe]: async (_e, req): Promise<VoiceTranscribeResult> => {
       const request = req as VoiceTranscribeRequest;
       if (!request?.audioBase64) return { ok: false, error: 'No audio received.' };
+      if (typeof request.audioBase64 !== 'string' || request.audioBase64.length > MAX_AUDIO_BASE64_CHARS) {
+        return { ok: false, error: 'Recording too long — keep voice input under about 25 MB of audio.' };
+      }
+      let inputPath: string | undefined;
       try {
         const settings = settingsStore?.get() ?? DEFAULT_SETTINGS;
         const dir = voiceTempDir();
         mkdirSync(dir, { recursive: true });
         const id = randomBytes(8).toString('hex');
-        const inputPath = path.join(dir, `${id}.${audioExtensionForMime(request.mime)}`);
+        inputPath = path.join(dir, `${id}.${audioExtensionForMime(request.mime)}`);
         const outPath = path.join(dir, `${id}.txt`);
         writeFileSync(inputPath, Buffer.from(request.audioBase64, 'base64'));
         if (settings.speechEngine === 'server') {
-          const result = await transcribeViaServer({
+          return await transcribeViaServer({
             url: settings.speechServerUrl,
             model: settings.speechServerModel,
             language: settings.speechLang,
             apiKey: settingsStore?.getSpeechServerApiKey(),
             filePath: inputPath,
           });
+        }
+        return await transcribeFile(inputPath, outPath, spawnYapsnap, settings.speechLang || 'auto');
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      } finally {
+        // transcribeFile deletes its own files; this covers the server path and
+        // any failure between writing the capture and handing it off.
+        if (inputPath) {
           try {
             rmSync(inputPath, { force: true });
           } catch {
             // best-effort cleanup
           }
-          return result;
         }
-        return await transcribeFile(inputPath, outPath, spawnYapsnap, settings.speechLang || 'auto');
-      } catch (error) {
-        return { ok: false, error: error instanceof Error ? error.message : String(error) };
       }
     },
     // T13/T14 — real mission lifecycle; inert stubs only when no service is wired (tests).

@@ -188,9 +188,11 @@ export interface AppSettings {
   speechServerHasKey: boolean;
 }
 
-/** Partial save payload — empty speechServerApiKey means keep the stored key. */
+/** Partial save payload — empty speechServerApiKey means keep the stored key;
+ *  clearSpeechServerApiKey removes it (a new key in the same save wins). */
 export type AppSettingsSaveInput = Partial<Omit<AppSettings, 'speechServerHasKey'>> & {
   speechServerApiKey?: string;
+  clearSpeechServerApiKey?: boolean;
 };
 
 /** Result of warming / pre-fetching the local yapsnap model cache. */

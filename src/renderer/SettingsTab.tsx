@@ -116,6 +116,21 @@ const SettingsTab: React.FC = () => {
     }
   };
 
+  const handleRemoveServerKey = async () => {
+    try {
+      const result = await window.vibesDesktop.settings.save({ clearSpeechServerApiKey: true });
+      if (result.ok) {
+        Message.success('Speech server key removed.');
+        setSpeechServerApiKey('');
+        setSpeechServerHasKey(false);
+      } else {
+        Message.error('Failed to remove the key.');
+      }
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Failed to remove the key.');
+    }
+  };
+
   const handleTestServer = async () => {
     setTestingServer(true);
     try {
@@ -311,6 +326,11 @@ const SettingsTab: React.FC = () => {
                 <Button size="small" type="outline" loading={testingServer} onClick={() => void handleTestServer()}>
                   Test server
                 </Button>
+                {speechServerHasKey && (
+                  <Button size="small" type="text" status="danger" onClick={() => void handleRemoveServerKey()}>
+                    Remove key
+                  </Button>
+                )}
               </div>
               <p className={styles.hint}>
                 Matches ZeroG Terminal’s server engine. For qwen3-asr-server: URL …/v1/audio/transcriptions, model qwen3-asr-0.6b-q8-0, key from that project’s .env.
