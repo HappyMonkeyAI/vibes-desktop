@@ -13,12 +13,15 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 - [docs/PACKAGING.md](docs/PACKAGING.md): dist cadence, SmartScreen, `CSC_*` / `WIN_CSC_LINK` signing for public beta (T61).
 - First-run / Settings: Browse for Vibes path; validate `src/mcp/server.ts` before continue/save; Test connection on wizard model step (T63).
 - First-run workspace step seeds Operations working directory; All quiet hint when no workspace chosen (T64).
+- Windows app icon (`build/icon.ico`) for NSIS / unpacked exe (T65).
 
 ### Changed
 
 - Installer metadata: author, homepage, repository, copyright; NSIS artifact `Vibes Desktop Setup <version>.exe`; `forceCodeSigning: false` until a cert is configured.
 - electron-builder 26: drop invalid `win.signingHashAlgorithms` so `npm run dist` validates again.
 - Settings → Test decision MCP on Unsloth `:8888` runs a real `system_one` tools/call and surfaces `sk-unsloth…` API-key errors (no false “reachable” with a classic KEV token).
+- Decision Settings copy clarifies Unsloth `sk-unsloth-…` vs classic KEV token (T65).
+- Live mission e2e defaults to local `127.0.0.1:1234` (override with `VIBES_LIVE_*` env) (T65).
 
 ## [0.1.1] — 2026-10-27
 

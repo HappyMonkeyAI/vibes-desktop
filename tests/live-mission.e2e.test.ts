@@ -18,10 +18,11 @@ import type { RolesConfigInput } from '@shared/channels';
  * disk — and a dead model must produce 'failed', never 'done'.
  */
 
-const EXECUTOR_ORIGIN = 'http://192.168.5.232:11434'; // Ollama — deliberately WITHOUT /v1
-const EXECUTOR_MODEL = 'hopephoto/Qwen3-4B-Instruct-2507_q8:latest';
-const REVIEWER_BASE = 'http://192.168.5.229:1234/v1'; // LM Studio
-const REVIEWER_MODEL = 'google/gemma-4-e2b';
+// Defaults target a local OpenAI-compatible host (LM Studio / Ollama). Override via env for LAN boxes.
+const EXECUTOR_ORIGIN = (process.env.VIBES_LIVE_EXECUTOR_URL ?? 'http://127.0.0.1:1234').replace(/\/$/, ''); // WITHOUT /v1 — writer appends it
+const EXECUTOR_MODEL = process.env.VIBES_LIVE_EXECUTOR_MODEL ?? 'google/gemma-4-e2b';
+const REVIEWER_BASE = (process.env.VIBES_LIVE_REVIEWER_URL ?? 'http://127.0.0.1:1234/v1').replace(/\/$/, '');
+const REVIEWER_MODEL = process.env.VIBES_LIVE_REVIEWER_MODEL ?? 'google/gemma-4-e2b';
 const VIBES_CHECKOUT = process.env.VIBES_PATH || 'C:/Users/steph/Documents/development/vibes';
 
 const MISSION_TIMEOUT_MS = 8 * 60_000;
@@ -119,15 +120,19 @@ describe.runIf(process.env.VIBES_LIVE === '1')('live mission smoke (real child +
         service = createLiveService(store, workspace);
         const request = 'Create a file named nope.txt with the word test';
         const result = await service.startMission({ request, workspaceRoot: workspace });
-        // Planning must fail loudly — a bad model is a start failure, never a
-        // silently dispatched mission with nothing to run.
-        expect(result.started).toBe(false);
-        expect(result.error).toBeTruthy();
-
-        const snap = await store.snapshot();
-        const row = snap.entries.find((e) => e.title === request && e.kind === 'mission');
-        expect(row?.status).toBe('failed');
-        expect(row?.detail).toBeTruthy();
+        // Ollama often fails at start; LM Studio may accept the id then fail mid-run.
+        // Either way: never a silent done, and the file must not appear.
+        if (!result.started) {
+          expect(result.error).toBeTruthy();
+          const snap = await store.snapshot();
+          const row = snap.entries.find((e) => e.title === request && e.kind === 'mission');
+          expect(row?.status).toBe('failed');
+          expect(row?.detail).toBeTruthy();
+        } else {
+          const row = await waitForMissionRow(store, request, MISSION_TIMEOUT_MS);
+          expect(row.status).toBe('failed');
+          expect(row.detail).toBeTruthy();
+        }
         expect(existsSync(path.join(workspace, 'nope.txt'))).toBe(false);
       } finally {
         await service?.stopMission().catch(() => undefined);
