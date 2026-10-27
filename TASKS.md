@@ -1,4 +1,4 @@
-# TASKS.md — Task Board
+﻿# TASKS.md — Task Board
 
 Status: `todo` → `doing` → `review` → `done`. One task per line; evidence links in PROGRESS.md.
 
@@ -41,8 +41,58 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T25 Seed reviewed plan tasks into ledger (0/N progress); mark open tasks failed on mission fail; hide Mission Scheduler from checklist ✅ 2026-10-20
 - [x] T27 Expandable mission/step failure detail in depth panel; child emits task error on TASK_STATUS ✅ 2026-10-20
 - [x] T28 Dark Mission Control default + Stitch sky accent; light toggle retained ✅ 2026-10-20
-- [ ] T24 Optional later: Agent Voice TTS announce on mission done/failed (HTTP to local daemon)
 
-## P7 — Roadmap (next)
-- [ ] T26 External MCP servers for missions: configure/register local MCP tools (e.g. html-design-advisor) so plan steps can call them — naming a path in the prompt is not enough
-- [ ] T21 V3 live mission pass (checklist + logs + failure detail without DevTools) — still owed from P5
+## P7 — Roadmap (next session)
+- [x] T26 Decision intervene gate (KEV): Settings URL+token → child env + `.vibes` config; before operator interrupt, `kev_evaluate` continue/escalate/skip (probabilities + margin); escalate on abstention/near-tie. html-design-advisor / general MCP registry still later. ✅ 2026-10-22
+- [x] T35 Harness²-lite: distill one post-failure harness lesson → `.vibes/harness-lesson.json` + Retry seed (extends T31) ✅ 2026-10-22
+- [x] T36 Chat tab (phase 1): request → plan RHS → auto-launch → ledger summary → done comment — `ChatView` + DESIGN.md ✅ 2026-10-21
+- [x] T41 Chat phase 2 steering: mid-run `mission:steer` → vibes `steer_mission` / `injectSteer` ✅ 2026-10-22
+- [x] T37 Completion gate: soft-pass malformed/`unverified` Owner adversary review (explicit `approved:false` still fails) — vibes + planner; mission `75c45024` false FAIL ✅ 2026-10-21
+- [x] T38 Double-check completion (Cline): deterministic evidence re-check + owner prompt newline fix + `ENABLE_DOUBLE_CHECK_COMPLETION` — vibes + planner + desktop config ✅ 2026-10-22
+- [x] T39 Crash-safe follow-up queue (OpenBot): FIFO in userData, `enqueueIfBusy`, drain on natural completion, Chat queues when busy ✅ 2026-10-22
+- [x] T40 Focus chain (lite): DESIGN + Chat RHS sticky plan as mission focus until next send ✅ 2026-10-22
+- [x] T21 V3 live mission pass — `VIBES_LIVE=1` e2e 3/3 (done file on disk; bad model → failed; reviewer path) ✅ 2026-10-22; Chat UI header re-run optional
+- [x] chore: commit desktop T38–T40 + vibes `ag/completion-gates` + planner gate mirror ✅ 2026-10-22
+- [x] T24 Agent Voice TTS announce on mission done/failed — Settings → Voice → daemon URL/token; soft `POST /v1/announce` ✅ 2026-10-22
+- [x] T42 Decision shadow live gate — `VIBES_DECISION_LIVE=1` e2e + offline fixture ✅ 2026-10-22
+- [x] T43 Chat queue chrome: list waiting follow-ups + Pause/Resume/Clear ✅ 2026-10-22
+- [x] T44 Mission MCP registry seed: Settings → HTML Design Advisor → workspace `.vibes/mcp.json` on spawn ✅ 2026-10-22
+- [x] T45 Live HappyMonkeyAI bookmark delta via BrowserOS Neo ✅ 2026-10-22 — OO-Harness / Agent S4 / Bark / Flint; see LINKS + neo-delta memory
+- [x] T46 OO-Harness-lite: harness-lesson v2 helped/failed + harnessClass → Retry seed Keep/Avoid ✅ 2026-10-22
+- [x] T47 Needs-You escalate UI: vibes `intervention` TASK_STATUS → ledger needsHuman; Ops/Chat Retry step / Skip / Fail → `resolve_intervention` ✅ 2026-10-22
+- [x] T42 Decision shadow live (Unsloth): `8888/mcp/` + `system_one` + English model ✅ 2026-10-22 (also works with classic KEV `kev_evaluate`)
+
+## P9 — Release hygiene
+- [x] T48 Version + changelog + feature map — bump `0.1.0`, `CHANGELOG.md`, `docs/FEATURES.md`, README spine ✅ 2026-10-22
+- [x] T49 Tag `v0.1.0` + NSIS `dist/Vibes Desktop Setup 0.1.0.exe` (~219 MB) ✅ 2026-10-22
+- [x] T50 Needs-You + Unsloth Decision wired end-to-end ✅ 2026-10-22 — Settings Decision → Unsloth `:8888/mcp/`; vibes + desktop `system_one`; mission-service intervention→resolve unit; live decision shadow green
+- [ ] T51 Optional: Kev 4B in Unsloth Decision picker; Bark STT watchlist (bookmark delta)
+- [x] T55 Roles context window on model cards → persist + `CONTEXT_WINDOW` in `.vibes/config.json` (executor wins over default) ✅ 2026-10-26
+- [x] T56 Settings → Runtime subpage: MAX_STEPS / concurrent / YOLO / thinking / compaction / small-model → `.vibes/config.json` on spawn ✅ 2026-10-26
+- [x] T57 Runtime II: triage observer + LOCAL_MEMORY / MEMORY_ENABLED → `.vibes/config.json` on spawn ✅ 2026-10-26
+- [x] T58 Cut closed beta **0.1.1** — CHANGELOG, BETA.md, NSIS dist, tag `v0.1.1` ✅ 2026-10-27
+- [x] T59 Merge PR #6 → `main` (security/review #2–#5 folded into release branch) ✅ 2026-10-27
+- [x] T60 First-run setup wizard (Vibes path → default role → mission tip) ✅ 2026-10-27
+- [x] T61 Packaging harden: author/metadata, signing docs (`CSC_*`), PACKAGING.md, BETA SmartScreen note ✅ 2026-10-27
+- [ ] T62 Live Decision/Needs-You smoke on LAN (blocked until KEV/Unsloth + VIBES_PATH + LLM up)
+- [x] T29b/T30b Speech migration + local ORT WASM/CSP merged into release branch ✅ 2026-10-27
+- [x] T50b Live Needs-You UI ✅ 2026-10-22 — mission `8b9c0e46` completion-gate → blocked+needsHuman; CDP clicked **Skip step**; vibes completion-gate→intervene + desktop `clearNeedsHuman` shipped. Follow-up: vibes scheduler deadlock (0/1 pending) on repeat orphan drills
+- [x] T52 Vibes scheduler deadlock ✅ 2026-10-24 — soft-requeue deleted `runningTasks` before `finally` → second start raced → stuck `in_progress`; also loop exited during `awaiting_intervention`. Fix on vibes `ag/completion-gates`; tests `scheduler-t52-requeue-race` + deps stuck-in_progress
+- [x] T53 Laya Decision probe ✅ 2026-10-24 — Unsloth `system_one` **is** Laya (`laya-english`); no second stack; native `laya_preset`/guard deferred; note `.agent/memories/codebase_insights/2026-10-24-laya-decision-probe.md`
+- [x] T54 Escalate on low System One confidence ✅ 2026-10-26 — default floor 0.35; missing confidence (classic KEV) unchanged; `minConfidence: null` disables
+
+## P8 — Part A (harness / memory research → product)
+- [x] T29 Decision spike (probe): LAN **KEV MCP** `http://192.168.5.157:8765/mcp` — list_models + triage `kev_evaluate` (escalate ~4.5s) + shadow `kev_select_tool` (~80ms). APIs `:8008`/`:8009` not LAN-published (localhost on host). Notes in `2026-10-20-decision-model-kev-gutsy.md` ✅ 2026-10-20
+- [x] T34 Settings → Decision model (KEV): optional MCP URL + encrypted bearer; on only when both present; Test probe IPC (HTTP 400/405/406 = reachable); `resolveDecisionMcpConfig` for future mission use ✅ 2026-10-20
+- [x] T30 Docs spike: Hy Memory vs vibes MEMORY/CODEX + Adapter — **ignore/defer**; one-pager in `.agent/memories/codebase_insights/2026-10-20-hy-memory-vs-vibes.md` ✅ 2026-10-20
+- [x] T31 Retry seed: forget-except-best (prior failure + best done steps) when Retry from depth panel — `buildRetryRequest` / `cleanMissionTitle` ✅ 2026-10-20
+- [x] T32 Mission ID on card + MISSION log lines — ✅ 2026-10-20
+- [x] T33 Vibes regression: evidence-handoff failure requeues instead of ghost-done deadlock — test in `local-ai-planner` + **ported to Settings checkout `development/vibes`** (`requeueOrFailGate`, evidence-requeue test green) ✅ 2026-10-20
+
+## P10 — Code review / security follow-ups (2026-10-27)
+- [x] T29b Speech fixes: migration + MIME + keyring fallback ✅ 2026-10-27
+- [x] T30b Bundle onnxruntime WASM locally + renderer CSP ✅ 2026-10-27
+- [x] T31 Speech server hardening ✅ 2026-10-27 (PR #4)
+- [x] T32 Ledger status validation + close pending on done ✅ 2026-10-27 (PR #4)
+- [x] T33 Voice worker isolate load failures + keyboard PTT ✅ 2026-10-27 (PR #4)
+- [x] T34 deps audit electron/undici/fast-uri ✅ 2026-10-27 (PR #5)

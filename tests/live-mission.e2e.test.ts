@@ -22,8 +22,17 @@ const EXECUTOR_ORIGIN = 'http://192.168.5.232:11434'; // Ollama — deliberately
 const EXECUTOR_MODEL = 'hopephoto/Qwen3-4B-Instruct-2507_q8:latest';
 const REVIEWER_BASE = 'http://192.168.5.229:1234/v1'; // LM Studio
 const REVIEWER_MODEL = 'google/gemma-4-e2b';
+const VIBES_CHECKOUT = process.env.VIBES_PATH || 'C:/Users/steph/Documents/development/vibes';
 
 const MISSION_TIMEOUT_MS = 8 * 60_000;
+
+function createLiveService(store: LedgerStore, userDataPath: string): MissionService {
+  return createMissionService({
+    store,
+    vibesPath: () => VIBES_CHECKOUT,
+    userDataPath,
+  });
+}
 
 function makeWorkspace(input: RolesConfigInput, extras: Record<string, string> = {}): string {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'vibes-live-'));
@@ -77,7 +86,7 @@ describe.runIf(process.env.VIBES_LIVE === '1')('live mission smoke (real child +
       const store = new LedgerStore(workspace);
       let service: MissionService | null = null;
       try {
-        service = createMissionService({ store });
+        service = createLiveService(store, workspace);
         const request = 'Create a file named hello.txt that contains exactly the word bonjour';
         const result = await service.startMission({ request, workspaceRoot: workspace });
         expect(result.error).toBeUndefined();
@@ -107,7 +116,7 @@ describe.runIf(process.env.VIBES_LIVE === '1')('live mission smoke (real child +
       const store = new LedgerStore(workspace);
       let service: MissionService | null = null;
       try {
-        service = createMissionService({ store });
+        service = createLiveService(store, workspace);
         const request = 'Create a file named nope.txt with the word test';
         const result = await service.startMission({ request, workspaceRoot: workspace });
         // Planning must fail loudly — a bad model is a start failure, never a
@@ -142,7 +151,7 @@ describe.runIf(process.env.VIBES_LIVE === '1')('live mission smoke (real child +
       const store = new LedgerStore(workspace);
       let service: MissionService | null = null;
       try {
-        service = createMissionService({ store });
+        service = createLiveService(store, workspace);
         const request = 'Create a file named note.txt that contains exactly the word aloha';
         const result = await service.startMission({ request, workspaceRoot: workspace });
         expect(result.error).toBeUndefined();

@@ -1,0 +1,46 @@
+.lead {
+  margin: 0 0 16px;
+  font-size: var(--type-13);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.steps {
+  margin-bottom: 18px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.done {
+  margin: 0;
+  font-size: var(--type-13);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}

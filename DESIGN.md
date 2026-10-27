@@ -45,6 +45,7 @@ Empty state stays ADR-0003: **"All quiet"**, never an incomplete-source error.
 3. **Select card:** opens depth panel (prefer sticky split over full-screen modal when width allows; modal fallback on narrow).
 4. **Active mission:** depth panel auto-focuses the running card; checklist + logs update from ledger subscription (no fake streams).
 5. **Failure:** expandable **Why this failed** in the depth panel (mission summary + system rows + failed steps); each failed step expands for its own error text. Retry / Archive stay in the action bar.
+5b. **Needs You (intervention):** when vibes emits `intervention` (KEV escalate / triage / task fail gate), the mission card moves to Needs You; depth + Chat show Retry step / Skip / Fail wired to `resolve_intervention`. Do not treat needsHuman-blocked as a finished failure.
 6. **Viewport:** tab pane scrolls the Operations page; card grid must not sit in a flex-shrunk strip. Depth actions (Retry / Archive / Terminate) sit under the panel header; panel body scrolls under a viewport `max-height`.
 
 ## Must surface (parity with TUI intent)
@@ -58,13 +59,40 @@ Empty state stays ADR-0003: **"All quiet"**, never an incomplete-source error.
 | Roles / models | Roles tab + `.vibes/config.json` | Keep Roles; footer may show active model when known |
 | Engine health | Child spawn / stop | Footer LIVE / offline |
 
-Out of scope for this pass: full TUI Settings parity (YOLO, swarm, triage interval), chat transcript pane, system htop pane, keyboard Alt+ view switching.
+Out of scope for Hybrid C pass: full TUI Settings parity (YOLO, swarm, triage interval), system htop pane, keyboard Alt+ view switching.
 
-## Voice (locked 2026-10-20; revised same day)
+## Chat tab (phase 1 — locked 2026-10-21)
+
+Traditional chat harness **above** mission ATC. Same `missionService` + ledger as Operations — not a second agent.
+
+```
+┌─ Chat (transcript) ──────────────────┬─ Plan (RHS) ─────────┐
+│ user: request                        │ 1. … checklist       │
+│ assistant: planned N steps · running │ 2. …                 │
+│ assistant: status lines from ledger  │ 3. …                 │
+│ assistant: done/fail summary         │                      │
+├─ workspace · composer · Send / Stop ─┴──────────────────────┤
+```
+
+**Interaction**
+1. User sends a message (workspace required).
+2. Plan via existing `mission:plan` → RHS task list + short assistant note.
+3. Auto-launch with `acceptPlan: true` (one write path into `startMission`).
+4. Live plan/status from ledger rows for that `missionId` (honest; no invented streams).
+5. On mission terminal state → one summary comment in the transcript.
+6. If a mission is already running → crash-safe follow-up queue (`enqueueIfBusy`); drains on natural completion (not Stop). Chat shows a queue bar (list + Pause/Resume/Clear) via `mission.queue.*` IPC.
+
+**Focus chain (Cline-inspired):** RHS checklist is the sticky plan for the active run — do not clear until the user sends a new request. Treat those step titles as the mission focus while ledger rows update status.
+
+**Phase 2 (steering — locked 2026-10-22):** While Chat owns an `activeMissionId`, further sends call `mission:steer` → vibes `steer_mission` (queued for the next task). Placeholder switches to “Steer the running mission…”. Mid-run replan / inline artifacts still later.
+
+**Rejected:** second composer that bypasses missionService; embedding the TUI.
+
+## Voice (locked 2026-10-20; revised 2026-10-22)
 
 - **Default STT:** in-app Whisper ONNX (`@huggingface/transformers`) — downloads on first hold-to-talk and caches (ZeroG Terminal behaviour). No pip/yapsnap required.
 - **Optional STT:** OpenAI-compatible server (qwen3-asr) or legacy yapsnap CLI.
-- **TTS (later):** Agent Voice daemon HTTP announce; not embedded MCP.
+- **TTS announce (T24):** Optional Agent Voice daemon `POST /v1/announce` on mission done/failed (Settings → Voice). Soft-fail; never blocks the mission.
 
 ## Success criteria
 

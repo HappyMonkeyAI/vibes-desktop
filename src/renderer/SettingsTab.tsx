@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Input, Message, Select, Switch, Tabs, Tag } from '@arco-design/web-react';
 import type { AppSettings, SpeechEngine, VoiceDoctorResult } from '@shared/channels';
+import { isDecisionModelConfigured } from '@shared/channels';
 import { DEFAULT_SPEECH_MODEL, DEFAULT_SPEECH_PRECISION, SPEECH_MODELS, describeDownload, type SpeechPrecision } from './speech/speech-models';
 import styles from './SettingsTab.module.css';
 
 /**
- * Settings — General (paths / prefs) and Voice (builtin Whisper + optional
- * OpenAI-compatible server / legacy yapsnap).
+ * Settings — General (paths / prefs / Decision), Runtime (vibes harness knobs),
+ * and Voice.
  */
 
 const SettingsTab: React.FC = () => {
@@ -23,12 +24,35 @@ const SettingsTab: React.FC = () => {
   const [speechServerModel, setSpeechServerModel] = useState('');
   const [speechServerApiKey, setSpeechServerApiKey] = useState('');
   const [speechServerHasKey, setSpeechServerHasKey] = useState(false);
+  const [decisionMcpUrl, setDecisionMcpUrl] = useState('');
+  const [decisionMcpAuthToken, setDecisionMcpAuthToken] = useState('');
+  const [decisionMcpHasToken, setDecisionMcpHasToken] = useState(false);
+  const [ttsAnnounceEnabled, setTtsAnnounceEnabled] = useState(false);
+  const [ttsDaemonUrl, setTtsDaemonUrl] = useState('http://127.0.0.1:4100');
+  const [ttsDaemonToken, setTtsDaemonToken] = useState('');
+  const [ttsDaemonHasToken, setTtsDaemonHasToken] = useState(false);
+  const [htmlDesignAdvisorEnabled, setHtmlDesignAdvisorEnabled] = useState(false);
+  const [htmlDesignAdvisorPython, setHtmlDesignAdvisorPython] = useState('python');
+  const [htmlDesignAdvisorWorkspace, setHtmlDesignAdvisorWorkspace] = useState('');
+  const [maxSteps, setMaxSteps] = useState('25');
+  const [maxConcurrentTasks, setMaxConcurrentTasks] = useState('1');
+  const [yoloMode, setYoloMode] = useState(true);
+  const [thinkingMode, setThinkingMode] = useState(true);
+  const [contextCompactionEnabled, setContextCompactionEnabled] = useState(true);
+  const [smallModelProfile, setSmallModelProfile] = useState(false);
+  const [triageEnabled, setTriageEnabled] = useState(false);
+  const [triageInterval, setTriageInterval] = useState('5');
+  const [triageAutoSteer, setTriageAutoSteer] = useState(true);
+  const [memoryEnabled, setMemoryEnabled] = useState(true);
+  const [localMemory, setLocalMemory] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [doctor, setDoctor] = useState<VoiceDoctorResult | null>(null);
   const [warming, setWarming] = useState(false);
   const [testingServer, setTestingServer] = useState(false);
+  const [testingDecision, setTestingDecision] = useState(false);
+  const [testingAnnounce, setTestingAnnounce] = useState(false);
 
   const refreshDoctor = async () => {
     try {
@@ -68,6 +92,33 @@ const SettingsTab: React.FC = () => {
     setSpeechServerModel(settings.speechServerModel || '');
     setSpeechServerHasKey(Boolean(settings.speechServerHasKey));
     setSpeechServerApiKey('');
+    setDecisionMcpUrl(settings.decisionMcpUrl || '');
+    setDecisionMcpHasToken(Boolean(settings.decisionMcpHasToken));
+    setDecisionMcpAuthToken('');
+    setTtsAnnounceEnabled(Boolean(settings.ttsAnnounceEnabled));
+    setTtsDaemonUrl(settings.ttsDaemonUrl || 'http://127.0.0.1:4100');
+    setTtsDaemonHasToken(Boolean(settings.ttsDaemonHasToken));
+    setTtsDaemonToken('');
+    setHtmlDesignAdvisorEnabled(Boolean(settings.htmlDesignAdvisorEnabled));
+    setHtmlDesignAdvisorPython(settings.htmlDesignAdvisorPython || 'python');
+    setHtmlDesignAdvisorWorkspace(settings.htmlDesignAdvisorWorkspace || '');
+    setMaxSteps(String(settings.maxSteps ?? 25));
+    setMaxConcurrentTasks(String(settings.maxConcurrentTasks ?? 1));
+    setYoloMode(settings.yoloMode !== false);
+    setThinkingMode(settings.thinkingMode !== false);
+    setContextCompactionEnabled(settings.contextCompactionEnabled !== false);
+    setSmallModelProfile(Boolean(settings.smallModelProfile));
+    setTriageEnabled(Boolean(settings.triageEnabled));
+    setTriageInterval(String(settings.triageInterval ?? 5));
+    setTriageAutoSteer(settings.triageAutoSteer !== false);
+    setMemoryEnabled(settings.memoryEnabled !== false);
+    setLocalMemory(Boolean(settings.localMemory));
+  };
+
+  const parsePositiveInt = (raw: string, fallback: number): number => {
+    const n = Number(raw.trim().replace(/[_\s,]/g, ''));
+    if (!Number.isFinite(n) || n <= 0) return fallback;
+    return Math.floor(n);
   };
 
   const handleSave = async () => {
@@ -86,10 +137,30 @@ const SettingsTab: React.FC = () => {
         speechServerUrl,
         speechServerModel,
         speechServerApiKey: speechServerApiKey || undefined,
+        decisionMcpUrl,
+        decisionMcpAuthToken: decisionMcpAuthToken || undefined,
+        ttsAnnounceEnabled,
+        ttsDaemonUrl,
+        ttsDaemonToken: ttsDaemonToken || undefined,
+        htmlDesignAdvisorEnabled,
+        htmlDesignAdvisorPython,
+        htmlDesignAdvisorWorkspace,
+        maxSteps: parsePositiveInt(maxSteps, 25),
+        maxConcurrentTasks: parsePositiveInt(maxConcurrentTasks, 1),
+        yoloMode,
+        thinkingMode,
+        contextCompactionEnabled,
+        smallModelProfile,
+        triageEnabled,
+        triageInterval: parsePositiveInt(triageInterval, 5),
+        triageAutoSteer,
+        memoryEnabled,
+        localMemory,
       });
       if (result.ok) {
         Message.success('Settings saved.');
         setSpeechServerApiKey('');
+        setDecisionMcpAuthToken('');
         const refreshed = await window.vibesDesktop.settings.get();
         applySettings(refreshed);
       } else {
@@ -116,6 +187,21 @@ const SettingsTab: React.FC = () => {
     }
   };
 
+  const handleRemoveServerKey = async () => {
+    try {
+      const result = await window.vibesDesktop.settings.save({ clearSpeechServerApiKey: true });
+      if (result.ok) {
+        Message.success('Speech server key removed.');
+        setSpeechServerApiKey('');
+        setSpeechServerHasKey(false);
+      } else {
+        Message.error('Failed to remove the key.');
+      }
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Failed to remove the key.');
+    }
+  };
+
   const handleTestServer = async () => {
     setTestingServer(true);
     try {
@@ -134,6 +220,50 @@ const SettingsTab: React.FC = () => {
       setTestingServer(false);
     }
   };
+
+  const handleTestAnnounce = async () => {
+    setTestingAnnounce(true);
+    try {
+      await window.vibesDesktop.settings.save({
+        ttsAnnounceEnabled,
+        ttsDaemonUrl,
+        ttsDaemonToken: ttsDaemonToken || undefined,
+      });
+      const refreshed = await window.vibesDesktop.settings.get();
+      applySettings(refreshed);
+      const result = await window.vibesDesktop.voice.testAnnounce();
+      if (result.ok) Message.success('Test announcement accepted by the daemon.');
+      else Message.error(result.error || 'Announce failed.');
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Announce failed.');
+    } finally {
+      setTestingAnnounce(false);
+    }
+  };
+
+  const handleTestDecision = async () => {
+    setTestingDecision(true);
+    try {
+      await window.vibesDesktop.settings.save({
+        decisionMcpUrl,
+        decisionMcpAuthToken: decisionMcpAuthToken || undefined,
+      });
+      const refreshed = await window.vibesDesktop.settings.get();
+      applySettings(refreshed);
+      const result = await window.vibesDesktop.decision.test();
+      if (result.ok) Message.success(result.detail || 'Decision MCP reachable.');
+      else Message.error(result.error || 'Decision MCP probe failed.');
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Decision MCP probe failed.');
+    } finally {
+      setTestingDecision(false);
+    }
+  };
+
+  const decisionOn = isDecisionModelConfigured({
+    decisionMcpUrl,
+    decisionMcpHasToken: decisionMcpHasToken || Boolean(decisionMcpAuthToken.trim()),
+  });
 
   return (
     <div className={styles.page}>
@@ -170,6 +300,198 @@ const SettingsTab: React.FC = () => {
               <span className={styles.rowLabel}>Verbose logging</span>
               <Switch checked={verboseLogging} onChange={setVerboseLogging} size="small" />
             </div>
+          </div>
+
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Decision model (KEV)</h3>
+            <p className={styles.hint}>
+              Optional. When MCP URL and bearer token are set, missions can use a local System One
+              decision model (triage / tool choice). Leave blank to keep decision calls off.
+            </p>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Status</span>
+              {decisionOn
+                ? <Tag color="green" size="small">on — URL + token present</Tag>
+                : <Tag color="gray" size="small">off — not configured</Tag>}
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Decision MCP URL</label>
+              <Input
+                placeholder="http://192.168.5.157:8766/mcp"
+                value={decisionMcpUrl}
+                onChange={setDecisionMcpUrl}
+                size="small"
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>
+                MCP bearer token {decisionMcpHasToken && <Tag color="green" size="small">token stored</Tag>}
+              </label>
+              <Input.Password
+                placeholder={decisionMcpHasToken ? 'Leave blank to keep stored token' : 'KEV_MCP_AUTH_TOKEN'}
+                value={decisionMcpAuthToken}
+                onChange={setDecisionMcpAuthToken}
+                size="small"
+              />
+            </div>
+            <div className={styles.actions}>
+              <Button size="small" type="outline" loading={testingDecision} onClick={() => void handleTestDecision()}>
+                Test decision MCP
+              </Button>
+            </div>
+            <p className={styles.hint}>
+              KEV MCP is often :8765/mcp; Gutsy :8766/mcp; Unsloth Studio Decision API{' '}
+              <code>http://host:8888/mcp/</code> (Bearer = Unsloth API key; tool <code>system_one</code>).
+              Use the MCP URL, not chat <code>/v1</code> or docker <code>:8008</code>. Clear URL to disable.
+            </p>
+          </div>
+
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Mission MCP tools</h3>
+            <p className={styles.hint}>
+              Optional servers merged into the mission workspace <code>.vibes/mcp.json</code> on spawn
+              (vibes child loads them). Off removes only the advisor entry; other servers stay.
+            </p>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>HTML Design Advisor</span>
+              <Switch
+                checked={htmlDesignAdvisorEnabled}
+                onChange={setHtmlDesignAdvisorEnabled}
+                size="small"
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Python command</label>
+              <Input
+                placeholder="python"
+                value={htmlDesignAdvisorPython}
+                onChange={setHtmlDesignAdvisorPython}
+                size="small"
+                disabled={!htmlDesignAdvisorEnabled}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Catalog workspace (optional)</label>
+              <Input
+                placeholder="C:/path/to/ui-design"
+                value={htmlDesignAdvisorWorkspace}
+                onChange={setHtmlDesignAdvisorWorkspace}
+                size="small"
+                disabled={!htmlDesignAdvisorEnabled}
+              />
+            </div>
+            <p className={styles.hint}>
+              Requires <code>pip install</code> of{' '}
+              <a href="https://github.com/HappyMonkeyAI/html-design-advisor-mcp" target="_blank" rel="noreferrer">
+                html-design-advisor-mcp
+              </a>
+              . Sets <code>python -m html_design_advisor</code> under key <code>html-design-advisor</code>.
+            </p>
+          </div>
+
+          <Button type="primary" onClick={() => void handleSave()} loading={loading || saving} size="large" disabled={loading}>
+            Save Settings
+          </Button>
+        </Tabs.TabPane>
+
+        <Tabs.TabPane key="runtime" title="Runtime">
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Mission runtime</h3>
+            <p className={styles.hint}>
+              Written into the mission workspace <code>.vibes/config.json</code> on spawn
+              (same path as Roles / Decision). Defaults match the Vibes TUI.
+            </p>
+            <div className={styles.field}>
+              <label className={styles.label}>Max steps per task</label>
+              <Input
+                placeholder="25"
+                value={maxSteps}
+                onChange={(v) => setMaxSteps(v.replace(/[^\d_\s,]/g, ''))}
+                size="small"
+                inputMode="numeric"
+              />
+              <p className={styles.hint}>Caps how long a single task can run before the harness stops it.</p>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Max concurrent tasks</label>
+              <Input
+                placeholder="1"
+                value={maxConcurrentTasks}
+                onChange={(v) => setMaxConcurrentTasks(v.replace(/[^\d_\s,]/g, ''))}
+                size="small"
+                inputMode="numeric"
+              />
+              <p className={styles.hint}>Raise above 1 only when your local LLM can handle parallel load.</p>
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>YOLO mode (auto-approve tools)</span>
+              <Switch checked={yoloMode} onChange={setYoloMode} size="small" />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Reasoning mode</span>
+              <Switch checked={thinkingMode} onChange={setThinkingMode} size="small" />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Context compaction</span>
+              <Switch checked={contextCompactionEnabled} onChange={setContextCompactionEnabled} size="small" />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Small-model runtime profile</span>
+              <Switch checked={smallModelProfile} onChange={setSmallModelProfile} size="small" />
+            </div>
+          </div>
+
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Triage observer</h3>
+            <p className={styles.hint}>
+              Pair with a Triage role endpoint on the Roles tab. When on, vibes watches progress
+              every N tasks and can auto-steer.
+            </p>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Triage observer</span>
+              <Switch checked={triageEnabled} onChange={setTriageEnabled} size="small" />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Triage interval (tasks)</label>
+              <Input
+                placeholder="5"
+                value={triageInterval}
+                onChange={(v) => setTriageInterval(v.replace(/[^\d_\s,]/g, ''))}
+                size="small"
+                inputMode="numeric"
+                disabled={!triageEnabled}
+              />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Triage auto-steer</span>
+              <Switch
+                checked={triageAutoSteer}
+                onChange={setTriageAutoSteer}
+                size="small"
+                disabled={!triageEnabled}
+              />
+            </div>
+          </div>
+
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Memory</h3>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Memory enabled</span>
+              <Switch checked={memoryEnabled} onChange={setMemoryEnabled} size="small" />
+            </div>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Local memory (JSONL)</span>
+              <Switch
+                checked={localMemory}
+                onChange={setLocalMemory}
+                size="small"
+                disabled={!memoryEnabled}
+              />
+            </div>
+            <p className={styles.hint}>
+              Local memory keeps preferences offline in the workspace. Context window is on Roles;
+              Codex RAG paths stay in the TUI or <code>.vibes/config.json</code>.
+            </p>
           </div>
 
           <Button type="primary" onClick={() => void handleSave()} loading={loading || saving} size="large" disabled={loading}>
@@ -311,12 +633,54 @@ const SettingsTab: React.FC = () => {
                 <Button size="small" type="outline" loading={testingServer} onClick={() => void handleTestServer()}>
                   Test server
                 </Button>
+                {speechServerHasKey && (
+                  <Button size="small" type="text" status="danger" onClick={() => void handleRemoveServerKey()}>
+                    Remove key
+                  </Button>
+                )}
               </div>
               <p className={styles.hint}>
                 Matches ZeroG Terminal’s server engine. For qwen3-asr-server: URL …/v1/audio/transcriptions, model qwen3-asr-0.6b-q8-0, key from that project’s .env.
               </p>
             </div>
           )}
+
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Mission announce (TTS)</h3>
+            <p className={styles.hint}>
+              Optional Agent Voice daemon (`POST /v1/announce`). When enabled, speak a short line on mission done/failed.
+              Soft-fail — never blocks the mission.
+            </p>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Announce on mission terminal</span>
+              <Switch checked={ttsAnnounceEnabled} onChange={setTtsAnnounceEnabled} size="small" />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Daemon URL</label>
+              <Input
+                placeholder="http://127.0.0.1:4100"
+                value={ttsDaemonUrl}
+                onChange={setTtsDaemonUrl}
+                size="small"
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>
+                Daemon token {ttsDaemonHasToken && <Tag color="green" size="small">token stored</Tag>}
+              </label>
+              <Input.Password
+                placeholder={ttsDaemonHasToken ? 'Leave blank to keep stored token' : 'AVT_TOKEN'}
+                value={ttsDaemonToken}
+                onChange={setTtsDaemonToken}
+                size="small"
+              />
+            </div>
+            <div className={styles.actions}>
+              <Button size="small" type="outline" loading={testingAnnounce} onClick={() => void handleTestAnnounce()}>
+                Test announce
+              </Button>
+            </div>
+          </div>
 
           <Button type="primary" onClick={() => void handleSave()} loading={loading || saving} size="large" disabled={loading}>
             Save Settings

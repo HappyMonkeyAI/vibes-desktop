@@ -2,19 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { Message, Tabs } from '@arco-design/web-react';
 import RolesTab from './RolesTab';
 import SettingsTab from './SettingsTab';
+import FirstRunSetup from './FirstRunSetup';
 import { ThemeToggle } from './ThemeToggle';
 import OperationsView from './OperationsView';
+import ChatView from './ChatView';
 import styles from './MissionControl.module.css';
 
 const App: React.FC = () => {
   const [voiceReady, setVoiceReady] = useState<boolean | null>(null);
   const [engineOnline] = useState(true);
+  const [showFirstRun, setShowFirstRun] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
         const settings = await window.vibesDesktop.settings.get();
+        if (!cancelled && !settings.setupComplete) setShowFirstRun(true);
         // Builtin Whisper and speech-server need no yapsnap/ffmpeg on PATH.
         if (settings.speechEngine === 'builtin' || settings.speechEngine === 'server') {
           if (!cancelled) setVoiceReady(true);
@@ -32,6 +36,7 @@ const App: React.FC = () => {
   return (
     <div className={styles.page}>
       <Message />
+      <FirstRunSetup visible={showFirstRun} onFinished={() => setShowFirstRun(false)} />
       <header className={styles.header}>
         <h1>Mission Control</h1>
         <span className={styles.subtitle}>Vibes missions, live in one place.</span>
@@ -50,6 +55,9 @@ const App: React.FC = () => {
         <Tabs defaultActiveTab="operations">
           <Tabs.TabPane key="operations" title="Operations">
             <OperationsView />
+          </Tabs.TabPane>
+          <Tabs.TabPane key="chat" title="Chat">
+            <ChatView />
           </Tabs.TabPane>
           <Tabs.TabPane key="roles" title="Roles">
             <RolesTab />

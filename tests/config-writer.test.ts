@@ -57,4 +57,32 @@ describe('writeVibesConfig (T9)', () => {
     const written = JSON.parse(readFileSync(target!, 'utf-8')) as Record<string, string>;
     expect(written.OLLAMA_MODEL).toBe('e-model');
   });
+
+  it('merges Settings Runtime knobs including explicit false flags', () => {
+    const target = writeVibesConfig(workspace, input, null, {
+      maxSteps: 12,
+      maxConcurrentTasks: 1,
+      yoloMode: false,
+      thinkingMode: false,
+      contextCompactionEnabled: true,
+      smallModelProfile: false,
+      triageEnabled: true,
+      triageInterval: 4,
+      triageAutoSteer: true,
+      memoryEnabled: false,
+      localMemory: false,
+    });
+    const written = JSON.parse(readFileSync(target!, 'utf-8')) as Record<string, string>;
+    expect(written.MAX_STEPS).toBe('12');
+    expect(written.MAX_CONCURRENT_TASKS).toBe('1');
+    expect(written.YOLO_MODE).toBe('false');
+    expect(written.THINKING_MODE).toBe('false');
+    expect(written.CONTEXT_COMPACTION_ENABLED).toBe('true');
+    expect(written.SMALL_MODEL_PROFILE).toBe('false');
+    expect(written.TRIAGE_ENABLED).toBe('true');
+    expect(written.TRIAGE_INTERVAL).toBe('4');
+    expect(written.TRIAGE_AUTO_STEER).toBe('true');
+    expect(written.MEMORY_ENABLED).toBe('false');
+    expect(written.LOCAL_MEMORY).toBe('false');
+  });
 });

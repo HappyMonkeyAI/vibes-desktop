@@ -15,13 +15,23 @@ npm install
 npm run dev        # electron + vite dev server
 npm test           # vitest
 npm run typecheck
-npm run build      # electron-builder distributable
+npm run dist       # Windows NSIS installer → dist/
 ```
 
-Requires Node 22+, a Vibes checkout or the `vibes-tui` npm package (the app spawns its MCP server), and for voice: ffmpeg on PATH plus `pip install yapsnap`.
+**Closed beta:** bring your own Vibes checkout + local LLM. Operator setup: [docs/BETA.md](docs/BETA.md). Packaging / signing: [docs/PACKAGING.md](docs/PACKAGING.md).
+
+Requires Node 22+, a Vibes checkout containing `src/mcp/server.ts` (first-run wizard, Settings → Vibes path, or `VIBES_PATH`). Voice default is in-app Whisper (downloads on first talk); optional ASR server or legacy yapsnap + ffmpeg.
+
+## Version
+
+Current app version: **0.1.1** (`package.json`). User-facing release notes: [CHANGELOG.md](CHANGELOG.md). Feature map: [docs/FEATURES.md](docs/FEATURES.md). Beta setup: [docs/BETA.md](docs/BETA.md).
+
+Bump `package.json` `version` when cutting a release; add a matching `CHANGELOG.md` section the same day; follow [docs/PACKAGING.md](docs/PACKAGING.md). Session detail stays in `PROGRESS.md` — do not duplicate full narrative into the changelog.
 
 ## Documentation Spine
 
+- [CHANGELOG.md](CHANGELOG.md) — released versions
+- [docs/FEATURES.md](docs/FEATURES.md) — operator feature map
 - [CONTEXT.md](CONTEXT.md) — stack, rules, what not to do
 - [AGENTS.md](AGENTS.md) — agent behavior law
 - [SPEC.md](SPEC.md) — acceptance criteria (S1–S8)

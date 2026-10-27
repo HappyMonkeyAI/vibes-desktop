@@ -3,17 +3,25 @@ import type { WebContents } from 'electron';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { channels, type AppSettings, type AppSettingsSaveInput, type ChannelName, type LedgerSnapshot, type MissionPlanRequest, type MissionStartRequest, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult, type WorkspaceSelectResult } from '@shared/channels';
+import { channels, type AppSettings, type AppSettingsSaveInput, type ChannelName, type LedgerSnapshot, type MissionPlanRequest, type MissionResolveInterventionRequest, type MissionStartRequest, type RolesConfigInput, type RolesConfigView, type TestConnectionRequest, type VoiceDoctorResult, type VoiceTranscribeRequest, type VoiceTranscribeResult, type WorkspaceSelectResult } from '@shared/channels';
 import type { LedgerStore } from '../ledger/store';
 import type { RolesStore } from '../roles/store';
 import type { MissionService } from '../mission/service';
 import { testConnection } from '../roles/test-connection';
 import { runVoiceDoctor } from '../voice/doctor';
 import { spawnYapsnap, transcribeFile, voiceTempDir } from '../voice/transcribe';
-import { transcribeViaServer, probeSpeechServer } from '../voice/speech-server';
+import { audioExtensionForMime, transcribeViaServer, probeSpeechServer } from '../voice/speech-server';
 import { warmYapsnapModels } from '../voice/warm';
 import type { WorkspaceHistoryStore } from '../workspace/history';
 import { DEFAULT_SETTINGS, type SettingsStore } from '../settings/store';
+import { resolveDecisionMcpConfig } from '../decision/config';
+import { probeDecisionMcp } from '../decision/probe';
+import { readHarnessLesson } from '../harness/lesson-store';
+import { announceToDaemon } from '../voice/announce';
+
+/** Base64 cap for one voice capture: ~25 MB of audio (the OpenAI transcriptions
+ *  limit), far beyond any push-to-talk clip. Guards main-process memory. */
+const MAX_AUDIO_BASE64_CHARS = Math.ceil((25 * 1024 * 1024 * 4) / 3);
 
 /**
  * Handler table: one entry per channel in the shared map. T5 wires the ledger
@@ -34,11 +42,11 @@ export function emptySnapshot(): LedgerSnapshot {
 /** Five unconfigured role endpoints (P0 default; T7 makes this persistent). */
 export function emptyRolesView(): RolesConfigView {
   return {
-    default: { baseUrl: '', model: '', hasKey: false },
-    planner: { baseUrl: '', model: '', hasKey: false },
-    executor: { baseUrl: '', model: '', hasKey: false },
-    reviewer: { baseUrl: '', model: '', hasKey: false },
-    triage: { baseUrl: '', model: '', hasKey: false },
+    default: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
+    planner: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
+    executor: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
+    reviewer: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
+    triage: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
   };
 }
 
@@ -99,32 +107,40 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
     [channels.voiceTranscribe]: async (_e, req): Promise<VoiceTranscribeResult> => {
       const request = req as VoiceTranscribeRequest;
       if (!request?.audioBase64) return { ok: false, error: 'No audio received.' };
+      if (typeof request.audioBase64 !== 'string' || request.audioBase64.length > MAX_AUDIO_BASE64_CHARS) {
+        return { ok: false, error: 'Recording too long — keep voice input under about 25 MB of audio.' };
+      }
+      let inputPath: string | undefined;
       try {
         const settings = settingsStore?.get() ?? DEFAULT_SETTINGS;
         const dir = voiceTempDir();
         mkdirSync(dir, { recursive: true });
         const id = randomBytes(8).toString('hex');
-        const inputPath = path.join(dir, `${id}.webm`);
+        inputPath = path.join(dir, `${id}.${audioExtensionForMime(request.mime)}`);
         const outPath = path.join(dir, `${id}.txt`);
         writeFileSync(inputPath, Buffer.from(request.audioBase64, 'base64'));
         if (settings.speechEngine === 'server') {
-          const result = await transcribeViaServer({
+          return await transcribeViaServer({
             url: settings.speechServerUrl,
             model: settings.speechServerModel,
             language: settings.speechLang,
             apiKey: settingsStore?.getSpeechServerApiKey(),
             filePath: inputPath,
           });
+        }
+        return await transcribeFile(inputPath, outPath, spawnYapsnap, settings.speechLang || 'auto');
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      } finally {
+        // transcribeFile deletes its own files; this covers the server path and
+        // any failure between writing the capture and handing it off.
+        if (inputPath) {
           try {
             rmSync(inputPath, { force: true });
           } catch {
             // best-effort cleanup
           }
-          return result;
         }
-        return await transcribeFile(inputPath, outPath, spawnYapsnap, settings.speechLang || 'auto');
-      } catch (error) {
-        return { ok: false, error: error instanceof Error ? error.message : String(error) };
       }
     },
     // T13/T14 — real mission lifecycle; inert stubs only when no service is wired (tests).
@@ -132,7 +148,12 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       if (!missionService) return { started: false, alreadyRunning: false };
       const request = req as MissionStartRequest;
       // No cwd fallback — an empty workspaceRoot is rejected by the service.
-      return missionService.startMission({ request: request.request, workspaceRoot: request.workspaceRoot, acceptPlan: request.acceptPlan });
+      return missionService.startMission({
+        request: request.request,
+        workspaceRoot: request.workspaceRoot,
+        acceptPlan: request.acceptPlan,
+        enqueueIfBusy: request.enqueueIfBusy,
+      });
     },
     [channels.missionStop]: async () => (missionService ? missionService.stopMission() : { stopped: false }),
     // Mission plan via VibesBridge: call planMission and return extracted tasks.
@@ -147,6 +168,14 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       if (missionService) await missionService.cancelPlan();
       return { ok: true };
     },
+    [channels.missionQueueGet]: async () =>
+      missionService ? missionService.getFollowupQueue() : { paused: false, items: [] },
+    [channels.missionQueuePause]: async (_e, paused) =>
+      missionService
+        ? missionService.setFollowupQueuePaused(Boolean(paused))
+        : { paused: Boolean(paused), items: [] },
+    [channels.missionQueueClear]: async () =>
+      missionService ? missionService.clearFollowupQueue() : { paused: false, items: [] },
     // Native folder picker for the mission working directory; cancel → null path.
     [channels.workspaceSelect]: async (): Promise<WorkspaceSelectResult> =>
       selectWorkspace ? selectWorkspace() : { path: null },
@@ -187,6 +216,62 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       if (!settingsStore) return { ok: true }; // parity stub — nothing to persist in tests
       const ok = settingsStore.save(input as AppSettingsSaveInput);
       return { ok };
+    },
+    // Optional KEV/GUTSY decision MCP — only probes when URL + token are configured.
+    [channels.decisionTest]: async () => {
+      const config = resolveDecisionMcpConfig(settingsStore);
+      if (!config) {
+        return {
+          ok: false,
+          error: 'Decision model is off — set MCP URL and bearer token in Settings, then Save.',
+        };
+      }
+      return probeDecisionMcp(config);
+    },
+    // T35 — latest harness lesson for Retry seed (null when absent / bad path).
+    [channels.harnessLessonGet]: async (_e, workspaceRootArg) => {
+      const root = typeof workspaceRootArg === 'string' ? workspaceRootArg.trim() : '';
+      if (!root) return null;
+      const record = readHarnessLesson(root);
+      if (!record) return null;
+      return {
+        lesson: record.lesson,
+        missionTitle: record.missionTitle,
+        at: record.at,
+        helped: record.helped,
+        failed: record.failed,
+        harnessClass: record.harnessClass,
+      };
+    },
+    // T24 — test announcement to Agent Voice daemon.
+    [channels.voiceAnnounceTest]: async () => {
+      if (!settingsStore) return { ok: false, error: 'Settings unavailable' };
+      const settings = settingsStore.get();
+      const token = settingsStore.getTtsDaemonToken()?.trim();
+      if (!token) {
+        return { ok: false, error: 'Set an Agent Voice daemon token in Settings → Voice, then Save.' };
+      }
+      return announceToDaemon(
+        { baseUrl: settings.ttsDaemonUrl, token },
+        { text: 'Vibes Desktop test announcement.', priority: 3, sourceName: 'vibes-desktop' },
+      );
+    },
+    // Chat phase 2 — mid-run steering.
+    [channels.missionSteer]: async (_e, req) => {
+      if (!missionService) return { ok: false, error: 'Mission service not available' };
+      const message = typeof (req as { message?: unknown })?.message === 'string'
+        ? (req as { message: string }).message
+        : '';
+      return missionService.steerMission(message);
+    },
+    // Needs-You — resolve pending vibes intervention.
+    [channels.missionResolveIntervention]: async (_e, req) => {
+      if (!missionService) return { ok: false, error: 'Mission service not available' };
+      const body = req as MissionResolveInterventionRequest;
+      return missionService.resolveIntervention({
+        action: body?.action,
+        message: typeof body?.message === 'string' ? body.message : undefined,
+      });
     },
   };
 }

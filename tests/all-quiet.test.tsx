@@ -27,7 +27,8 @@ describe('first-launch empty state (S1)', () => {
     // Running missions auto-open the depth panel, so the title appears on the
     // card and again in the panel header.
     expect((await screen.findAllByText('Refactor auth module')).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Waiting on API key')).toBeTruthy();
+    // Needs-you missions also auto-open depth, so the title is on the card + panel.
+    expect((await screen.findAllByText('Waiting on API key')).length).toBeGreaterThanOrEqual(1);
     // Task rows are grouped under their mission card, not shown as separate cards
     // until the depth panel lists them (this fixture has no missionId link).
     expect(screen.queryByText('Update index.html title')).toBeNull();
@@ -49,9 +50,10 @@ describe('live ledger push (T5)', () => {
     expect(await screen.findByText('All quiet')).toBeTruthy();
 
     // A mission starts — its mission row is pushed live and becomes a card
-    // titled by the original request (depth panel also shows the title).
+    // titled by the original request (depth panel also shows the title + id).
     handlers[0]({ entry: { id: 'm1', kind: 'mission', missionId: 'm1', group: 'running', status: 'running', source: 'vibes-mission', title: 'Build widget', workspaceRoot: '/w/widget', updatedAt: 1 } });
     expect((await screen.findAllByText('Build widget')).length).toBeGreaterThanOrEqual(1);
+    expect(document.body.textContent).toContain('[MISSION id=m1]');
     expect(document.body.textContent).not.toContain('All quiet');
 
     // The mission completes in place — same id/title upsert, still one card

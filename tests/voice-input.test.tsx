@@ -25,6 +25,26 @@ beforeEach(() => {
     speechServerUrl: 'http://127.0.0.1:8765/v1/audio/transcriptions',
     speechServerModel: 'qwen3-asr-0.6b-q8-0',
     speechServerHasKey: false,
+    decisionMcpUrl: '',
+    decisionMcpHasToken: false,
+    ttsAnnounceEnabled: false,
+    ttsDaemonUrl: 'http://127.0.0.1:4100',
+    ttsDaemonHasToken: false,
+    htmlDesignAdvisorEnabled: false,
+    htmlDesignAdvisorPython: 'python',
+    htmlDesignAdvisorWorkspace: '',
+    maxSteps: 25,
+    maxConcurrentTasks: 1,
+    yoloMode: true,
+    thinkingMode: true,
+    contextCompactionEnabled: true,
+    smallModelProfile: false,
+    triageEnabled: false,
+    triageInterval: 5,
+    triageAutoSteer: true,
+    memoryEnabled: true,
+    localMemory: false,
+    setupComplete: true,
   });
 });
 
@@ -56,7 +76,8 @@ function installMediaMock() {
   }
   vi.stubGlobal('MediaRecorder', MediaRecorderFake);
 
-  const stream = { getTracks: () => [{ stop: vi.fn() }] };
+  const track = { stop: vi.fn() };
+  const stream = { getTracks: () => [track] };
   Object.defineProperty(window.navigator, 'mediaDevices', {
     value: { getUserMedia: vi.fn(async () => stream) },
     configurable: true,
@@ -74,7 +95,7 @@ function installMediaMock() {
     }
   }
   vi.stubGlobal('FileReader', FileReaderFake);
-  return recorder;
+  return Object.assign(recorder, { track });
 }
 
 describe('VoiceInput (T10)', () => {
@@ -127,5 +148,41 @@ describe('VoiceInput (T10)', () => {
     // delivered no text because transcription failed.
     await waitFor(() => expect(window.vibesDesktop.voice.transcribe).toHaveBeenCalled());
     expect(onTranscript).not.toHaveBeenCalled();
+  });
+
+  it('T33 — holding Space on the focused button records and transcribes on release', async () => {
+    installMediaMock();
+    vi.mocked(window.vibesDesktop.voice.doctor).mockResolvedValue({
+      ffmpegAvailable: true, yapsnapAvailable: true, ready: true, ffmpegHint: null, yapsnapHint: null,
+    });
+    // The error test above leaves a failing transcribe mock behind.
+    vi.mocked(window.vibesDesktop.voice.transcribe).mockResolvedValue({ ok: true, text: 'stub transcription' });
+    const onTranscript = vi.fn();
+    renderWithMessages(<VoiceInput onTranscript={onTranscript} />);
+    await waitFor(() => expect(window.vibesDesktop.voice.doctor).toHaveBeenCalled());
+
+    const button = screen.getByRole('button');
+    fireEvent.keyDown(button, { key: ' ' });
+    await waitFor(() => expect(screen.getByText('Recording… release to send')).toBeTruthy());
+    // Auto-repeat keydowns while held must not restart capture.
+    fireEvent.keyDown(button, { key: ' ', repeat: true });
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+    fireEvent.keyUp(button, { key: ' ' });
+    await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('stub transcription'));
+  });
+
+  it('T33 — unmounting mid-recording releases the microphone', async () => {
+    const recorder = installMediaMock();
+    vi.mocked(window.vibesDesktop.voice.doctor).mockResolvedValue({
+      ffmpegAvailable: true, yapsnapAvailable: true, ready: true, ffmpegHint: null, yapsnapHint: null,
+    });
+    const view = renderWithMessages(<VoiceInput onTranscript={() => undefined} />);
+    await waitFor(() => expect(window.vibesDesktop.voice.doctor).toHaveBeenCalled());
+
+    fireEvent.mouseDown(screen.getByText('Hold to talk'));
+    await waitFor(() => expect(screen.getByText('Recording… release to send')).toBeTruthy());
+    view.unmount();
+    expect(recorder.stop).toHaveBeenCalled();
+    expect(recorder.track.stop).toHaveBeenCalled();
   });
 });
