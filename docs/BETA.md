@@ -43,7 +43,15 @@ Stop cancels the child cleanly. Only one mission runs at a time.
 
 ## 6. Optional: Decision → Needs You
 
-Settings → Decision MCP URL + bearer (e.g. Unsloth Studio `http://host:8888/mcp/` + API key).  
+Settings → Decision MCP URL + bearer, then **Test decision MCP**.
+
+| Host | URL example | Bearer |
+|------|-------------|--------|
+| Unsloth Studio | `http://host:8888/mcp/` | Studio API key (`sk-unsloth-…` from Studio → Settings → API) |
+| Classic KEV | `http://host:8765/mcp` | KEV MCP auth token |
+
+A classic KEV token will **not** work on Unsloth `:8888` — Settings → Test now runs a real `system_one` call and shows the API-key error instead of a false “reachable” pass.
+
 When configured, escalate / low confidence can open **Needs You** (Retry step / Skip / Fail).
 
 Without Decision, missions still run; intervene gate stays off.

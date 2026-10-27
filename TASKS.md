@@ -74,7 +74,8 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T59 Merge PR #6 → `main` (security/review #2–#5 folded into release branch) ✅ 2026-10-27
 - [x] T60 First-run setup wizard (Vibes path → default role → mission tip) ✅ 2026-10-27
 - [x] T61 Packaging harden: author/metadata, signing docs (`CSC_*`), PACKAGING.md, BETA SmartScreen note ✅ 2026-10-27
-- [ ] T62 Live Decision/Needs-You smoke on LAN (blocked until KEV/Unsloth + VIBES_PATH + LLM up)
+- [ ] T62 Live Decision/Needs-You smoke on LAN — Unsloth `:8888` up but needs `sk-unsloth…` key; classic KEV `:8765` down; Ollama down (2026-10-27)
+- [x] T62b Decision Settings probe: Unsloth deep `system_one` check + sk-unsloth error surfacing ✅ 2026-10-27
 - [x] T63 First-run polish: Browse + validate `src/mcp/server.ts`, Test connection on model step; Settings path Browse ✅ 2026-10-27
 - [x] T64 First-run workspace pick → seeds Operations; empty-state guidance when no working directory ✅ 2026-10-27
 - [x] T29b/T30b Speech migration + local ORT WASM/CSP merged into release branch ✅ 2026-10-27

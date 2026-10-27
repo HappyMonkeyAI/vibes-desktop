@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 — T62b Unsloth Decision probe
+
+**Done:** Live LAN check: Unsloth `:8888` answers; `.env` classic KEV token rejected (`sk-unsloth` required); `:8765` + Ollama down. Settings → Test now deep-probes `system_one` on Studio URLs and surfaces API-key errors. T64 on `main` (PR #11).
+
+**Evidence:** `tests/decision-probe.test.ts`; live t53 probe against `:8888`.
+
+**Next:** T62 full smoke with Unsloth API key + local LLM; signed installer; cut 0.2.0 after stranger first-mission proof.
+
+---
+
 ## 2026-10-27 — T64 first-run workspace seed
 
 **Done:** Wizard step 3 picks mission workspace (history + `initialWorkspace` into Operations); empty-state copy steers strangers to choose a working directory before Start. T63 merged via PR #10.

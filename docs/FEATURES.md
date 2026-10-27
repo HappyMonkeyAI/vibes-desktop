@@ -1,6 +1,10 @@
 # Features — Vibes Desktop 0.1.1
 
-Operator-facing map of what ships in **0.1.x**. Closed beta setup: [BETA.md](BETA.md). Design intent lives in [DESIGN.md](../DESIGN.md); acceptance criteria in [SPEC.md](../SPEC.md); release notes in [CHANGELOG.md](../CHANGELOG.md).
+Operator-facing map of what ships in **0.1.x** (public-beta path toward **0.2.x**). Closed beta setup: [BETA.md](BETA.md). Packaging: [PACKAGING.md](PACKAGING.md). Design intent lives in [DESIGN.md](../DESIGN.md); acceptance criteria in [SPEC.md](../SPEC.md); release notes in [CHANGELOG.md](../CHANGELOG.md).
+
+## First-run wizard
+
+Vibes checkout (Browse + `src/mcp/server.ts` check) → default model (optional Test connection) → optional workspace (seeds Operations). Skip anytime; Settings can finish the same path later.
 
 ## Mission Control (Operations)
 
