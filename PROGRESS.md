@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 — T61b dist schema fix
+
+**Done:** Removed invalid `build.win.signingHashAlgorithms` (electron-builder 26); `npm run dist` produces `dist/Vibes Desktop Setup 0.1.1.exe`. T62b on `main` (PR #12).
+
+**Evidence:** live `npm run dist` success.
+
+**Next:** T62 with `sk-unsloth` + LLM; code-signing cert for public beta; cut 0.2.0 after stranger first-mission proof.
+
+---
+
 ## 2026-10-27 — T62b Unsloth Decision probe
 
 **Done:** Live LAN check: Unsloth `:8888` answers; `.env` classic KEV token rejected (`sk-unsloth` required); `:8765` + Ollama down. Settings → Test now deep-probes `system_one` on Studio URLs and surfaces API-key errors. T64 on `main` (PR #11).
