@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 — T65 live first-mission + icon
+
+**Done:** V3 live smoke against LM Studio `127.0.0.1:1234` / `google/gemma-4-e2b` — mission created `hello.txt` with `bonjour` (~50s). Live e2e defaults updated off dead LAN Ollama. App icon `build/icon.ico`; Decision Settings sk-unsloth copy.
+
+**Evidence:** `VIBES_LIVE=1 npm test -- tests/live-mission.e2e.test.ts -t "plans, executes"` pass.
+
+**Next:** T62 Needs-You with Unsloth `sk-unsloth…`; sign installer; cut **0.2.0** when Decision verified.
+
+---
+
 ## 2026-10-27 — T61b dist schema fix
 
 **Done:** Removed invalid `build.win.signingHashAlgorithms` (electron-builder 26); `npm run dist` produces `dist/Vibes Desktop Setup 0.1.1.exe`. T62b on `main` (PR #12).

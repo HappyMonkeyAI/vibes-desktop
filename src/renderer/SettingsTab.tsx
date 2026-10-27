@@ -321,10 +321,10 @@ const SettingsTab: React.FC = () => {
           </div>
 
           <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Decision model (KEV)</h3>
+            <h3 className={styles.sectionTitle}>Decision model</h3>
             <p className={styles.hint}>
-              Optional. When MCP URL and bearer token are set, missions can use a local System One
-              decision model (triage / tool choice). Leave blank to keep decision calls off.
+              Optional. When MCP URL and bearer are set, missions can escalate to Needs You via System One.
+              Leave blank to keep the intervene gate off.
             </p>
             <div className={styles.row}>
               <span className={styles.rowLabel}>Status</span>
@@ -335,7 +335,7 @@ const SettingsTab: React.FC = () => {
             <div className={styles.field}>
               <label className={styles.label}>Decision MCP URL</label>
               <Input
-                placeholder="http://192.168.5.157:8766/mcp"
+                placeholder="http://host:8888/mcp/  or  http://host:8765/mcp"
                 value={decisionMcpUrl}
                 onChange={setDecisionMcpUrl}
                 size="small"
@@ -346,7 +346,7 @@ const SettingsTab: React.FC = () => {
                 MCP bearer token {decisionMcpHasToken && <Tag color="green" size="small">token stored</Tag>}
               </label>
               <Input.Password
-                placeholder={decisionMcpHasToken ? 'Leave blank to keep stored token' : 'KEV_MCP_AUTH_TOKEN'}
+                placeholder={decisionMcpHasToken ? 'Leave blank to keep stored token' : 'sk-unsloth-… or KEV token'}
                 value={decisionMcpAuthToken}
                 onChange={setDecisionMcpAuthToken}
                 size="small"
@@ -358,9 +358,9 @@ const SettingsTab: React.FC = () => {
               </Button>
             </div>
             <p className={styles.hint}>
-              KEV MCP is often :8765/mcp; Gutsy :8766/mcp; Unsloth Studio Decision API{' '}
-              <code>http://host:8888/mcp/</code> (Bearer = Unsloth API key; tool <code>system_one</code>).
-              Use the MCP URL, not chat <code>/v1</code> or docker <code>:8008</code>. Clear URL to disable.
+              Unsloth Studio <code>:8888/mcp/</code> needs a Studio API key (<code>sk-unsloth-…</code>), not a classic KEV token —
+              Test runs a real <code>system_one</code> call. Classic KEV is usually <code>:8765/mcp</code>.
+              Use the MCP URL, not chat <code>/v1</code>. Clear URL to disable.
             </p>
           </div>
 

@@ -10,6 +10,15 @@ function tempDir() {
   return mkdtempSync(path.join(os.tmpdir(), 'vibes-mission-'));
 }
 
+async function waitUntil(check: () => Promise<boolean>, timeoutMs = 2000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (await check()) return;
+    if (Date.now() > deadline) throw new Error('waitUntil timed out');
+    await new Promise((r) => setTimeout(r, 20));
+  }
+}
+
 /** Mirror the child's real plan_mission output: a JSON task array. */
 const PLAN_OK = JSON.stringify([{ id: 1, name: 'Write code', status: 'pending' }]);
 /** Mirror the child's real start_execution success text. */
@@ -408,7 +417,11 @@ describe('MissionService (T13/T14)', () => {
       status: 'intervention',
       detail: 'Escalate: css_orphan — retry or skip?',
     });
-    await new Promise((r) => setTimeout(r, 40));
+    await waitUntil(async () => {
+      const snap = await store.snapshot();
+      const m = snap.entries.find((e) => e.title === 'Needs You fixture');
+      return m?.status === 'blocked' && m.needsHuman === true;
+    });
 
     let snap = await store.snapshot();
     const mission = snap.entries.find((e) => e.title === 'Needs You fixture')!;

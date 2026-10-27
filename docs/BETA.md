@@ -22,12 +22,14 @@ Roles tab — at minimum **Default** (or Executor):
 
 | Field | Example |
 |-------|---------|
-| Base URL | `http://127.0.0.1:11434` (app appends `/v1` if needed) |
-| Model | your local model id |
+| Base URL | `http://127.0.0.1:1234` (LM Studio) or `http://127.0.0.1:11434` (Ollama) — app appends `/v1` if needed |
+| Model | your local model id (e.g. `google/gemma-4-e2b`) |
 | Context window | e.g. `32768` (optional; → vibes `CONTEXT_WINDOW`) |
 | API key | only if the endpoint requires one |
 
 Use **Test connection**, then **Save Configuration**.
+
+Live smoke (dev): `VIBES_LIVE=1 VIBES_PATH=… npm test -- tests/live-mission.e2e.test.ts` (defaults to `127.0.0.1:1234`).
 
 ## 4. Runtime (optional)
 
