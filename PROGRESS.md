@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 — T67 Runtime completion gates
+
+**Done:** Settings → Runtime toggles for `ENABLE_DOUBLE_CHECK_COMPLETION` and `ENABLE_ADVERSARIAL_AUDIT` (defaults on). T66 on `main`.
+
+**Evidence:** vibes-config / config-writer tests; typecheck.
+
+**Next:** T62 with Unsloth API key; CSC signing; cut **0.2.0**.
+
+---
+
 ## 2026-10-27 — T66 LM Studio defaults + Unsloth env alias
 
 **Done:** Branded `npm run dist` (no default Electron icon warning). First-run defaults `:1234`. Decision config accepts `UNSLOTH_API_KEY` for `:8888`. BETA public-beta readiness table. T62 still needs a real `sk-unsloth…` value.

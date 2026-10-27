@@ -117,7 +117,12 @@ describe('MissionService (T13/T14)', () => {
     });
 
     await service.startMission({ request: 'Build a thing', workspaceRoot: dir });
-    await new Promise((r) => setTimeout(r, 30)); // allow background execution to finish
+    await waitUntil(async () => {
+      const snap = await store.snapshot();
+      const mission = snap.entries.find((e) => e.title === 'Build a thing');
+      const docs = snap.entries.find((e) => e.title === 'Write docs');
+      return mission?.status === 'done' && docs?.status === 'idle';
+    });
 
     const snap = await store.snapshot();
     expect(snap.entries.find((e) => e.title === 'Write code')!.status).toBe('done');
@@ -195,21 +200,21 @@ describe('MissionService (T13/T14)', () => {
     expect(snap.entries.find((e) => e.title === 'In flight')!.status).toBe('blocked');
 
     // Now with a live child — start hangs in executePlanned, then stop ends it and reports stopped:true.
+    // Await startMission so dispatchExecution has assigned `bridge` before we stop.
     const execGate = new Promise<string>(() => undefined); // never resolves
     bridge.executePlanned = () => execGate;
-    const first = service.startMission({ request: 'Hang', workspaceRoot: dir });
-    await new Promise((r) => setTimeout(r, 30));
+    const started = await service.startMission({ request: 'Hang', workspaceRoot: dir });
+    expect(started.started).toBe(true);
     const withChild = await service.stopMission();
     expect(withChild.stopped).toBe(true);
-    await new Promise((r) => setTimeout(r, 30)); // allow background chain to settle
-    expect(bridge._state().stopped).toBe(true);
+    await waitUntil(async () => bridge._state().stopped);
     rmSync(dir, { recursive: true, force: true });
   });
 
   it('records a failed mission when execution throws (child crash path)', async () => {
     const dir = tempDir();
     const store = new LedgerStore(dir);
-    let bridge;
+    let bridge: ReturnType<typeof makeFakeBridge>;
     const service = createMissionService({
       store,
       createBridge: () => {
@@ -223,11 +228,11 @@ describe('MissionService (T13/T14)', () => {
     // the start promise (P2-2: toast/spinner at start, not end).
     expect(result.started).toBe(true);
     expect(result.error).toBeUndefined();
-    await new Promise((r) => setTimeout(r, 30)); // allow background chain to settle
-    expect(bridge._state().stopped).toBe(true);
-
-    const snap = await store.snapshot();
-    expect(snap.entries.some((e) => e.title === 'Crash' && e.status === 'failed')).toBe(true);
+    await waitUntil(async () => bridge!._state().stopped);
+    await waitUntil(async () => {
+      const snap = await store.snapshot();
+      return snap.entries.some((e) => e.title === 'Crash' && e.status === 'failed');
+    });
     rmSync(dir, { recursive: true, force: true });
   });
 

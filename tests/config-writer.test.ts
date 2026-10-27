@@ -71,6 +71,8 @@ describe('writeVibesConfig (T9)', () => {
       triageAutoSteer: true,
       memoryEnabled: false,
       localMemory: false,
+      doubleCheckCompletion: false,
+      adversarialAudit: false,
     });
     const written = JSON.parse(readFileSync(target!, 'utf-8')) as Record<string, string>;
     expect(written.MAX_STEPS).toBe('12');
@@ -84,5 +86,7 @@ describe('writeVibesConfig (T9)', () => {
     expect(written.TRIAGE_AUTO_STEER).toBe('true');
     expect(written.MEMORY_ENABLED).toBe('false');
     expect(written.LOCAL_MEMORY).toBe('false');
+    expect(written.ENABLE_DOUBLE_CHECK_COMPLETION).toBe('false');
+    expect(written.ENABLE_ADVERSARIAL_AUDIT).toBe('false');
   });
 });

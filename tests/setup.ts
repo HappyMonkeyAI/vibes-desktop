@@ -83,6 +83,8 @@ window.vibesDesktop = {
       triageAutoSteer: true,
       memoryEnabled: true,
       localMemory: false,
+      doubleCheckCompletion: true,
+      adversarialAudit: true,
       setupComplete: true,
     }),
     save: vi.fn().mockResolvedValue({ ok: true }),

@@ -246,6 +246,10 @@ export interface AppSettings {
   memoryEnabled: boolean;
   /** Prefer local JSONL memory over remote mem0. */
   localMemory: boolean;
+  /** Evidence re-check before mission success (Cline-style). */
+  doubleCheckCompletion: boolean;
+  /** Final adversarial audit pass — pair with a Reviewer role endpoint. */
+  adversarialAudit: boolean;
   /**
    * True after the first-run wizard finishes or is dismissed. When false and
    * vibesPath + default role are empty, App shows the setup modal.
@@ -267,6 +271,8 @@ export type VibesRuntimeSettings = Pick<
   | 'triageAutoSteer'
   | 'memoryEnabled'
   | 'localMemory'
+  | 'doubleCheckCompletion'
+  | 'adversarialAudit'
 >;
 
 /** Partial save — empty *ApiKey/*AuthToken keep stored secrets; clearSpeechServerApiKey removes it. */

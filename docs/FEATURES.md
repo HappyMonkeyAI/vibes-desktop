@@ -33,7 +33,7 @@ Per-role base URL / model / **context window** (tokens) / API key (encrypted at 
 
 ### Runtime
 
-Settings → **Runtime** passes TUI harness knobs into `.vibes/config.json` on mission spawn: `MAX_STEPS`, `MAX_CONCURRENT_TASKS`, `YOLO_MODE`, `THINKING_MODE`, `CONTEXT_COMPACTION_ENABLED`, `SMALL_MODEL_PROFILE`, plus triage (`TRIAGE_ENABLED` / `INTERVAL` / `AUTO_STEER`) and memory (`MEMORY_ENABLED`, `LOCAL_MEMORY`). Codex paths stay TUI-or-file for now.
+Settings → **Runtime** passes TUI harness knobs into `.vibes/config.json` on mission spawn: `MAX_STEPS`, `MAX_CONCURRENT_TASKS`, `YOLO_MODE`, `THINKING_MODE`, `CONTEXT_COMPACTION_ENABLED`, `SMALL_MODEL_PROFILE`, triage (`TRIAGE_ENABLED` / `INTERVAL` / `AUTO_STEER`), memory (`MEMORY_ENABLED`, `LOCAL_MEMORY`), plus completion gates `ENABLE_DOUBLE_CHECK_COMPLETION` and `ENABLE_ADVERSARIAL_AUDIT`. Codex paths stay TUI-or-file for now.
 
 ### Decision (intervene gate)
 
