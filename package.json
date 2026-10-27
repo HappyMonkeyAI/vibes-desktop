@@ -3,6 +3,12 @@
   "version": "0.1.1",
   "private": true,
   "description": "Focused desktop app for orchestrating Vibes missions: voice input, live activity ledger, mission control UI.",
+  "author": "HappyMonkey / FerroxLabs",
+  "homepage": "https://github.com/SPhillips1337/vibes-desktop",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SPhillips1337/vibes-desktop.git"
+  },
   "main": "./out/main/index.js",
   "type": "module",
   "scripts": {
@@ -11,11 +17,13 @@
     "start": "electron .",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
-    "dist": "electron-vite build && electron-builder --win"
+    "dist": "electron-vite build && electron-builder --win",
+    "dist:dir": "electron-vite build && electron-builder --win --dir"
   },
   "build": {
     "appId": "com.ferrox.vibesdesktop",
     "productName": "Vibes Desktop",
+    "copyright": "Copyright © HappyMonkey / FerroxLabs",
     "directories": {
       "output": "dist"
     },
@@ -23,6 +31,7 @@
       "out/**/*",
       "package.json"
     ],
+    "forceCodeSigning": false,
     "win": {
       "target": [
         {
@@ -31,13 +40,17 @@
             "x64"
           ]
         }
+      ],
+      "signingHashAlgorithms": [
+        "sha256"
       ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "artifactName": "Vibes Desktop Setup ${version}.${ext}"
     }
   },
   "dependencies": {

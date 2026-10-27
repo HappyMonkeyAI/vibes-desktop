@@ -18,15 +18,15 @@ npm run typecheck
 npm run dist       # Windows NSIS installer → dist/
 ```
 
-**Closed beta:** bring your own Vibes checkout + local LLM. Operator setup: [docs/BETA.md](docs/BETA.md).
+**Closed beta:** bring your own Vibes checkout + local LLM. Operator setup: [docs/BETA.md](docs/BETA.md). Packaging / signing: [docs/PACKAGING.md](docs/PACKAGING.md).
 
-Requires Node 22+, a Vibes checkout containing `src/mcp/server.ts` (Settings → Vibes path, or `VIBES_PATH`). Voice default is in-app Whisper (downloads on first talk); optional ASR server or legacy yapsnap + ffmpeg.
+Requires Node 22+, a Vibes checkout containing `src/mcp/server.ts` (first-run wizard, Settings → Vibes path, or `VIBES_PATH`). Voice default is in-app Whisper (downloads on first talk); optional ASR server or legacy yapsnap + ffmpeg.
 
 ## Version
 
 Current app version: **0.1.1** (`package.json`). User-facing release notes: [CHANGELOG.md](CHANGELOG.md). Feature map: [docs/FEATURES.md](docs/FEATURES.md). Beta setup: [docs/BETA.md](docs/BETA.md).
 
-Bump `package.json` `version` when cutting a release; add a matching `CHANGELOG.md` section the same day. Session detail stays in `PROGRESS.md` — do not duplicate full narrative into the changelog.
+Bump `package.json` `version` when cutting a release; add a matching `CHANGELOG.md` section the same day; follow [docs/PACKAGING.md](docs/PACKAGING.md). Session detail stays in `PROGRESS.md` — do not duplicate full narrative into the changelog.
 
 ## Documentation Spine
 

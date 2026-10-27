@@ -27,7 +27,8 @@ describe('first-launch empty state (S1)', () => {
     // Running missions auto-open the depth panel, so the title appears on the
     // card and again in the panel header.
     expect((await screen.findAllByText('Refactor auth module')).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Waiting on API key')).toBeTruthy();
+    // Needs-you missions also auto-open depth, so the title is on the card + panel.
+    expect((await screen.findAllByText('Waiting on API key')).length).toBeGreaterThanOrEqual(1);
     // Task rows are grouped under their mission card, not shown as separate cards
     // until the depth panel lists them (this fixture has no missionId link).
     expect(screen.queryByText('Update index.html title')).toBeNull();

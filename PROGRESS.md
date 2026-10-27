@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 — T61 packaging harden
+
+**Done:** `package.json` author/homepage/repository/copyright; explicit `forceCodeSigning: false` + sha256; NSIS artifact name; [docs/PACKAGING.md](docs/PACKAGING.md) (dist cadence + `CSC_*` signing); BETA/README link SmartScreen + signing. Live Decision smoke still blocked on this machine (no KEV/VIBES_PATH/Ollama).
+
+**Evidence:** docs + package metadata; typecheck.
+
+**Next:** T62 live Decision smoke when LAN up; optional MCP registry UI; cut 0.2.0 when first-run + signing path proven.
+
+---
+
 ## 2026-10-27 — T60 first-run setup wizard
 
 **Done:** Modal on launch when `setupComplete` is false: Vibes path → Default URL/model → Operations tip. Skip/finish persists `setupComplete`. Existing installs with `vibesPath` infer complete. BETA.md updated. PR #6 already on `main`.
