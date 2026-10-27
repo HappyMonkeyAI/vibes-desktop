@@ -7,6 +7,15 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 
 ## [Unreleased]
 
+### Added
+
+- First-run setup wizard (Vibes path → default model → Operations tip); `setupComplete` in settings (T60).
+- [docs/PACKAGING.md](docs/PACKAGING.md): dist cadence, SmartScreen, `CSC_*` / `WIN_CSC_LINK` signing for public beta (T61).
+
+### Changed
+
+- Installer metadata: author, homepage, repository, copyright; NSIS artifact `Vibes Desktop Setup <version>.exe`; `forceCodeSigning: false` until a cert is configured.
+
 ## [0.1.1] — 2026-10-27
 
 Closed-beta cut: Roles/Runtime parity with high-value TUI knobs, Decision/Needs You reliability, Windows installer. **Requires** a Vibes checkout + local OpenAI-compatible LLM — see [docs/BETA.md](docs/BETA.md).
