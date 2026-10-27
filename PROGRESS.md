@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 — T64 first-run workspace seed
+
+**Done:** Wizard step 3 picks mission workspace (history + `initialWorkspace` into Operations); empty-state copy steers strangers to choose a working directory before Start. T63 merged via PR #10.
+
+**Evidence:** typecheck + unit tests.
+
+**Next:** T62 live Decision smoke when LAN up; signed installer when cert available; cut 0.2.0 after stranger first-mission proof.
+
+---
+
 ## 2026-10-27 — T63 first-run path validate
 
 **Done:** `settings:validate-vibes-path` IPC; first-run Browse + reject paths without `src/mcp/server.ts`; Test connection on model step; Settings Vibes path Browse + validate on Save. Packaging (T61) on `main` via PR #9.

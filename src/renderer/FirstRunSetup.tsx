@@ -3,13 +3,17 @@ import { Button, Input, Message, Modal, Steps } from '@arco-design/web-react';
 import styles from './FirstRunSetup.module.css';
 
 /**
- * Closed-beta first-run: Vibes checkout path → default model endpoint → tip.
+ * Closed-beta first-run: Vibes checkout → default model → workspace → Mission Control.
  * BYO stack (docs/BETA.md). Skip sets setupComplete so the modal does not return.
  */
 
+export type FirstRunFinished = {
+  workspaceRoot?: string;
+};
+
 export type FirstRunSetupProps = {
   visible: boolean;
-  onFinished: () => void;
+  onFinished: (result?: FirstRunFinished) => void;
 };
 
 const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) => {
@@ -17,6 +21,7 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
   const [vibesPath, setVibesPath] = useState('');
   const [baseUrl, setBaseUrl] = useState('http://127.0.0.1:11434');
   const [model, setModel] = useState('');
+  const [workspaceRoot, setWorkspaceRoot] = useState('');
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
 
@@ -25,14 +30,16 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
     let cancelled = false;
     void (async () => {
       try {
-        const [settings, roles] = await Promise.all([
+        const [settings, roles, history] = await Promise.all([
           window.vibesDesktop.settings.get(),
           window.vibesDesktop.roles.get(),
+          window.vibesDesktop.workspace.history.get(),
         ]);
         if (cancelled) return;
         if (settings.vibesPath.trim()) setVibesPath(settings.vibesPath);
         if (roles.default.baseUrl.trim()) setBaseUrl(roles.default.baseUrl);
         if (roles.default.model.trim()) setModel(roles.default.model);
+        if (history[0]?.path) setWorkspaceRoot(history[0].path);
       } catch {
         // Prefill is best-effort; wizard still works empty.
       }
@@ -42,14 +49,18 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
     };
   }, [visible]);
 
-  const markComplete = useCallback(async (extra?: { vibesPath?: string }) => {
+  const markComplete = useCallback(async (extra?: { vibesPath?: string; workspaceRoot?: string }) => {
     setSaving(true);
     try {
+      const root = extra?.workspaceRoot?.trim();
+      if (root) {
+        await window.vibesDesktop.workspace.history.save(root);
+      }
       await window.vibesDesktop.settings.save({
         setupComplete: true,
         ...(extra?.vibesPath !== undefined ? { vibesPath: extra.vibesPath } : {}),
       });
-      onFinished();
+      onFinished(root ? { workspaceRoot: root } : undefined);
     } catch (error) {
       Message.error(error instanceof Error ? error.message : 'Could not save setup.');
     } finally {
@@ -61,9 +72,14 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
     void markComplete();
   }, [markComplete]);
 
-  const handleBrowse = useCallback(async () => {
+  const handleBrowseVibes = useCallback(async () => {
     const res = await window.vibesDesktop.workspace.select();
     if (res.path) setVibesPath(res.path);
+  }, []);
+
+  const handleBrowseWorkspace = useCallback(async () => {
+    const res = await window.vibesDesktop.workspace.select();
+    if (res.path) setWorkspaceRoot(res.path);
   }, []);
 
   const handleSavePath = useCallback(async () => {
@@ -142,8 +158,11 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
   }, [baseUrl, model]);
 
   const handleFinish = useCallback(() => {
-    void markComplete({ vibesPath: vibesPath.trim() || undefined });
-  }, [markComplete, vibesPath]);
+    void markComplete({
+      vibesPath: vibesPath.trim() || undefined,
+      workspaceRoot: workspaceRoot.trim() || undefined,
+    });
+  }, [markComplete, vibesPath, workspaceRoot]);
 
   return (
     <Modal
@@ -161,7 +180,7 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
       <Steps current={step} size="small" className={styles.steps}>
         <Steps.Step title="Vibes" />
         <Steps.Step title="Model" />
-        <Steps.Step title="Mission" />
+        <Steps.Step title="Workspace" />
       </Steps>
 
       {step === 1 && (
@@ -174,7 +193,7 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
               onChange={setVibesPath}
               size="default"
             />
-            <Button onClick={() => void handleBrowse()}>Browse</Button>
+            <Button onClick={() => void handleBrowseVibes()}>Browse</Button>
           </div>
           <p className={styles.hint}>
             We check for <code>src/mcp/server.ts</code> before continuing. Or set VIBES_PATH before launch.
@@ -221,11 +240,22 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
 
       {step === 3 && (
         <div className={styles.panel}>
-          <p className={styles.done}>
-            On <strong>Operations</strong>, pick a workspace folder, enter a short mission, and press Start.
-            Decision / Needs You is optional under Settings when you have a Decision MCP.
+          <label className={styles.label}>Mission workspace</label>
+          <div className={styles.pathRow}>
+            <Input
+              placeholder="Folder where missions will run (git repo or project dir)"
+              value={workspaceRoot}
+              onChange={setWorkspaceRoot}
+              size="default"
+            />
+            <Button onClick={() => void handleBrowseWorkspace()}>Browse</Button>
+          </div>
+          <p className={styles.hint}>
+            Optional now — you can also pick it on Operations. After this, enter a short mission and press Start.
+            Decision / Needs You is optional under Settings.
           </p>
           <div className={styles.actions}>
+            <Button onClick={() => setStep(2)}>Back</Button>
             <Button type="primary" loading={saving} onClick={handleFinish}>
               Open Mission Control
             </Button>

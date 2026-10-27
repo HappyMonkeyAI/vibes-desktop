@@ -12,6 +12,7 @@ const App: React.FC = () => {
   const [voiceReady, setVoiceReady] = useState<boolean | null>(null);
   const [engineOnline] = useState(true);
   const [showFirstRun, setShowFirstRun] = useState(false);
+  const [seedWorkspace, setSeedWorkspace] = useState<string | undefined>();
 
   useEffect(() => {
     let cancelled = false;
@@ -36,7 +37,13 @@ const App: React.FC = () => {
   return (
     <div className={styles.page}>
       <Message />
-      <FirstRunSetup visible={showFirstRun} onFinished={() => setShowFirstRun(false)} />
+      <FirstRunSetup
+        visible={showFirstRun}
+        onFinished={(result) => {
+          setShowFirstRun(false);
+          if (result?.workspaceRoot) setSeedWorkspace(result.workspaceRoot);
+        }}
+      />
       <header className={styles.header}>
         <h1>Mission Control</h1>
         <span className={styles.subtitle}>Vibes missions, live in one place.</span>
@@ -54,7 +61,7 @@ const App: React.FC = () => {
       <div className={styles.tabsWrap}>
         <Tabs defaultActiveTab="operations">
           <Tabs.TabPane key="operations" title="Operations">
-            <OperationsView />
+            <OperationsView initialWorkspace={seedWorkspace} />
           </Tabs.TabPane>
           <Tabs.TabPane key="chat" title="Chat">
             <ChatView />
