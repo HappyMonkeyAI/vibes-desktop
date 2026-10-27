@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 — T66 LM Studio defaults + Unsloth env alias
+
+**Done:** Branded `npm run dist` (no default Electron icon warning). First-run defaults `:1234`. Decision config accepts `UNSLOTH_API_KEY` for `:8888`. BETA public-beta readiness table. T62 still needs a real `sk-unsloth…` value.
+
+**Evidence:** dist success; `tests/decision-config.test.ts`.
+
+**Next:** T62 with Unsloth API key; CSC signing; cut **0.2.0**.
+
+---
+
 ## 2026-10-27 — T65 live first-mission + icon
 
 **Done:** V3 live smoke against LM Studio `127.0.0.1:1234` / `google/gemma-4-e2b` — mission created `hello.txt` with `bonjour` (~50s). Live e2e defaults updated off dead LAN Ollama. App icon `build/icon.ico`; Decision Settings sk-unsloth copy.

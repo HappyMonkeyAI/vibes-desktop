@@ -19,7 +19,7 @@ export type FirstRunSetupProps = {
 const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) => {
   const [step, setStep] = useState(1);
   const [vibesPath, setVibesPath] = useState('');
-  const [baseUrl, setBaseUrl] = useState('http://127.0.0.1:11434');
+  const [baseUrl, setBaseUrl] = useState('http://127.0.0.1:1234');
   const [model, setModel] = useState('');
   const [workspaceRoot, setWorkspaceRoot] = useState('');
   const [saving, setSaving] = useState(false);
@@ -211,20 +211,21 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
         <div className={styles.panel}>
           <label className={styles.label}>Default endpoint base URL</label>
           <Input
-            placeholder="http://127.0.0.1:11434"
+            placeholder="http://127.0.0.1:1234"
             value={baseUrl}
             onChange={setBaseUrl}
             size="default"
           />
           <label className={styles.label}>Model id</label>
           <Input
-            placeholder="llama3.2"
+            placeholder="google/gemma-4-e2b"
             value={model}
             onChange={setModel}
             size="default"
           />
           <p className={styles.hint}>
-            Saved to the Default role. You can refine Planner/Reviewer later on the Roles tab.
+            Defaults assume LM Studio on :1234. Use <code>http://127.0.0.1:11434</code> for Ollama.
+            Saved to the Default role — refine Planner/Reviewer later on Roles.
           </p>
           <div className={styles.actions}>
             <Button onClick={() => setStep(1)}>Back</Button>

@@ -22,6 +22,7 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 - Settings → Test decision MCP on Unsloth `:8888` runs a real `system_one` tools/call and surfaces `sk-unsloth…` API-key errors (no false “reachable” with a classic KEV token).
 - Decision Settings copy clarifies Unsloth `sk-unsloth-…` vs classic KEV token (T65).
 - Live mission e2e defaults to local `127.0.0.1:1234` (override with `VIBES_LIVE_*` env) (T65).
+- First-run model step defaults to LM Studio `:1234`; Decision resolves `UNSLOTH_API_KEY` / `UNSLOTH_STUDIO_API_KEY` for Studio URLs (T66).
 
 ## [0.1.1] — 2026-10-27
 
