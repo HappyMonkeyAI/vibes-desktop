@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 — T63 first-run path validate
+
+**Done:** `settings:validate-vibes-path` IPC; first-run Browse + reject paths without `src/mcp/server.ts`; Test connection on model step; Settings Vibes path Browse + validate on Save. Packaging (T61) on `main` via PR #9.
+
+**Evidence:** `tests/vibes-path.test.ts`; ipc parity; typecheck.
+
+**Next:** T62 live Decision smoke when LAN up; signed installer when cert available; cut 0.2.0 after stranger first-mission proof.
+
+---
+
 ## 2026-10-27 — T61 packaging harden
 
 **Done:** `package.json` author/homepage/repository/copyright; explicit `forceCodeSigning: false` + sha256; NSIS artifact name; [docs/PACKAGING.md](docs/PACKAGING.md) (dist cadence + `CSC_*` signing); BETA/README link SmartScreen + signing. Live Decision smoke still blocked on this machine (no KEV/VIBES_PATH/Ollama).

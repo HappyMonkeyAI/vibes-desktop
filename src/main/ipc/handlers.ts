@@ -14,6 +14,7 @@ import { audioExtensionForMime, transcribeViaServer, probeSpeechServer } from '.
 import { warmYapsnapModels } from '../voice/warm';
 import type { WorkspaceHistoryStore } from '../workspace/history';
 import { DEFAULT_SETTINGS, type SettingsStore } from '../settings/store';
+import { validateVibesCheckout } from '../settings/vibes-path';
 import { resolveDecisionMcpConfig } from '../decision/config';
 import { probeDecisionMcp } from '../decision/probe';
 import { readHarnessLesson } from '../harness/lesson-store';
@@ -216,6 +217,10 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
       if (!settingsStore) return { ok: true }; // parity stub — nothing to persist in tests
       const ok = settingsStore.save(input as AppSettingsSaveInput);
       return { ok };
+    },
+    [channels.settingsValidateVibesPath]: async (_e, pathArg) => {
+      const root = typeof pathArg === 'string' ? pathArg : '';
+      return validateVibesCheckout(root);
     },
     // Optional KEV/GUTSY decision MCP — only probes when URL + token are configured.
     [channels.decisionTest]: async () => {

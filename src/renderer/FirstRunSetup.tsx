@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Input, Message, Modal, Steps } from '@arco-design/web-react';
 import styles from './FirstRunSetup.module.css';
 
@@ -18,6 +18,29 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
   const [baseUrl, setBaseUrl] = useState('http://127.0.0.1:11434');
   const [model, setModel] = useState('');
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [settings, roles] = await Promise.all([
+          window.vibesDesktop.settings.get(),
+          window.vibesDesktop.roles.get(),
+        ]);
+        if (cancelled) return;
+        if (settings.vibesPath.trim()) setVibesPath(settings.vibesPath);
+        if (roles.default.baseUrl.trim()) setBaseUrl(roles.default.baseUrl);
+        if (roles.default.model.trim()) setModel(roles.default.model);
+      } catch {
+        // Prefill is best-effort; wizard still works empty.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
 
   const markComplete = useCallback(async (extra?: { vibesPath?: string }) => {
     setSaving(true);
@@ -38,14 +61,20 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
     void markComplete();
   }, [markComplete]);
 
+  const handleBrowse = useCallback(async () => {
+    const res = await window.vibesDesktop.workspace.select();
+    if (res.path) setVibesPath(res.path);
+  }, []);
+
   const handleSavePath = useCallback(async () => {
     const path = vibesPath.trim();
-    if (!path) {
-      Message.warning('Enter the absolute path to a Vibes checkout (…/src/mcp/server.ts).');
-      return;
-    }
     setSaving(true);
     try {
+      const check = await window.vibesDesktop.settings.validateVibesPath(path);
+      if (!check.ok) {
+        Message.warning(check.error ?? 'Invalid Vibes path.');
+        return;
+      }
       await window.vibesDesktop.settings.save({ vibesPath: path });
       setStep(2);
     } catch (error) {
@@ -54,6 +83,32 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
       setSaving(false);
     }
   }, [vibesPath]);
+
+  const handleTestModel = useCallback(async () => {
+    const url = baseUrl.trim();
+    const m = model.trim();
+    if (!url || !m) {
+      Message.warning('Base URL and model are required to test.');
+      return;
+    }
+    setTesting(true);
+    try {
+      const result = await window.vibesDesktop.roles.testConnection({
+        role: 'default',
+        baseUrl: url,
+        model: m,
+      });
+      if (result.ok) {
+        Message.success('Endpoint reachable.');
+      } else {
+        Message.error(result.error ?? 'Connection failed.');
+      }
+    } catch (error) {
+      Message.error(error instanceof Error ? error.message : 'Connection test failed.');
+    } finally {
+      setTesting(false);
+    }
+  }, [baseUrl, model]);
 
   const handleSaveRole = useCallback(async () => {
     const url = baseUrl.trim();
@@ -112,13 +167,18 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
       {step === 1 && (
         <div className={styles.panel}>
           <label className={styles.label}>Vibes checkout path</label>
-          <Input
-            placeholder="C:/path/to/vibes (must contain src/mcp/server.ts)"
-            value={vibesPath}
-            onChange={setVibesPath}
-            size="default"
-          />
-          <p className={styles.hint}>Or set VIBES_PATH in the environment before launch.</p>
+          <div className={styles.pathRow}>
+            <Input
+              placeholder="C:/path/to/vibes (must contain src/mcp/server.ts)"
+              value={vibesPath}
+              onChange={setVibesPath}
+              size="default"
+            />
+            <Button onClick={() => void handleBrowse()}>Browse</Button>
+          </div>
+          <p className={styles.hint}>
+            We check for <code>src/mcp/server.ts</code> before continuing. Or set VIBES_PATH before launch.
+          </p>
           <div className={styles.actions}>
             <Button onClick={handleSkip}>Skip for now</Button>
             <Button type="primary" loading={saving} onClick={() => void handleSavePath()}>
@@ -149,6 +209,9 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
           </p>
           <div className={styles.actions}>
             <Button onClick={() => setStep(1)}>Back</Button>
+            <Button loading={testing} onClick={() => void handleTestModel()}>
+              Test connection
+            </Button>
             <Button type="primary" loading={saving} onClick={() => void handleSaveRole()}>
               Next
             </Button>

@@ -310,6 +310,12 @@ export interface DecisionProbeResult {
   detail?: string;
 }
 
+/** Result of checking a Vibes checkout path (must contain src/mcp/server.ts). */
+export interface VibesPathValidationResult {
+  ok: boolean;
+  error?: string;
+}
+
 /** Wire shape for the `ledger:new-entry` push event (main → renderer). */
 export type LedgerNewEntryEvent = { entry: LedgerEntry };
 
@@ -338,6 +344,8 @@ export const channels = {
   ledgerArchive: 'ledger:archive',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
+  /** First-run / Settings — verify path has src/mcp/server.ts before save. */
+  settingsValidateVibesPath: 'settings:validate-vibes-path',
   decisionTest: 'decision:test',
   /** T35 — latest Harness²-lite lesson for a workspace (`.vibes/harness-lesson.json`). */
   harnessLessonGet: 'harness:lesson-get',
