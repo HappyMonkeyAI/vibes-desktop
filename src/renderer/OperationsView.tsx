@@ -107,7 +107,12 @@ const logTextFor = (entry: LedgerEntry): string => {
  * OperationsView — Hybrid C: always-on dispatch, classify() metrics, card grid,
  * and a live depth panel (checklist + detail + ledger-derived logs).
  */
-const OperationsView: React.FC = () => {
+export type OperationsViewProps = {
+  /** Prefill from first-run wizard (also written to workspace history). */
+  initialWorkspace?: string;
+};
+
+const OperationsView: React.FC<OperationsViewProps> = ({ initialWorkspace }) => {
   const [snapshot, setSnapshot] = useState<LedgerSnapshot | null>(null);
   const [missionRequest, setMissionRequest] = useState('');
   const [starting, setStarting] = useState(false);
@@ -135,6 +140,13 @@ const OperationsView: React.FC = () => {
   useEffect(() => {
     void refreshHistory();
   }, []);
+
+  useEffect(() => {
+    const seed = initialWorkspace?.trim();
+    if (!seed) return;
+    setWorkspaceRoot(seed);
+    void refreshHistory();
+  }, [initialWorkspace]);
 
   const handleSelectWorkspace = async () => {
     try {
@@ -630,7 +642,11 @@ const OperationsView: React.FC = () => {
             <>
               <div className={styles.empty}>
                 <span className={styles.emptyTitle}>All quiet</span>
-                <span className={styles.emptyHint}>No missions yet. Launch a new agent or start from the dispatch bar.</span>
+                <span className={styles.emptyHint}>
+                  {workspaceRoot
+                    ? 'No missions yet. Enter a short request above and press Start, or Launch New Agent.'
+                    : 'Choose a working directory above, then enter a short mission and press Start.'}
+                </span>
               </div>
               <div className={styles.cardGrid}>
                 <button type="button" className={styles.launchCard} onClick={handleLaunchModalOpen}>

@@ -76,6 +76,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T61 Packaging harden: author/metadata, signing docs (`CSC_*`), PACKAGING.md, BETA SmartScreen note ✅ 2026-10-27
 - [ ] T62 Live Decision/Needs-You smoke on LAN (blocked until KEV/Unsloth + VIBES_PATH + LLM up)
 - [x] T63 First-run polish: Browse + validate `src/mcp/server.ts`, Test connection on model step; Settings path Browse ✅ 2026-10-27
+- [x] T64 First-run workspace pick → seeds Operations; empty-state guidance when no working directory ✅ 2026-10-27
 - [x] T29b/T30b Speech migration + local ORT WASM/CSP merged into release branch ✅ 2026-10-27
 - [x] T50b Live Needs-You UI ✅ 2026-10-22 — mission `8b9c0e46` completion-gate → blocked+needsHuman; CDP clicked **Skip step**; vibes completion-gate→intervene + desktop `clearNeedsHuman` shipped. Follow-up: vibes scheduler deadlock (0/1 pending) on repeat orphan drills
 - [x] T52 Vibes scheduler deadlock ✅ 2026-10-24 — soft-requeue deleted `runningTasks` before `finally` → second start raced → stuck `in_progress`; also loop exited during `awaiting_intervention`. Fix on vibes `ag/completion-gates`; tests `scheduler-t52-requeue-race` + deps stuck-in_progress

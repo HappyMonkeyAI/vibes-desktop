@@ -12,6 +12,7 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 - First-run setup wizard (Vibes path → default model → Operations tip); `setupComplete` in settings (T60).
 - [docs/PACKAGING.md](docs/PACKAGING.md): dist cadence, SmartScreen, `CSC_*` / `WIN_CSC_LINK` signing for public beta (T61).
 - First-run / Settings: Browse for Vibes path; validate `src/mcp/server.ts` before continue/save; Test connection on wizard model step (T63).
+- First-run workspace step seeds Operations working directory; All quiet hint when no workspace chosen (T64).
 
 ### Changed
 

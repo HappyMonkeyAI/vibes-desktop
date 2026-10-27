@@ -11,7 +11,7 @@
 
 ## 2. Point at Vibes
 
-On first launch, a short setup wizard asks for the Vibes path and a default model endpoint (you can Skip and configure later). Use **Browse**, or paste a path — Next checks for `src/mcp/server.ts`. On the model step, **Test connection** probes the endpoint before you continue.
+On first launch, a short setup wizard asks for the Vibes path, a default model endpoint, and an optional mission workspace (you can Skip and configure later). Use **Browse**, or paste a path — Next checks for `src/mcp/server.ts`. On the model step, **Test connection** probes the endpoint before you continue. A chosen workspace is prefilled on Operations.
 
 Settings → **General** → **Vibes Checkout Path** (Browse + validate on Save) = absolute path to a vibes repo that contains `src/mcp/server.ts`.  
 (Dev alternative: set env `VIBES_PATH` before launch.)
