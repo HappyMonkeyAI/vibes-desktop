@@ -11,6 +11,8 @@
 
 ## 2. Point at Vibes
 
+On first launch, a short setup wizard asks for the Vibes path and a default model endpoint (you can Skip and configure later).
+
 Settings → **General** → **Vibes Checkout Path** = absolute path to a vibes repo that contains `src/mcp/server.ts`.  
 (Dev alternative: set env `VIBES_PATH` before launch.)
 

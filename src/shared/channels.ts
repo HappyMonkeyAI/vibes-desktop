@@ -246,6 +246,11 @@ export interface AppSettings {
   memoryEnabled: boolean;
   /** Prefer local JSONL memory over remote mem0. */
   localMemory: boolean;
+  /**
+   * True after the first-run wizard finishes or is dismissed. When false and
+   * vibesPath + default role are empty, App shows the setup modal.
+   */
+  setupComplete: boolean;
 }
 
 /** Slice of AppSettings written into vibes native keys on mission spawn. */

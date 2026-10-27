@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 — T60 first-run setup wizard
+
+**Done:** Modal on launch when `setupComplete` is false: Vibes path → Default URL/model → Operations tip. Skip/finish persists `setupComplete`. Existing installs with `vibesPath` infer complete. BETA.md updated. PR #6 already on `main`.
+
+**Evidence:** settings `setupComplete` tests; typecheck.
+
+**Next:** Live Decision smoke; packaging/signing; first-run polish from beta feedback.
+
+---
+
 ## 2026-10-27 — Fold #4/#5 into release (toward PR #6)
 
 **Done:** Merged `ag/deps-audit-fix` (includes T31–T33 + electron/undici/fast-uri audit) into the release branch after #2/#3. Conflicts resolved (channels clear-key, mission done→idle + harness lesson, settings clearSpeechServerApiKey).
