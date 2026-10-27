@@ -180,6 +180,8 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
             const outcome = missionOutcomeFrom(result);
             if (outcome.status === 'failed') {
               await store.markOpenTasksFailed(missionId).catch(() => undefined);
+            } else if (outcome.status === 'done') {
+              await store.markUnreportedTasksIdle(missionId).catch(() => undefined);
             }
             return store.recordMissionEvent(request, outcome.status, root, missionId, outcome.detail).catch(() => undefined);
           }

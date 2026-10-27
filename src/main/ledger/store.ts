@@ -195,6 +195,27 @@ export class LedgerStore extends EventEmitter {
    *  Preserves any richer step/system detail already on the row; does not stamp
    *  the mission summary onto every incomplete step. */
   async markOpenTasksFailed(missionId: string): Promise<number> {
+    return this.closeOpenTasks(missionId, 'failed', (entry) =>
+      entry.detail
+      || (entry.status === 'pending'
+        ? 'Left pending when the mission ended (dependency never became runnable).'
+        : 'Left incomplete when the mission ended.'));
+  }
+
+  /** When a mission completes, close checklist rows the child never reported
+   *  (e.g. a seeded plan step it renamed or merged). They go to `idle`, not
+   *  `done` — no task-status event proves the work ran — and not `failed`,
+   *  which would flag a completed mission as needing attention. */
+  async markUnreportedTasksIdle(missionId: string): Promise<number> {
+    return this.closeOpenTasks(missionId, 'idle', (entry) =>
+      entry.detail || 'Not reported by the mission (no task-status event before it completed).');
+  }
+
+  private async closeOpenTasks(
+    missionId: string,
+    status: 'failed' | 'idle',
+    detailFor: (entry: LedgerEntry) => string,
+  ): Promise<number> {
     return this.enqueue(async () => {
       await this.ready;
       let count = 0;
@@ -203,18 +224,14 @@ export class LedgerStore extends EventEmitter {
         if (entry.kind === 'mission') continue;
         if (entry.missionId !== missionId) continue;
         if (entry.status !== 'running' && entry.status !== 'verifying' && entry.status !== 'pending') continue;
-        const failed: LedgerEntry = {
+        const closed: LedgerEntry = {
           ...entry,
-          status: 'failed',
-          group: classify({ status: 'failed', needsHuman: false }),
-          detail:
-            entry.detail
-            || (entry.status === 'pending'
-              ? 'Left pending when the mission ended (dependency never became runnable).'
-              : 'Left incomplete when the mission ended.'),
+          status,
+          group: classify({ status, needsHuman: false }),
+          detail: detailFor(entry),
           updatedAt: Date.now(),
         };
-        await this.append(failed);
+        await this.append(closed);
         count += 1;
       }
       return count;

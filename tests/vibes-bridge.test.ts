@@ -99,6 +99,13 @@ describe('VibesBridge task-status events (T4)', () => {
     expect(logs).toEqual(['[INFO] starting mission', 'random warning line']);
   });
 
+  it('treats an unknown [TASK_STATUS] status as a plain log, not a task event', () => {
+    const { bridge, events, logs } = bridgeWithTaskEvents();
+    bridge.client.emit('log', '[TASK_STATUS] {"name": "Write tests", "status": "paused"}');
+    expect(events).toEqual([]);
+    expect(logs).toContain('[TASK_STATUS] {"name": "Write tests", "status": "paused"}');
+  });
+
   it('treats a malformed [TASK_STATUS] payload as a plain log', () => {
     const { bridge, events, logs } = bridgeWithTaskEvents();
     bridge.client.emit('log', '[TASK_STATUS] {not valid json');

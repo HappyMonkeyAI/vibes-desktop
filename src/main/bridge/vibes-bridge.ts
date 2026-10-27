@@ -93,6 +93,12 @@ const PLAN_TIMEOUT_MS = 600_000; // planning can take a long time on slow local 
 const EXECUTE_TIMEOUT_MS = 3_600_000; // an hour ceiling for a full mission
 const TASK_STATUS_RE = /^\[TASK_STATUS\] (.*)$/;
 
+const TASK_STATUSES: readonly TaskStatusEvent['status'][] = ['in-progress', 'complete', 'failed'];
+
+function isTaskStatus(value: unknown): value is TaskStatusEvent['status'] {
+  return typeof value === 'string' && (TASK_STATUSES as readonly string[]).includes(value);
+}
+
 export class VibesBridge extends EventEmitter {
   readonly client = new JsonRpcClient();
   private proc: ReturnType<typeof spawn> | null = null;
@@ -113,7 +119,9 @@ export class VibesBridge extends EventEmitter {
             error?: unknown;
             detail?: unknown;
           };
-          if (typeof parsed.name === 'string' && typeof parsed.status === 'string') {
+          // Unknown statuses would map to an undefined ledger status — drop them
+          // to the plain log instead of writing a broken row.
+          if (typeof parsed.name === 'string' && isTaskStatus(parsed.status)) {
             const detail =
               typeof parsed.detail === 'string'
                 ? parsed.detail
@@ -122,7 +130,7 @@ export class VibesBridge extends EventEmitter {
                   : undefined;
             const event: TaskStatusEvent = {
               name: parsed.name,
-              status: parsed.status as TaskStatusEvent['status'],
+              status: parsed.status,
               ...(detail ? { detail } : {}),
             };
             this.emit('task-status', event);
