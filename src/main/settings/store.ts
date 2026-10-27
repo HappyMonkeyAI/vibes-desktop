@@ -202,7 +202,9 @@ export class SettingsStore {
       const currentView = this.get();
       const existing = this.readRaw();
 
-      let nextSpeechEnc = asString(existing?.speechServerApiKeyEnc);
+      let nextSpeechEnc = input.clearSpeechServerApiKey === true
+        ? ''
+        : asString(existing?.speechServerApiKeyEnc);
       if (typeof input.speechServerApiKey === 'string' && input.speechServerApiKey.length > 0) {
         nextSpeechEnc = this.cipher
           ? encryptKey(this.cipher, input.speechServerApiKey)

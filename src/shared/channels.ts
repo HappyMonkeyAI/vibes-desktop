@@ -264,9 +264,10 @@ export type VibesRuntimeSettings = Pick<
   | 'localMemory'
 >;
 
-/** Partial save payload — empty *ApiKey / *AuthToken fields mean keep the stored secret. */
+/** Partial save — empty *ApiKey/*AuthToken keep stored secrets; clearSpeechServerApiKey removes it. */
 export type AppSettingsSaveInput = Partial<Omit<AppSettings, 'speechServerHasKey' | 'decisionMcpHasToken' | 'ttsDaemonHasToken'>> & {
   speechServerApiKey?: string;
+  clearSpeechServerApiKey?: boolean;
   /** Bearer for decision MCP; empty string omitted = keep stored. */
   decisionMcpAuthToken?: string;
   /** Bearer for Agent Voice daemon; empty = keep stored. */

@@ -167,6 +167,30 @@ describe('LedgerStore (T5)', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it('markUnreportedTasksIdle closes rows a completed mission never reported, without failing them', async () => {
+    const dir = tempDir();
+    const store = new LedgerStore(dir);
+    const missionId = 'm-done';
+    await store.recordMissionEvent('Do the thing', 'running', dir, missionId);
+    await store.seedPlannedTasks(['A', 'B', 'C'], dir, missionId);
+    await store.recordTaskStatus({ name: 'A', status: 'complete' }, dir, missionId);
+    await store.recordTaskStatus({ name: 'B', status: 'in-progress' }, dir, missionId);
+
+    const count = await store.markUnreportedTasksIdle(missionId);
+    expect(count).toBe(2);
+
+    const snap = await store.snapshot();
+    expect(snap.entries.find((e) => e.title === 'A')!.status).toBe('done');
+    for (const title of ['B', 'C']) {
+      const row = snap.entries.find((e) => e.title === title)!;
+      expect(row.status).toBe('idle');
+      expect(row.group).toBe('recent'); // not needs-you
+      expect(row.detail).toContain('Not reported by the mission');
+    }
+    expect(snap.entries.find((e) => e.kind === 'mission')!.status).toBe('running');
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it('concurrent task-status events for the same title upsert in place — one row, final status', async () => {
     const dir = tempDir();
     const store = new LedgerStore(dir);

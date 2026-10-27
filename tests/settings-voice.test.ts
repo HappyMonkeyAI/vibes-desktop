@@ -37,6 +37,15 @@ describe('SettingsStore voice fields', () => {
     expect(store.getSpeechServerApiKey()).toBe('secret-token');
   });
 
+  it('removes the stored key on clearSpeechServerApiKey and keeps other fields', () => {
+    const store = new SettingsStore(dir, cipher);
+    store.save({ speechServerApiKey: 'drop-me', speechServerModel: 'qwen3-asr-0.6b-q8-0' });
+    expect(store.save({ clearSpeechServerApiKey: true })).toBe(true);
+    expect(store.get().speechServerHasKey).toBe(false);
+    expect(store.getSpeechServerApiKey()).toBeUndefined();
+    expect(store.get().speechServerModel).toBe('qwen3-asr-0.6b-q8-0');
+  });
+
   it('keeps the stored key when save omits speechServerApiKey', () => {
     const store = new SettingsStore(dir, cipher);
     store.save({ speechServerApiKey: 'keep-me' });

@@ -68,8 +68,13 @@ async function loadPipeline(config: WorkerConfig, id: number): Promise<LoadedPip
   const key = configKey(config);
   if (loaded && loaded.key === key) return loaded;
   if (loading) {
-    const pending = await loading;
-    if (pending.key === key) return pending;
+    try {
+      const pending = await loading;
+      if (pending.key === key) return pending;
+    } catch {
+      // That load failed. It was for this config (retry below) or another one
+      // (irrelevant) — either way its error belongs to its own request, not this one.
+    }
   }
   if (loaded) {
     try {

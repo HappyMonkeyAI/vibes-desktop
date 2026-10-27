@@ -2,13 +2,33 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-27 — Fold #4/#5 into release (toward PR #6)
+
+**Done:** Merged `ag/deps-audit-fix` (includes T31–T33 + electron/undici/fast-uri audit) into the release branch after #2/#3. Conflicts resolved (channels clear-key, mission done→idle + harness lesson, settings clearSpeechServerApiKey).
+
+**Evidence:** see prior #4/#5 PR notes; release-branch tests after merge.
+
+**Next:** CI green on [PR #6](https://github.com/SPhillips1337/vibes-desktop/pull/6); merge to `main`.
+
+---
+
+## 2026-10-27 (deps + packaging) — Audit fixes; packaged build verified
+
+**Done:** `npm audit fix` (in-range, lockfile only): electron 44.7.0 → 44.9.3, undici and fast-uri patch bumps. `npm audit`: 0 vulnerabilities. Packaged win-unpacked CDP: CSP + ORT from asar, 0 jsdelivr.
+
+---
+
+## 2026-10-27 (review) — Follow-ups T31–T33
+
+**Done:** Speech-server non-loopback http+key blocked; ~25 MB capture cap; temp cleanup; probe matrix; clear key; unknown TASK_STATUS dropped; unreported→idle on done; worker load isolation; Space/Enter PTT; mic release on unmount.
+
+---
+
 ## 2026-10-27 — Merge security #2/#3 into release (toward PR #6)
 
-**Done:** Opened [PR #6](https://github.com/SPhillips1337/vibes-desktop/pull/6) (`cursor/decision-retry-research-links` → `main`). Merged `ag/t30-local-ort-wasm` (local ORT WASM + CSP + speech migration/keyring fallback) into the release branch; resolved settings store + docs conflicts.
+**Done:** Opened [PR #6](https://github.com/SPhillips1337/vibes-desktop/pull/6). Merged `ag/t30-local-ort-wasm` into the release branch.
 
-**Evidence:** conflict-free tree; settings/voice tests pending green.
-
-**Next:** Fold #4/#5 (T31–T33 + deps audit); CI green; merge #6 to `main`.
+**Next:** Fold #4/#5; merge #6 to `main`.
 
 ---
 

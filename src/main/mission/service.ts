@@ -276,6 +276,8 @@ export function createMissionService(options: MissionServiceOptions): MissionSer
             if (outcome.status === 'failed') {
               await store.markOpenTasksFailed(missionId).catch(() => undefined);
               await persistHarnessLessonFromLedger(request, root, missionId, outcome.detail).catch(() => undefined);
+            } else if (outcome.status === 'done') {
+              await store.markUnreportedTasksIdle(missionId).catch(() => undefined);
             }
             maybeAnnounce(outcome.status, request, outcome.detail);
             return store.recordMissionEvent(request, outcome.status, root, missionId, outcome.detail).catch(() => undefined);
