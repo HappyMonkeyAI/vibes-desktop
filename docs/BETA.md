@@ -103,8 +103,11 @@ Default: builtin Whisper (downloads ONNX on first talk). Alternatives: OpenAI-co
 npm test
 npm run typecheck
 # live mission (dev): VIBES_LIVE=1 npm test -- tests/live-mission.e2e.test.ts
-# decision shadow (live): VIBES_DECISION_LIVE=1 KEV_MCP_URL=… KEV_MCP_AUTH_TOKEN=… npm test -- tests/decision-shadow.e2e.test.ts
 # decision wiring (hermetic mock): npm test -- tests/mock-decision-mcp.test.ts
+# decision live smoke (T62) — Unsloth example:
+#   $env:KEV_MCP_URL="http://host:8888/mcp/"; $env:UNSLOTH_API_KEY="sk-unsloth-…"
+#   .\scripts\decision-live-smoke.ps1
+#   # or: $env:VIBES_DECISION_LIVE=1; npm run test:decision-live
 ```
 
 Issues: note OS build, vibes commit, model endpoint, and whether Decision was on.

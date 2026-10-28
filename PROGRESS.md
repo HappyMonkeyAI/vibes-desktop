@@ -2,6 +2,14 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-28 — T78 Decision live smoke one-liner
+
+**Done:** `scripts/decision-live-smoke.ps1` + `npm run test:decision-live`; shadow e2e accepts `UNSLOTH_API_KEY` for `:8888`. Hosts still down — script ready for T62 when Studio is up. Setup `0.2.0.exe` built locally; GitHub Release not published yet.
+
+**Next:** Run T78 script when `:8888` + `sk-unsloth…` available; publish `v0.2.0` prerelease when approved; CSC.
+
+---
+
 ## 2026-10-28 — T77 cut 0.2.0
 
 **Done:** `package.json` → `0.2.0`; CHANGELOG `[0.2.0]` with Unreleased rolled in; README/BETA updated. Dist + GitHub Release `v0.2.0` (unsigned) when this lands. Live Decision T62 and CSC signing still block calling the public-beta goal **complete**.
