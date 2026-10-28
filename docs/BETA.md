@@ -91,6 +91,7 @@ Default: builtin Whisper (downloads ONNX on first talk). Alternatives: OpenAI-co
 | First mission without tribal knowledge | Live-proven on LM Studio `:1234` (T65; re-verified 2026-10-28) |
 | Branded NSIS installer | Done (icon); **unsigned** until `CSC_*` cert — SmartScreen path documented (T71) |
 | BYO-stack stranger docs | Done — BETA checklist + PACKAGING + first-run clone hint (T71) |
+| Packaging appId / CONTRIBUTING | Done — `com.stephenphillips.vibesdesktop` + PRs→`main` (T72) |
 | Decision / Needs You when configured | Blocked — Unsloth `:8888` / classic KEV MCP down (2026-10-28); probe rejects Speech ASR URLs (T70) |
 | Version cut `0.2.0` | After Decision smoke + (ideally) signed build |
 | GitHub visibility | Repo may stay private until Decision + packaging gates feel ready |

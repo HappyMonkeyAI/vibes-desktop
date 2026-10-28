@@ -61,7 +61,7 @@ set CSC_KEY_PASSWORD=…
 
 3. electron-builder signs the exe when `CSC_LINK` / `WIN_CSC_LINK` is present. Without it, the build still succeeds (`forceCodeSigning` is off). Do not put `signingHashAlgorithms` under `build.win` on electron-builder 26 — that field belongs to the signtool options object and fails schema validation.
 
-Optional: `publisherName` in `package.json` → `build.win` should match the cert subject once you sign for real.
+`build.appId` is `com.stephenphillips.vibesdesktop`. Optional: `publisherName` under `build.win` should match the cert subject once you sign for real.
 
 ## SmartScreen after signing
 

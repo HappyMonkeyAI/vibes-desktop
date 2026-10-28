@@ -2,6 +2,14 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-28 — T72 appId + CONTRIBUTING + Jules register
+
+**Done:** `build.appId` → `com.stephenphillips.vibesdesktop`; CONTRIBUTING.md (PRs → `main`); Jules broker project registered. Jules GitHub source for this private repo still missing — handoff blocked until connected in Jules UI. GitHub default branch fixed to `main`.
+
+**Next:** Connect Jules source → handoff loop; T62 Decision; CSC; cut **0.2.0**.
+
+---
+
 ## 2026-10-28 — T71 stranger BYO / packaging docs
 
 **Done:** BETA “What you need” checklist; PACKAGING BYO table + SmartScreen More info → Run anyway; README operator path; first-run title/copy links to Vibes clone. Live mission still green on `:1234`. Decision hosts still down.
