@@ -75,7 +75,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T60 First-run setup wizard (Vibes path → default role → mission tip) ✅ 2026-10-27
 - [x] T61 Packaging harden: author/metadata, signing docs (`CSC_*`), PACKAGING.md, BETA SmartScreen note ✅ 2026-10-27
 - [x] T61b Fix electron-builder 26 `win.signingHashAlgorithms` schema break; `npm run dist` → Setup 0.1.1.exe ✅ 2026-10-27
-- [ ] T62 Live Decision/Needs-You smoke on LAN — Unsloth `:8888` up but needs `sk-unsloth…` key; classic KEV `:8765` down (2026-10-27)
+- [ ] T62 Live Decision/Needs-You smoke on LAN — Unsloth `:8888` down (2026-10-28); needs `sk-unsloth…` when Studio is up; `:8765/health` is ASR (`qwen3-asr`), not classic KEV
 - [x] T62b Decision Settings probe: Unsloth deep `system_one` check + sk-unsloth error surfacing ✅ 2026-10-27
 - [x] T63 First-run polish: Browse + validate `src/mcp/server.ts`, Test connection on model step; Settings path Browse ✅ 2026-10-27
 - [x] T64 First-run workspace pick → seeds Operations; empty-state guidance when no working directory ✅ 2026-10-27
