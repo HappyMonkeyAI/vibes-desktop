@@ -9,6 +9,14 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 
 ### Added
 
+### Changed
+
+## [0.2.0] — 2026-10-28
+
+Public-beta candidate: first-run BYO path, packaging hygiene, CI, Decision wiring (hermetic). **Installer is unsigned** (SmartScreen → More info → Run anyway). **Live Decision/Needs-You smoke (T62)** still needs a reachable Unsloth/KEV MCP + key — desktop wiring is proven hermetically (T75). See [docs/BETA.md](docs/BETA.md).
+
+### Added
+
 - MIT license — copyright Stephen Phillips (`LICENSE`).
 - Operations shows Needs You / Decision on|off status (T76).
 - Hermetic mock Decision MCP covers Settings probe + escalate→gate wiring (T75; live T62 still needs LAN host).

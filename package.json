@@ -1,6 +1,6 @@
 {
   "name": "vibes-desktop",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Focused desktop app for orchestrating Vibes missions: voice input, live activity ledger, mission control UI.",
   "author": "Stephen Phillips",

@@ -16,7 +16,7 @@ Packaging / SmartScreen / signing: [PACKAGING.md](PACKAGING.md).
 
 ## 1. Install
 
-- **Installer:** run `Vibes Desktop Setup <version>.exe` (NSIS). If SmartScreen warns on an **unsigned** build: **More info** → **Run anyway** ([PACKAGING.md](PACKAGING.md)).
+- **Installer:** run `Vibes Desktop Setup 0.2.0.exe` (NSIS; GitHub Release asset when published). If SmartScreen warns on an **unsigned** build: **More info** → **Run anyway** ([PACKAGING.md](PACKAGING.md)).
 - **From source:** `npm install` → `npm run dev` (or `npm run dist` then install the built exe).
 
 ## 2. Point at Vibes
@@ -94,7 +94,7 @@ Default: builtin Whisper (downloads ONNX on first talk). Alternatives: OpenAI-co
 | Packaging appId / CONTRIBUTING | Done — `com.stephenphillips.vibesdesktop` + PRs→`main` (T72) |
 | CI on PR/`main` | Done — typecheck + hermetic tests (T73) |
 | Decision / Needs You when configured | Desktop wiring hermetic (T75) + Operations Decision on/off cue (T76); **live** Unsloth/KEV smoke (T62) still blocked — hosts down |
-| Version cut `0.2.0` | After Decision smoke + (ideally) signed build |
+| Version cut `0.2.0` | Done (unsigned candidate); live Decision (T62) + CSC signing still open before flipping repo public |
 | GitHub visibility | Repo may stay private until Decision + packaging gates feel ready |
 
 ## Verify
