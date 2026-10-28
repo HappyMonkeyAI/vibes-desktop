@@ -80,6 +80,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T70 Decision Test always deep tools/call; reject Speech ASR URLs mistaken for Decision; docs clarify `:8765` collision ✅ 2026-10-28
 - [x] T71 Stranger BYO docs: BETA checklist, PACKAGING SmartScreen interim, README operator path, first-run Vibes clone hint ✅ 2026-10-28
 - [x] T72 Electron `appId` → `com.stephenphillips.vibesdesktop`; CONTRIBUTING (PRs → `main`); Jules project registered (source connect still needed for handoffs) ✅ 2026-10-28
+- [x] T73 CI: GitHub Actions typecheck + hermetic tests on PR/`main` ✅ 2026-10-28
 - [x] T63 First-run polish: Browse + validate `src/mcp/server.ts`, Test connection on model step; Settings path Browse ✅ 2026-10-27
 - [x] T64 First-run workspace pick → seeds Operations; empty-state guidance when no working directory ✅ 2026-10-27
 - [x] T65 Live first-mission smoke on local LM Studio `:1234` + app icon for NSIS; Decision Settings sk-unsloth copy ✅ 2026-10-27
