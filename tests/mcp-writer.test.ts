@@ -4,6 +4,9 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   htmlDesignAdvisorServerConfig,
+  customMcpServerConfig,
+  parseMcpArgs,
+  sanitizeMcpServerName,
   writeVibesMcpJson,
   vibesMcpPath,
 } from '../src/main/roles/mcp-writer';
@@ -62,5 +65,58 @@ describe('mcp-writer (html-design-advisor registry)', () => {
 
   it('refuses relative workspace roots', () => {
     expect(writeVibesMcpJson('relative/ws', { enabled: true, pythonCommand: 'python' })).toBeNull();
+  });
+
+  it('sanitizes names and parses args', () => {
+    expect(sanitizeMcpServerName(' My Server! ')).toBe('my-server');
+    expect(parseMcpArgs('-y foo-bar')).toEqual(['-y', 'foo-bar']);
+    expect(parseMcpArgs('["a","b"]')).toEqual(['a', 'b']);
+  });
+
+  it('builds HTTP or stdio custom entries', () => {
+    expect(customMcpServerConfig({ command: '', args: '', url: 'http://127.0.0.1:9/mcp' })).toEqual({
+      url: 'http://127.0.0.1:9/mcp',
+    });
+    expect(customMcpServerConfig({ command: 'npx', args: '-y pkg', url: '' })).toEqual({
+      command: 'npx',
+      args: ['-y', 'pkg'],
+    });
+    expect(customMcpServerConfig({ command: '', args: '', url: 'not-a-url' })).toBeNull();
+  });
+
+  it('writes and removes a custom MCP alongside the advisor', () => {
+    writeVibesMcpJson(
+      dir,
+      { enabled: true, pythonCommand: 'python' },
+      {
+        enabled: true,
+        name: 'my-tools',
+        command: 'npx',
+        args: '-y demo-mcp',
+        url: '',
+      },
+    );
+    const on = JSON.parse(fs.readFileSync(vibesMcpPath(dir), 'utf8')) as {
+      mcpServers: Record<string, unknown>;
+    };
+    expect(on.mcpServers['html-design-advisor']).toBeTruthy();
+    expect(on.mcpServers['my-tools']).toEqual({ command: 'npx', args: ['-y', 'demo-mcp'] });
+
+    writeVibesMcpJson(
+      dir,
+      { enabled: true, pythonCommand: 'python' },
+      {
+        enabled: false,
+        name: 'my-tools',
+        command: 'npx',
+        args: '-y demo-mcp',
+        url: '',
+      },
+    );
+    const off = JSON.parse(fs.readFileSync(vibesMcpPath(dir), 'utf8')) as {
+      mcpServers: Record<string, unknown>;
+    };
+    expect(off.mcpServers['my-tools']).toBeUndefined();
+    expect(off.mcpServers['html-design-advisor']).toBeTruthy();
   });
 });

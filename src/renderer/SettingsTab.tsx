@@ -34,6 +34,11 @@ const SettingsTab: React.FC = () => {
   const [htmlDesignAdvisorEnabled, setHtmlDesignAdvisorEnabled] = useState(false);
   const [htmlDesignAdvisorPython, setHtmlDesignAdvisorPython] = useState('python');
   const [htmlDesignAdvisorWorkspace, setHtmlDesignAdvisorWorkspace] = useState('');
+  const [customMcpEnabled, setCustomMcpEnabled] = useState(false);
+  const [customMcpName, setCustomMcpName] = useState('desktop-custom');
+  const [customMcpCommand, setCustomMcpCommand] = useState('');
+  const [customMcpArgs, setCustomMcpArgs] = useState('');
+  const [customMcpUrl, setCustomMcpUrl] = useState('');
   const [maxSteps, setMaxSteps] = useState('25');
   const [maxConcurrentTasks, setMaxConcurrentTasks] = useState('1');
   const [yoloMode, setYoloMode] = useState(true);
@@ -104,6 +109,11 @@ const SettingsTab: React.FC = () => {
     setHtmlDesignAdvisorEnabled(Boolean(settings.htmlDesignAdvisorEnabled));
     setHtmlDesignAdvisorPython(settings.htmlDesignAdvisorPython || 'python');
     setHtmlDesignAdvisorWorkspace(settings.htmlDesignAdvisorWorkspace || '');
+    setCustomMcpEnabled(Boolean(settings.customMcpEnabled));
+    setCustomMcpName(settings.customMcpName || 'desktop-custom');
+    setCustomMcpCommand(settings.customMcpCommand || '');
+    setCustomMcpArgs(settings.customMcpArgs || '');
+    setCustomMcpUrl(settings.customMcpUrl || '');
     setMaxSteps(String(settings.maxSteps ?? 25));
     setMaxConcurrentTasks(String(settings.maxConcurrentTasks ?? 1));
     setYoloMode(settings.yoloMode !== false);
@@ -163,6 +173,11 @@ const SettingsTab: React.FC = () => {
         htmlDesignAdvisorEnabled,
         htmlDesignAdvisorPython,
         htmlDesignAdvisorWorkspace,
+        customMcpEnabled,
+        customMcpName,
+        customMcpCommand,
+        customMcpArgs,
+        customMcpUrl,
         maxSteps: parsePositiveInt(maxSteps, 25),
         maxConcurrentTasks: parsePositiveInt(maxConcurrentTasks, 1),
         yoloMode,
@@ -410,6 +425,58 @@ const SettingsTab: React.FC = () => {
                 html-design-advisor-mcp
               </a>
               . Sets <code>python -m html_design_advisor</code> under key <code>html-design-advisor</code>.
+            </p>
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Custom MCP server</span>
+              <Switch
+                checked={customMcpEnabled}
+                onChange={setCustomMcpEnabled}
+                size="small"
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Server name (mcpServers key)</label>
+              <Input
+                placeholder="desktop-custom"
+                value={customMcpName}
+                onChange={setCustomMcpName}
+                size="small"
+                disabled={!customMcpEnabled}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>HTTP URL (optional — skips stdio when set)</label>
+              <Input
+                placeholder="http://127.0.0.1:8765/mcp"
+                value={customMcpUrl}
+                onChange={setCustomMcpUrl}
+                size="small"
+                disabled={!customMcpEnabled}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Stdio command</label>
+              <Input
+                placeholder="npx"
+                value={customMcpCommand}
+                onChange={setCustomMcpCommand}
+                size="small"
+                disabled={!customMcpEnabled || Boolean(customMcpUrl.trim())}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Stdio args</label>
+              <Input
+                placeholder="-y some-mcp-package"
+                value={customMcpArgs}
+                onChange={setCustomMcpArgs}
+                size="small"
+                disabled={!customMcpEnabled || Boolean(customMcpUrl.trim())}
+              />
+            </div>
+            <p className={styles.hint}>
+              Thin registry seed into <code>.vibes/mcp.json</code> on mission spawn — not a marketplace.
+              Prefer HTTP URL for remote MCPs, or stdio command + args for local packages.
             </p>
           </div>
 

@@ -66,7 +66,7 @@ Default: builtin Whisper (downloads ONNX on first talk). Alternatives: OpenAI-co
 
 - Windows only; installer is **unsigned** (SmartScreen may warn). Signing for public beta: [PACKAGING.md](PACKAGING.md).
 - Full Needs You / Decision story needs your LAN Decision MCP.
-- Codex RAG paths and multi-MCP marketplace UI are out of scope for 0.1.x.
+- Codex RAG paths and full MCP marketplace UI are out of scope for 0.1.x (one custom MCP seed is supported in Settings).
 - Bring your own models — nothing is bundled except optional Whisper weights on first use.
 - Live Decision smoke requires `KEV_MCP_URL` + token (or Settings / `UNSLOTH_API_KEY` for `:8888`) and a reachable MCP.
 
