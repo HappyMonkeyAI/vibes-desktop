@@ -3,7 +3,8 @@
   "version": "0.1.1",
   "private": true,
   "description": "Focused desktop app for orchestrating Vibes missions: voice input, live activity ledger, mission control UI.",
-  "author": "HappyMonkey / FerroxLabs",
+  "author": "Stephen Phillips",
+  "license": "MIT",
   "homepage": "https://github.com/SPhillips1337/vibes-desktop",
   "repository": {
     "type": "git",
@@ -23,7 +24,7 @@
   "build": {
     "appId": "com.ferrox.vibesdesktop",
     "productName": "Vibes Desktop",
-    "copyright": "Copyright © HappyMonkey / FerroxLabs",
+    "copyright": "Copyright © 2026 Stephen Phillips",
     "directories": {
       "output": "dist"
     },
