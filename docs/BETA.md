@@ -1,12 +1,22 @@
-# Vibes Desktop — closed beta setup (0.1.x)
+# Vibes Desktop — operator setup (BYO stack)
 
-**Audience:** people who already run [Vibes](https://github.com/HappyMonkeyAI/vibes) (or `vibes-tui`) and a local OpenAI-compatible LLM. This is **not** a self-contained download-and-go product.
+**Audience:** people installing the Windows app who already (or will) run [Vibes](https://github.com/HappyMonkeyAI/vibes) and a local OpenAI-compatible LLM. This is **not** a self-contained download-and-go product — the installer is the shell only.
 
-**Requires:** Windows x64 · Node 22+ (dev) or the NSIS installer · Vibes checkout with `src/mcp/server.ts` · LAN/local model endpoint (e.g. Ollama).
+## What you need
+
+| Bring | Example |
+|-------|---------|
+| Windows x64 | NSIS Setup, or Node 22+ from source |
+| Vibes checkout | Clone [HappyMonkeyAI/vibes](https://github.com/HappyMonkeyAI/vibes) — must contain `src/mcp/server.ts` |
+| Local LLM | LM Studio `http://127.0.0.1:1234` or Ollama `http://127.0.0.1:11434` |
+| Optional Decision | Unsloth `:8888/mcp/` + `sk-unsloth-…`, or classic KEV `…/mcp` + token |
+| Optional Voice | Builtin Whisper (default) or Speech ASR server |
+
+Packaging / SmartScreen / signing: [PACKAGING.md](PACKAGING.md).
 
 ## 1. Install
 
-- **Installer:** run `Vibes Desktop Setup 0.1.1.exe` (NSIS; choose install dir).
+- **Installer:** run `Vibes Desktop Setup <version>.exe` (NSIS). If SmartScreen warns on an **unsigned** build: **More info** → **Run anyway** ([PACKAGING.md](PACKAGING.md)).
 - **From source:** `npm install` → `npm run dev` (or `npm run dist` then install the built exe).
 
 ## 2. Point at Vibes
@@ -78,8 +88,9 @@ Default: builtin Whisper (downloads ONNX on first talk). Alternatives: OpenAI-co
 |------|--------|
 | MIT license (Stephen Phillips) | Done (`LICENSE`) |
 | First-run (Vibes path → model → workspace) | Done (T60–T64) |
-| First mission without tribal knowledge | Live-proven on LM Studio `:1234` (T65) |
-| Branded NSIS installer | Done (icon); **unsigned** until `CSC_*` cert |
+| First mission without tribal knowledge | Live-proven on LM Studio `:1234` (T65; re-verified 2026-10-28) |
+| Branded NSIS installer | Done (icon); **unsigned** until `CSC_*` cert — SmartScreen path documented (T71) |
+| BYO-stack stranger docs | Done — BETA checklist + PACKAGING + first-run clone hint (T71) |
 | Decision / Needs You when configured | Blocked — Unsloth `:8888` / classic KEV MCP down (2026-10-28); probe rejects Speech ASR URLs (T70) |
 | Version cut `0.2.0` | After Decision smoke + (ideally) signed build |
 | GitHub visibility | Repo may stay private until Decision + packaging gates feel ready |

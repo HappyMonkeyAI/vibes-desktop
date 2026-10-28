@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-28 — T71 stranger BYO / packaging docs
+
+**Done:** BETA “What you need” checklist; PACKAGING BYO table + SmartScreen More info → Run anyway; README operator path; first-run title/copy links to Vibes clone. Live mission still green on `:1234`. Decision hosts still down.
+
+**Evidence:** docs + `FirstRunSetup.tsx`; typecheck.
+
+**Next:** T62 when Decision MCP + key; CSC signing; cut **0.2.0**.
+
+---
+
 ## 2026-10-28 — T70 Decision probe vs Speech ASR
 
 **Done:** Settings → Test Decision always runs tools/call (classic KEV + Unsloth). Rejects `/v1/audio…` and `/health` URLs so local qwen3-asr `:8765` cannot false-pass as Decision. BETA/FEATURES/Settings copy clarify the port collision.

@@ -10,6 +10,10 @@ Built from three proven parts:
 
 ## Quick Start
 
+**Operators (installer):** install `Vibes Desktop Setup <version>.exe`, then follow [docs/BETA.md](docs/BETA.md) — you bring a [Vibes](https://github.com/HappyMonkeyAI/vibes) checkout and a local LLM (LM Studio / Ollama). Unsigned builds may need SmartScreen **More info → Run anyway** ([docs/PACKAGING.md](docs/PACKAGING.md)).
+
+**From source:**
+
 ```bash
 npm install
 npm run dev        # electron + vite dev server
@@ -17,8 +21,6 @@ npm test           # vitest
 npm run typecheck
 npm run dist       # Windows NSIS installer → dist/
 ```
-
-**Closed beta:** bring your own Vibes checkout + local LLM. Operator setup: [docs/BETA.md](docs/BETA.md). Packaging / signing: [docs/PACKAGING.md](docs/PACKAGING.md).
 
 Requires Node 22+, a Vibes checkout containing `src/mcp/server.ts` (first-run wizard, Settings → Vibes path, or `VIBES_PATH`). Voice default is in-app Whisper (downloads on first talk); optional ASR server or legacy yapsnap + ffmpeg.
 
