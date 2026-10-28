@@ -198,6 +198,7 @@ const SettingsTab: React.FC = () => {
         setDecisionMcpAuthToken('');
         const refreshed = await window.vibesDesktop.settings.get();
         applySettings(refreshed);
+        window.dispatchEvent(new Event('vibes-settings-saved'));
       } else {
         Message.error('Failed to save settings.');
       }

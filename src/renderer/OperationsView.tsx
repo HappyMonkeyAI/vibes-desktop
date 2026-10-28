@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { ActivityGroup, LedgerEntry, LedgerSnapshot, WorkspaceHistoryEntry } from '@shared/channels';
+import { isDecisionModelConfigured } from '@shared/channels';
 import { classify } from '@shared/classify';
 import { formatHarnessLessonForRetry } from '@shared/harnessLesson';
 import { buildRetryRequest } from '@shared/missionRetry';
@@ -119,6 +120,8 @@ const OperationsView: React.FC<OperationsViewProps> = ({ initialWorkspace }) => 
   const [workspaceRoot, setWorkspaceRoot] = useState('');
   const [workspaceHistory, setWorkspaceHistory] = useState<WorkspaceHistoryEntry[]>([]);
   const [voiceReady, setVoiceReady] = useState<boolean | null>(null);
+  /** Settings Decision URL+token — Needs You intervene gate stays off when false. */
+  const [decisionConfigured, setDecisionConfigured] = useState(false);
 
   const [launchModalVisible, setLaunchModalVisible] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
@@ -176,9 +179,12 @@ const OperationsView: React.FC<OperationsViewProps> = ({ initialWorkspace }) => 
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
+    const refreshOperatorFlags = async () => {
       try {
         const settings = await window.vibesDesktop.settings.get();
+        if (!cancelled) {
+          setDecisionConfigured(isDecisionModelConfigured(settings));
+        }
         if (settings.speechEngine === 'builtin' || settings.speechEngine === 'server') {
           if (!cancelled) setVoiceReady(true);
           return;
@@ -188,8 +194,21 @@ const OperationsView: React.FC<OperationsViewProps> = ({ initialWorkspace }) => 
       } catch {
         if (!cancelled) setVoiceReady(true);
       }
-    })();
-    return () => { cancelled = true; };
+    };
+    void refreshOperatorFlags();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refreshOperatorFlags();
+    };
+    const onSettingsSaved = () => {
+      void refreshOperatorFlags();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('vibes-settings-saved', onSettingsSaved);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('vibes-settings-saved', onSettingsSaved);
+    };
   }, []);
 
   const appendLog = (missionId: string | undefined, entry: LedgerEntry) => {
@@ -612,6 +631,16 @@ const OperationsView: React.FC<OperationsViewProps> = ({ initialWorkspace }) => 
             )}
           </div>
           {voiceReady === false && <span className={styles.voiceNotReady}>voice not ready</span>}
+          <span
+            className={decisionConfigured ? styles.decisionOn : styles.decisionOff}
+            title={
+              decisionConfigured
+                ? 'Decision MCP URL + token set — escalate can open Needs You'
+                : 'Decision not configured — missions still run; Needs You intervene stays off (Settings → Decision)'
+            }
+          >
+            {decisionConfigured ? 'Needs You: Decision on' : 'Needs You: Decision off'}
+          </span>
         </div>
       </section>
 
@@ -644,7 +673,7 @@ const OperationsView: React.FC<OperationsViewProps> = ({ initialWorkspace }) => 
                 <span className={styles.emptyTitle}>All quiet</span>
                 <span className={styles.emptyHint}>
                   {workspaceRoot
-                    ? 'No missions yet. Enter a short request above and press Start, or Launch New Agent.'
+                    ? 'No missions yet. Enter a short request above and press Start, or Launch New Agent. Decision / Needs You is optional under Settings.'
                     : 'Choose a working directory above, then enter a short mission and press Start.'}
                 </span>
               </div>

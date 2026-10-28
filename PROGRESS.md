@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-28 — T76 Operations Decision status
+
+**Done:** Operations workspace bar shows `Needs You: Decision on|off`; refreshes on Settings save + tab visibility. Empty-state hints Decision is optional.
+
+**Evidence:** typecheck; UI wiring.
+
+**Next:** T62 live Decision; CSC; cut **0.2.0**.
+
+---
+
 ## 2026-10-28 — T75 hermetic mock Decision MCP
 
 **Done:** `tests/helpers/mock-decision-mcp.ts` + `tests/mock-decision-mcp.test.ts` — streamable initialize/tools/call; probe pass; wrong bearer 401; escalate maps through intervene gate. Does **not** close T62 (live Unsloth/KEV).
