@@ -1,14 +1,30 @@
 import type { DecisionMcpConfig } from '@shared/channels';
-import { decisionToolCandidates, probeDecisionTools } from './kev-client';
+import { probeDecisionTools } from './kev-client';
 
 export type DecisionProbeResult = { ok: boolean; error?: string; detail?: string };
 
 /** HTTP statuses that mean "the MCP host answered" for a bare GET (no session). */
 const REACHABLE_WITHOUT_SESSION = new Set([200, 204, 400, 405, 406]);
 
-function looksLikeStudioDecision(url: string): boolean {
-  const tools = decisionToolCandidates(url);
-  return tools[0] === 'system_one';
+/**
+ * Local Speech defaults often use :8765 for OpenAI-compatible ASR.
+ * Decision MCP is a different service (usually …/mcp) — reject speech URLs early.
+ */
+export function speechUrlMistakenForDecision(url: string): string | null {
+  const u = url.trim().toLowerCase();
+  if (!u) return null;
+  if (u.includes('/v1/audio') || u.includes('/audio/transcriptions')) {
+    return 'That looks like the Speech ASR URL. Decision needs an MCP endpoint (…/mcp), usually Unsloth :8888/mcp/ or a classic KEV MCP host — not the qwen3-asr /transcriptions path.';
+  }
+  try {
+    const path = new URL(url.trim()).pathname.replace(/\/+$/, '') || '/';
+    if (path === '/health') {
+      return 'Decision MCP URL should end in /mcp (or /mcp/), not /health. Local :8765/health is often Speech ASR, not KEV.';
+    }
+  } catch {
+    /* invalid URL — let fetch report it */
+  }
+  return null;
 }
 
 /**
@@ -17,10 +33,13 @@ function looksLikeStudioDecision(url: string): boolean {
  * Bare GET is not a valid MCP session: servers often reply 400/406. That still
  * proves the URL + network path work. 401/403 mean the bearer is wrong.
  *
- * For Unsloth Studio (`:8888` / unsloth hosts), also runs a real `system_one`
- * tools/call so a classic KEV token does not false-pass Settings → Test.
+ * Always follows with a real tools/call (`system_one` / `kev_evaluate`) so a
+ * wrong host (e.g. Speech ASR on :8765) or wrong token cannot false-pass.
  */
 export async function probeDecisionMcp(config: DecisionMcpConfig): Promise<DecisionProbeResult> {
+  const mistaken = speechUrlMistakenForDecision(config.url);
+  if (mistaken) return { ok: false, error: mistaken };
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
   try {
@@ -48,12 +67,5 @@ export async function probeDecisionMcp(config: DecisionMcpConfig): Promise<Decis
     clearTimeout(timer);
   }
 
-  if (looksLikeStudioDecision(config.url)) {
-    return probeDecisionTools({ config });
-  }
-
-  return {
-    ok: true,
-    detail: 'Reachable. Decision model is on when URL + token stay set.',
-  };
+  return probeDecisionTools({ config });
 }

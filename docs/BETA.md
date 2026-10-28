@@ -50,9 +50,11 @@ Settings → Decision MCP URL + bearer, then **Test decision MCP**.
 | Host | URL example | Bearer |
 |------|-------------|--------|
 | Unsloth Studio | `http://host:8888/mcp/` | Studio API key (`sk-unsloth-…` from Studio → Settings → API) |
-| Classic KEV | `http://host:8765/mcp` | KEV MCP auth token |
+| Classic KEV | `http://<lan-host>:<port>/mcp` | KEV MCP auth token |
 
-A classic KEV token will **not** work on Unsloth `:8888` — Settings → Test now runs a real `system_one` call and shows the API-key error instead of a false “reachable” pass.
+**Port collision:** Settings → Speech often defaults to local `:8765` (qwen3-asr `/v1/audio/transcriptions`). That is **not** Decision. Classic KEV may historically have used `:8765/mcp` on a LAN box, but it is a different service — paste an MCP `…/mcp` URL, never the ASR path.
+
+A classic KEV token will **not** work on Unsloth `:8888`. Settings → Test always runs a real Decision tools/call (not a bare GET) so wrong hosts/tokens fail clearly.
 
 When configured, escalate / low confidence can open **Needs You** (Retry step / Skip / Fail).
 
@@ -78,7 +80,7 @@ Default: builtin Whisper (downloads ONNX on first talk). Alternatives: OpenAI-co
 | First-run (Vibes path → model → workspace) | Done (T60–T64) |
 | First mission without tribal knowledge | Live-proven on LM Studio `:1234` (T65) |
 | Branded NSIS installer | Done (icon); **unsigned** until `CSC_*` cert |
-| Decision / Needs You when configured | Blocked without Unsloth `sk-unsloth-…` or classic KEV `:8765` |
+| Decision / Needs You when configured | Blocked — Unsloth `:8888` / classic KEV MCP down (2026-10-28); probe rejects Speech ASR URLs (T70) |
 | Version cut `0.2.0` | After Decision smoke + (ideally) signed build |
 | GitHub visibility | Repo may stay private until Decision + packaging gates feel ready |
 

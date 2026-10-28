@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-28 — T70 Decision probe vs Speech ASR
+
+**Done:** Settings → Test Decision always runs tools/call (classic KEV + Unsloth). Rejects `/v1/audio…` and `/health` URLs so local qwen3-asr `:8765` cannot false-pass as Decision. BETA/FEATURES/Settings copy clarify the port collision.
+
+**Evidence:** `tests/decision-probe.test.ts`; typecheck.
+
+**Next:** T62 when Unsloth/KEV MCP is up + `sk-unsloth…`; CSC signing; cut **0.2.0**.
+
+---
+
 ## 2026-10-28 — T69 custom MCP registry seed
 
 **Done:** Settings → Custom MCP (name + HTTP URL or stdio command/args) writes into workspace `.vibes/mcp.json` on spawn alongside HTML Design Advisor. Decision LAN hosts still down.

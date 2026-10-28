@@ -39,7 +39,7 @@ Settings → **Runtime** passes TUI harness knobs into `.vibes/config.json` on m
 
 | Field | Purpose |
 |-------|---------|
-| MCP URL | e.g. Unsloth Studio `http://<host>:8888/mcp/` or KEV `http://<host>:8765/mcp` |
+| MCP URL | Unsloth Studio `http://<host>:8888/mcp/` or classic KEV `http://<lan-host>:<port>/mcp` (not the Speech ASR URL) |
 | Bearer token | Encrypted; also injectable as env for live tests |
 
 When both are set, missions get Decision config. The **vibes child** (not only the desktop probe) calls:
