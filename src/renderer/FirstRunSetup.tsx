@@ -3,7 +3,7 @@ import { Button, Input, Message, Modal, Steps } from '@arco-design/web-react';
 import styles from './FirstRunSetup.module.css';
 
 /**
- * Closed-beta first-run: Vibes checkout → default model → workspace → Mission Control.
+ * First-run: Vibes checkout → default model → workspace → Mission Control.
  * BYO stack (docs/BETA.md). Skip sets setupComplete so the modal does not return.
  */
 
@@ -167,15 +167,18 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
   return (
     <Modal
       visible={visible}
-      title="Welcome — closed beta setup"
+      title="Welcome — bring-your-own setup"
       onCancel={handleSkip}
       footer={null}
       maskClosable={false}
       style={{ width: 'min(520px, calc(100vw - 32px))' }}
     >
       <p className={styles.lead}>
-        Vibes Desktop needs a Vibes checkout and a local OpenAI-compatible model.
-        Full notes: docs/BETA.md in the repo.
+        You bring the stack: a{' '}
+        <a href="https://github.com/HappyMonkeyAI/vibes" target="_blank" rel="noreferrer">
+          Vibes
+        </a>{' '}
+        checkout plus a local OpenAI-compatible model (LM Studio / Ollama). Nothing is bundled except optional Whisper on first talk.
       </p>
       <Steps current={step} size="small" className={styles.steps}>
         <Steps.Step title="Vibes" />
@@ -196,7 +199,8 @@ const FirstRunSetup: React.FC<FirstRunSetupProps> = ({ visible, onFinished }) =>
             <Button onClick={() => void handleBrowseVibes()}>Browse</Button>
           </div>
           <p className={styles.hint}>
-            We check for <code>src/mcp/server.ts</code> before continuing. Or set VIBES_PATH before launch.
+            Clone Vibes first if you do not have it yet, then Browse to that folder. We check for{' '}
+            <code>src/mcp/server.ts</code> before continuing. Dev alternative: set <code>VIBES_PATH</code> before launch.
           </p>
           <div className={styles.actions}>
             <Button onClick={handleSkip}>Skip for now</Button>

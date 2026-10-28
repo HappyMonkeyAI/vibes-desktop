@@ -1,6 +1,6 @@
 # Packaging & release (Windows)
 
-Closed-beta installers are **unsigned** NSIS builds. Public beta should ship a signed `Vibes Desktop Setup <version>.exe`.
+Installers are NSIS `Vibes Desktop Setup <version>.exe`. **Unsigned** builds are fine for closed beta and early public testers; public beta should ship a **signed** Setup once a code-signing cert is available.
 
 ## Build
 
@@ -21,9 +21,30 @@ Requires Node 22+, Windows x64. electron-builder reads `package.json` → `build
 4. Tag `vX.Y.Z` and attach the Setup exe to a GitHub Release (see `v0.1.1`).
 5. Point testers at [BETA.md](BETA.md).
 
-## Code signing (public beta)
+## Bring-your-own stack (what the installer does *not* include)
 
-Unsigned installers trigger SmartScreen / “unknown publisher”. To sign:
+The Setup exe is the Electron shell only. Operators still need:
+
+| Piece | Why |
+|-------|-----|
+| [Vibes](https://github.com/HappyMonkeyAI/vibes) checkout | Child MCP (`src/mcp/server.ts`) — first-run wizard / Settings |
+| Local OpenAI-compatible LLM | LM Studio (`:1234`) or Ollama (`:11434`) — Roles / first-run model step |
+| Optional Decision MCP | Unsloth Studio `:8888/mcp/` or classic KEV `…/mcp` — Needs You |
+| Optional Speech ASR | Builtin Whisper by default; or a local `/v1/audio/transcriptions` server |
+
+Full operator path: [BETA.md](BETA.md).
+
+## Unsigned interim (SmartScreen)
+
+Until `CSC_*` signing is wired, Windows may show **Windows protected your PC** / unknown publisher:
+
+1. Click **More info**.
+2. Click **Run anyway**.
+3. Prefer distributing the Setup exe over a hash/channel you control (GitHub Release asset), not random mirrors.
+
+This is expected for unsigned NSIS — not a broken build. Signing (below) removes the unknown-publisher class of warnings; reputation may still take a few signed releases.
+
+## Code signing (public beta)
 
 1. Obtain a Windows code-signing certificate (`.pfx` or cloud HSM).
 2. Set env before `npm run dist` (do **not** commit secrets):
@@ -38,17 +59,17 @@ set WIN_CSC_LINK=…base64…
 set CSC_KEY_PASSWORD=…
 ```
 
-3. electron-builder signs the exe when `CSC_LINK` / `WIN_CSC_LINK` is present. Without it, the build still succeeds (`forceCodeSigning` is off) for closed beta. Do not put `signingHashAlgorithms` under `build.win` on electron-builder 26 — that field belongs to the signtool options object and fails schema validation.
+3. electron-builder signs the exe when `CSC_LINK` / `WIN_CSC_LINK` is present. Without it, the build still succeeds (`forceCodeSigning` is off). Do not put `signingHashAlgorithms` under `build.win` on electron-builder 26 — that field belongs to the signtool options object and fails schema validation.
 
 Optional: `publisherName` in `package.json` → `build.win` should match the cert subject once you sign for real.
 
-## SmartScreen
+## SmartScreen after signing
 
 After first public signed releases, Microsoft may still warn until reputation builds. Prefer an EV cert or established publisher for faster trust.
 
 ## Verify a build
 
-- Install on a clean Windows user profile.
+- Install on a clean Windows user profile (expect SmartScreen if unsigned).
 - First-run wizard → Vibes path + default model ([BETA.md](BETA.md)).
 - Start a trivial mission against a local LLM.
 - Optional: Decision MCP → Needs You when Unsloth/KEV is on the LAN.
