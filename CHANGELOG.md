@@ -10,6 +10,7 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 ### Added
 
 - MIT license — copyright Stephen Phillips (`LICENSE`).
+- Live mission smoke: unreachable-endpoint failure case (LM Studio accepts unknown model ids) (T74).
 - CI: typecheck + hermetic tests on PR/`main` (T73).
 - Electron `appId` retargeted to `com.stephenphillips.vibesdesktop`; CONTRIBUTING (PRs target `main`) (T72).
 - Operator BYO-stack docs: BETA checklist, unsigned SmartScreen path, first-run Vibes clone hint (T71).

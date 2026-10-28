@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-28 — T74 live e2e unreachable LLM failure
+
+**Done:** `tests/live-mission.e2e.test.ts` failure case now hits `http://127.0.0.1:1` instead of a fake model id — LM Studio was accepting unknown models and marking missions `done`.
+
+**Evidence:** live `-t "unreachable"` when `VIBES_LIVE=1`.
+
+**Next:** T62 Decision; CSC; cut **0.2.0**.
+
+---
+
 ## 2026-10-28 — T73 CI typecheck + test
 
 **Done:** `.github/workflows/ci.yml` — Node 22, `npm ci`, typecheck, hermetic `npm test` on PR/`main`. Live e2e stays opt-in locally.

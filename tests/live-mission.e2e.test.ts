@@ -109,10 +109,13 @@ describe.runIf(process.env.VIBES_LIVE === '1')('live mission smoke (real child +
   );
 
   it(
-    'records FAILED (not done) when the model does not exist',
+    'records FAILED (not done) when the LLM endpoint is unreachable',
     async () => {
+      // Fake model ids are not a reliable failure probe: LM Studio often accepts
+      // unknown ids and may still mark the mission done. A closed port is honest.
+      const deadOrigin = 'http://127.0.0.1:1';
       const workspace = makeWorkspace(
-        { ...executorOnly(), default: { baseUrl: EXECUTOR_ORIGIN, model: 'definitely-not-a-real-model-xyz', apiKey: '' } },
+        { ...executorOnly(), default: { baseUrl: deadOrigin, model: EXECUTOR_MODEL, apiKey: '' } },
       );
       const store = new LedgerStore(workspace);
       let service: MissionService | null = null;
@@ -120,8 +123,7 @@ describe.runIf(process.env.VIBES_LIVE === '1')('live mission smoke (real child +
         service = createLiveService(store, workspace);
         const request = 'Create a file named nope.txt with the word test';
         const result = await service.startMission({ request, workspaceRoot: workspace });
-        // Ollama often fails at start; LM Studio may accept the id then fail mid-run.
-        // Either way: never a silent done, and the file must not appear.
+        // Never a silent done, and the file must not appear.
         if (!result.started) {
           expect(result.error).toBeTruthy();
           const snap = await store.snapshot();
