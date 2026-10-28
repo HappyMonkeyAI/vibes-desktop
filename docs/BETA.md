@@ -74,11 +74,13 @@ Default: builtin Whisper (downloads ONNX on first talk). Alternatives: OpenAI-co
 
 | Gate | Status |
 |------|--------|
+| MIT license (Stephen Phillips) | Done (`LICENSE`) |
 | First-run (Vibes path → model → workspace) | Done (T60–T64) |
 | First mission without tribal knowledge | Live-proven on LM Studio `:1234` (T65) |
 | Branded NSIS installer | Done (icon); **unsigned** until `CSC_*` cert |
 | Decision / Needs You when configured | Blocked without Unsloth `sk-unsloth-…` or classic KEV `:8765` |
 | Version cut `0.2.0` | After Decision smoke + (ideally) signed build |
+| GitHub visibility | Repo may stay private until Decision + packaging gates feel ready |
 
 ## Verify
 

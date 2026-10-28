@@ -2,6 +2,14 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-28 — T68 MIT license
+
+**Done:** `LICENSE` (MIT, Copyright © 2026 Stephen Phillips); `package.json` `license`/`author`/`copyright`; README License section. Merged via PR #17. Repo still **private** on GitHub.
+
+**Next:** T62 Decision smoke with `sk-unsloth…`; CSC signing; cut **0.2.0**; flip visibility when ready.
+
+---
+
 ## 2026-10-27 — T67 Runtime completion gates
 
 **Done:** Settings → Runtime toggles for `ENABLE_DOUBLE_CHECK_COMPLETION` and `ENABLE_ADVERSARIAL_AUDIT` (defaults on). T66 on `main`.

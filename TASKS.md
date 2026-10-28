@@ -82,6 +82,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T65 Live first-mission smoke on local LM Studio `:1234` + app icon for NSIS; Decision Settings sk-unsloth copy ✅ 2026-10-27
 - [x] T66 Dist icon verified; first-run defaults LM Studio `:1234`; Decision accepts `UNSLOTH_API_KEY` for Studio URLs; 0.2 readiness table in BETA ✅ 2026-10-27
 - [x] T67 Runtime completion gates: double-check + adversarial audit toggles → `.vibes/config.json` ✅ 2026-10-27
+- [x] T68 MIT license — copyright Stephen Phillips (`LICENSE` + package.json) ✅ 2026-10-28
 - [x] T29b/T30b Speech migration + local ORT WASM/CSP merged into release branch ✅ 2026-10-27
 - [x] T50b Live Needs-You UI ✅ 2026-10-22 — mission `8b9c0e46` completion-gate → blocked+needsHuman; CDP clicked **Skip step**; vibes completion-gate→intervene + desktop `clearNeedsHuman` shipped. Follow-up: vibes scheduler deadlock (0/1 pending) on repeat orphan drills
 - [x] T52 Vibes scheduler deadlock ✅ 2026-10-24 — soft-requeue deleted `runningTasks` before `finally` → second start raced → stuck `in_progress`; also loop exited during `awaiting_intervention`. Fix on vibes `ag/completion-gates`; tests `scheduler-t52-requeue-race` + deps stuck-in_progress
