@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-28 — T75 hermetic mock Decision MCP
+
+**Done:** `tests/helpers/mock-decision-mcp.ts` + `tests/mock-decision-mcp.test.ts` — streamable initialize/tools/call; probe pass; wrong bearer 401; escalate maps through intervene gate. Does **not** close T62 (live Unsloth/KEV).
+
+**Evidence:** `npm test -- tests/mock-decision-mcp.test.ts`.
+
+**Next:** T62 when Decision host + key; CSC; cut **0.2.0**.
+
+---
+
 ## 2026-10-28 — T74 live e2e unreachable LLM failure
 
 **Done:** `tests/live-mission.e2e.test.ts` failure case now hits `http://127.0.0.1:1` instead of a fake model id — LM Studio was accepting unknown models and marking missions `done`.

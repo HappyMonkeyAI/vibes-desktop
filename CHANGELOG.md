@@ -10,6 +10,7 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 ### Added
 
 - MIT license — copyright Stephen Phillips (`LICENSE`).
+- Hermetic mock Decision MCP covers Settings probe + escalate→gate wiring (T75; live T62 still needs LAN host).
 - Live mission smoke: unreachable-endpoint failure case (LM Studio accepts unknown model ids) (T74).
 - CI: typecheck + hermetic tests on PR/`main` (T73).
 - Electron `appId` retargeted to `com.stephenphillips.vibesdesktop`; CONTRIBUTING (PRs target `main`) (T72).
