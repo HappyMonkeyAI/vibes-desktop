@@ -1,6 +1,6 @@
 # Vibes Desktop
 
-A focused desktop app for orchestrating [Vibes](https://github.com/HappyMonkeyAI/vibes) missions: voice input, live activity log, and a mission control UI — without the rest of Wayland.
+A focused desktop app for orchestrating [Vibes](https://github.com/HappyMonkeyAI/vibes) missions: voice input, live activity log, and a mission control UI.
 
 Built from three proven parts:
 
