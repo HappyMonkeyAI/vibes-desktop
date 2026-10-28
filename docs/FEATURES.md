@@ -56,7 +56,7 @@ One-shot persist (dev): `KEV_MCP_URL=… KEV_MCP_AUTH_TOKEN=… npx electron scr
 
 ### Mission MCP tools
 
-Toggle **HTML Design Advisor** to seed/remove that server in workspace `.vibes/mcp.json` when a mission spawns.
+Toggle **HTML Design Advisor** and/or a **Custom MCP server** (stdio command/args or HTTP URL) to seed/remove entries in workspace `.vibes/mcp.json` when a mission spawns. Thin registry — not a full marketplace.
 
 ### Voice
 

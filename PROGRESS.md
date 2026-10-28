@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-28 — T69 custom MCP registry seed
+
+**Done:** Settings → Custom MCP (name + HTTP URL or stdio command/args) writes into workspace `.vibes/mcp.json` on spawn alongside HTML Design Advisor. Decision LAN hosts still down.
+
+**Evidence:** `tests/mcp-writer.test.ts`; typecheck.
+
+**Next:** T62 when Decision host + `sk-unsloth…`; CSC signing; cut **0.2.0**.
+
+---
+
 ## 2026-10-28 — T68 MIT license
 
 **Done:** `LICENSE` (MIT, Copyright © 2026 Stephen Phillips); `package.json` `license`/`author`/`copyright`; README License section. Merged via PR #17. Repo still **private** on GitHub.

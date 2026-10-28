@@ -36,6 +36,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   htmlDesignAdvisorEnabled: false,
   htmlDesignAdvisorPython: 'python',
   htmlDesignAdvisorWorkspace: '',
+  customMcpEnabled: false,
+  customMcpName: 'desktop-custom',
+  customMcpCommand: '',
+  customMcpArgs: '',
+  customMcpUrl: '',
   // Vibes ConfigSchema defaults — written to workspace .vibes/config.json on spawn.
   maxSteps: 25,
   maxConcurrentTasks: 1,
@@ -213,6 +218,13 @@ export class SettingsStore {
       htmlDesignAdvisorPython: asString(raw.htmlDesignAdvisorPython)
         || DEFAULT_SETTINGS.htmlDesignAdvisorPython,
       htmlDesignAdvisorWorkspace: asString(raw.htmlDesignAdvisorWorkspace),
+      customMcpEnabled: typeof raw.customMcpEnabled === 'boolean'
+        ? raw.customMcpEnabled
+        : DEFAULT_SETTINGS.customMcpEnabled,
+      customMcpName: asString(raw.customMcpName) || DEFAULT_SETTINGS.customMcpName,
+      customMcpCommand: asString(raw.customMcpCommand),
+      customMcpArgs: asString(raw.customMcpArgs),
+      customMcpUrl: asString(raw.customMcpUrl),
       maxSteps: asPositiveInt(raw.maxSteps, DEFAULT_SETTINGS.maxSteps),
       maxConcurrentTasks: asPositiveInt(raw.maxConcurrentTasks, DEFAULT_SETTINGS.maxConcurrentTasks),
       yoloMode: asBool(raw.yoloMode, DEFAULT_SETTINGS.yoloMode),
@@ -294,6 +306,14 @@ export class SettingsStore {
         htmlDesignAdvisorWorkspace: asString(
           input.htmlDesignAdvisorWorkspace ?? currentView.htmlDesignAdvisorWorkspace,
         ),
+        customMcpEnabled: typeof input.customMcpEnabled === 'boolean'
+          ? input.customMcpEnabled
+          : currentView.customMcpEnabled,
+        customMcpName: asString(input.customMcpName ?? currentView.customMcpName)
+          || DEFAULT_SETTINGS.customMcpName,
+        customMcpCommand: asString(input.customMcpCommand ?? currentView.customMcpCommand),
+        customMcpArgs: asString(input.customMcpArgs ?? currentView.customMcpArgs),
+        customMcpUrl: asString(input.customMcpUrl ?? currentView.customMcpUrl),
         maxSteps: asPositiveInt(input.maxSteps ?? currentView.maxSteps, DEFAULT_SETTINGS.maxSteps),
         maxConcurrentTasks: asPositiveInt(
           input.maxConcurrentTasks ?? currentView.maxConcurrentTasks,

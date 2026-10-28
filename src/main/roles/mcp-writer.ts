@@ -10,6 +10,8 @@ import path from 'node:path';
 const VIBES_DIR = '.vibes';
 const MCP_FILE = 'mcp.json';
 const HTML_DESIGN_ADVISOR_KEY = 'html-design-advisor';
+/** Fallback key when the operator leaves the custom name blank. */
+export const CUSTOM_MCP_DEFAULT_KEY = 'desktop-custom';
 
 export type HtmlDesignAdvisorMcpOptions = {
   enabled: boolean;
@@ -17,6 +19,24 @@ export type HtmlDesignAdvisorMcpOptions = {
   pythonCommand: string;
   /** Optional HTML_DESIGN_ADVISOR_WORKSPACE override. */
   workspace?: string;
+};
+
+/** One operator-defined MCP server (stdio command or HTTP URL). */
+export type CustomMcpOptions = {
+  enabled: boolean;
+  /** mcpServers object key (sanitized). */
+  name: string;
+  /** Stdio command (e.g. npx, python). Ignored when `url` is set. */
+  command: string;
+  /** Whitespace-separated args, or a JSON string array. */
+  args: string;
+  /** Streamable-HTTP MCP URL — when set, writes `{ url }` instead of stdio. */
+  url: string;
+  /**
+   * Previous key we wrote (so a rename removes the old entry).
+   * Empty on first enable.
+   */
+  previousName?: string;
 };
 
 export type McpServersFile = {
@@ -41,6 +61,34 @@ function readMcpFile(target: string): McpServersFile {
   }
 }
 
+/** Safe mcpServers key: lowercase letters, digits, hyphen, underscore. */
+export function sanitizeMcpServerName(raw: string): string {
+  const cleaned = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64);
+  return cleaned || CUSTOM_MCP_DEFAULT_KEY;
+}
+
+/** Parse Settings args field into a string array. */
+export function parseMcpArgs(raw: string): string[] {
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.filter((x): x is string => typeof x === 'string' && x.length > 0);
+      }
+    } catch {
+      /* fall through to whitespace split */
+    }
+  }
+  return trimmed.split(/\s+/).filter(Boolean);
+}
+
 /** Build the html-design-advisor stdio entry (HappyMonkeyAI/html-design-advisor-mcp). */
 export function htmlDesignAdvisorServerConfig(opts: {
   pythonCommand: string;
@@ -57,13 +105,36 @@ export function htmlDesignAdvisorServerConfig(opts: {
   };
 }
 
+/** Build custom MCP entry — HTTP url wins over stdio when both present. */
+export function customMcpServerConfig(opts: {
+  command: string;
+  args: string;
+  url: string;
+}): Record<string, unknown> | null {
+  const url = opts.url.trim();
+  if (url) {
+    try {
+      // eslint-disable-next-line no-new
+      new URL(url);
+    } catch {
+      return null;
+    }
+    return { url };
+  }
+  const command = opts.command.trim();
+  if (!command) return null;
+  const args = parseMcpArgs(opts.args);
+  return args.length > 0 ? { command, args } : { command };
+}
+
 /**
- * Upsert or remove the html-design-advisor entry. Returns path written, or null.
+ * Upsert or remove desktop-owned MCP entries. Returns path written, or null.
  * Refuses non-absolute workspace roots (same rule as writeVibesConfig).
  */
 export function writeVibesMcpJson(
   workspaceRoot: string,
   advisor: HtmlDesignAdvisorMcpOptions,
+  custom?: CustomMcpOptions | null,
 ): string | null {
   if (!workspaceRoot || !path.isAbsolute(workspaceRoot)) return null;
   const target = vibesMcpPath(workspaceRoot);
@@ -77,6 +148,20 @@ export function writeVibesMcpJson(
     } else {
       delete file.mcpServers[HTML_DESIGN_ADVISOR_KEY];
     }
+
+    if (custom) {
+      const name = sanitizeMcpServerName(custom.name);
+      const prev = custom.previousName ? sanitizeMcpServerName(custom.previousName) : '';
+      if (prev && prev !== name) delete file.mcpServers[prev];
+      if (custom.enabled) {
+        const entry = customMcpServerConfig(custom);
+        if (entry) file.mcpServers[name] = entry;
+        else delete file.mcpServers[name];
+      } else {
+        delete file.mcpServers[name];
+      }
+    }
+
     mkdirSync(path.dirname(target), { recursive: true });
     writeFileSync(target, `${JSON.stringify(file, null, 2)}\n`, 'utf-8');
     return target;

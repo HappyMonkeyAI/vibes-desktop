@@ -229,6 +229,18 @@ export interface AppSettings {
   /** Optional HTML_DESIGN_ADVISOR_WORKSPACE (ui-design catalog root). */
   htmlDesignAdvisorWorkspace: string;
   /**
+   * Optional operator MCP server merged into workspace `.vibes/mcp.json` on spawn
+   * (stdio command/args or HTTP URL). Thin registry — not a full marketplace.
+   */
+  customMcpEnabled: boolean;
+  /** mcpServers key (sanitized on write). */
+  customMcpName: string;
+  customMcpCommand: string;
+  /** Whitespace-separated or JSON string array. */
+  customMcpArgs: string;
+  /** When set, writes `{ url }` instead of stdio. */
+  customMcpUrl: string;
+  /**
    * Mission runtime knobs → workspace `.vibes/config.json` on spawn (Settings → Runtime).
    * Defaults match vibes ConfigSchema.
    */

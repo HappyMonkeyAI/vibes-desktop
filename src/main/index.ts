@@ -102,11 +102,21 @@ app.whenReady().then(() => {
         doubleCheckCompletion: settings.doubleCheckCompletion,
         adversarialAudit: settings.adversarialAudit,
       });
-      writeVibesMcpJson(workspaceRoot, {
-        enabled: settings.htmlDesignAdvisorEnabled,
-        pythonCommand: settings.htmlDesignAdvisorPython || 'python',
-        workspace: settings.htmlDesignAdvisorWorkspace || undefined,
-      });
+      writeVibesMcpJson(
+        workspaceRoot,
+        {
+          enabled: settings.htmlDesignAdvisorEnabled,
+          pythonCommand: settings.htmlDesignAdvisorPython || 'python',
+          workspace: settings.htmlDesignAdvisorWorkspace || undefined,
+        },
+        {
+          enabled: settings.customMcpEnabled,
+          name: settings.customMcpName,
+          command: settings.customMcpCommand,
+          args: settings.customMcpArgs,
+          url: settings.customMcpUrl,
+        },
+      );
       const llmEnv: Record<string, string> = {};
       if (decision) {
         llmEnv.KEV_MCP_URL = decision.url;
