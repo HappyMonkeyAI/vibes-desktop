@@ -9,6 +9,8 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 
 ### Added
 
+- One-command Decision live smoke: `scripts/decision-live-smoke.ps1` / `npm run test:decision-live` (T78).
+
 ### Changed
 
 ## [0.2.0] — 2026-10-28
