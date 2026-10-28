@@ -32,6 +32,7 @@ Bump `package.json` `version` when cutting a release; add a matching `CHANGELOG.
 
 ## Documentation Spine
 
+- [CONTRIBUTING.md](CONTRIBUTING.md) — PRs target `main`, local checks
 - [CHANGELOG.md](CHANGELOG.md) — released versions
 - [docs/FEATURES.md](docs/FEATURES.md) — operator feature map
 - [CONTEXT.md](CONTEXT.md) — stack, rules, what not to do

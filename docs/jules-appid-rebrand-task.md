@@ -1,7 +1,9 @@
 # Jules task: Retarget Electron `appId` off FerroxLabs leftover
 
+> **Done locally (T72, 2026-10-28)** — Jules source for this private repo was not connected yet; Cursor landed `com.stephenphillips.vibesdesktop` on `main`. Keep this brief as a template for future handoffs.
+
 ## Context
-Vibes Desktop is MIT © Stephen Phillips and heading toward public beta. `package.json` → `build.appId` is still `com.ferrox.vibesdesktop` from the early FerroxLabs/wayland fork packaging. That id is wrong for a stranger-facing installer and for any future signing/`publisherName` alignment. Historical README mention of FerroxLabs as UI provenance can stay.
+Vibes Desktop is MIT © Stephen Phillips and heading toward public beta. `package.json` → `build.appId` was still `com.ferrox.vibesdesktop` from the early FerroxLabs/wayland fork packaging. That id is wrong for a stranger-facing installer and for any future signing/`publisherName` alignment. Historical README mention of FerroxLabs as UI provenance can stay.
 
 ## Exact files
 - `package.json` — `build.appId` only (and `build.publisherName` **only if** it already exists and still says Ferrox; do not invent unrelated metadata)

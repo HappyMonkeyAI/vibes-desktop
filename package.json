@@ -22,7 +22,7 @@
     "dist:dir": "electron-vite build && electron-builder --win --dir"
   },
   "build": {
-    "appId": "com.ferrox.vibesdesktop",
+    "appId": "com.stephenphillips.vibesdesktop",
     "productName": "Vibes Desktop",
     "copyright": "Copyright © 2026 Stephen Phillips",
     "directories": {
