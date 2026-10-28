@@ -93,7 +93,7 @@ Default: builtin Whisper (downloads ONNX on first talk). Alternatives: OpenAI-co
 | BYO-stack stranger docs | Done — BETA checklist + PACKAGING + first-run clone hint (T71) |
 | Packaging appId / CONTRIBUTING | Done — `com.stephenphillips.vibesdesktop` + PRs→`main` (T72) |
 | CI on PR/`main` | Done — typecheck + hermetic tests (T73) |
-| Decision / Needs You when configured | Blocked — Unsloth `:8888` / classic KEV MCP down (2026-10-28); probe rejects Speech ASR URLs (T70) |
+| Decision / Needs You when configured | Desktop wiring hermetic via mock MCP (T75); **live** Unsloth/KEV smoke (T62) still blocked — hosts down |
 | Version cut `0.2.0` | After Decision smoke + (ideally) signed build |
 | GitHub visibility | Repo may stay private until Decision + packaging gates feel ready |
 
@@ -103,7 +103,8 @@ Default: builtin Whisper (downloads ONNX on first talk). Alternatives: OpenAI-co
 npm test
 npm run typecheck
 # live mission (dev): VIBES_LIVE=1 npm test -- tests/live-mission.e2e.test.ts
-# decision shadow: VIBES_DECISION_LIVE=1 … (URL + token in Settings or env)
+# decision shadow (live): VIBES_DECISION_LIVE=1 KEV_MCP_URL=… KEV_MCP_AUTH_TOKEN=… npm test -- tests/decision-shadow.e2e.test.ts
+# decision wiring (hermetic mock): npm test -- tests/mock-decision-mcp.test.ts
 ```
 
 Issues: note OS build, vibes commit, model endpoint, and whether Decision was on.
