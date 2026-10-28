@@ -77,6 +77,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T61b Fix electron-builder 26 `win.signingHashAlgorithms` schema break; `npm run dist` → Setup 0.1.1.exe ✅ 2026-10-27
 - [ ] T62 Live Decision/Needs-You smoke on LAN — Unsloth `:8888` down (2026-10-28); needs `sk-unsloth…` when Studio is up; `:8765/health` is ASR (`qwen3-asr`), not classic KEV
 - [x] T62b Decision Settings probe: Unsloth deep `system_one` check + sk-unsloth error surfacing ✅ 2026-10-27
+- [x] T70 Decision Test always deep tools/call; reject Speech ASR URLs mistaken for Decision; docs clarify `:8765` collision ✅ 2026-10-28
 - [x] T63 First-run polish: Browse + validate `src/mcp/server.ts`, Test connection on model step; Settings path Browse ✅ 2026-10-27
 - [x] T64 First-run workspace pick → seeds Operations; empty-state guidance when no working directory ✅ 2026-10-27
 - [x] T65 Live first-mission smoke on local LM Studio `:1234` + app icon for NSIS; Decision Settings sk-unsloth copy ✅ 2026-10-27

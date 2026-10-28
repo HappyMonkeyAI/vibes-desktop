@@ -356,7 +356,7 @@ const SettingsTab: React.FC = () => {
             <div className={styles.field}>
               <label className={styles.label}>Decision MCP URL</label>
               <Input
-                placeholder="http://host:8888/mcp/  or  http://host:8765/mcp"
+                placeholder="http://host:8888/mcp/  or  http://lan-host:PORT/mcp"
                 value={decisionMcpUrl}
                 onChange={setDecisionMcpUrl}
                 size="small"
@@ -380,7 +380,8 @@ const SettingsTab: React.FC = () => {
             </div>
             <p className={styles.hint}>
               Unsloth Studio <code>:8888/mcp/</code> needs a Studio API key (<code>sk-unsloth-…</code>), not a classic KEV token —
-              Test runs a real <code>system_one</code> call. Classic KEV is usually <code>:8765/mcp</code>.
+              Test always runs a real Decision tools/call. Classic KEV is a separate MCP at <code>…/mcp</code> —
+              do not paste the Speech ASR URL (local <code>:8765</code> is often qwen3-asr, not Decision).
               Use the MCP URL, not chat <code>/v1</code>. Clear URL to disable.
             </p>
           </div>

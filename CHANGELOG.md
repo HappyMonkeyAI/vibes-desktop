@@ -10,6 +10,7 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 ### Added
 
 - MIT license — copyright Stephen Phillips (`LICENSE`).
+- Decision Settings Test always deep-probes tools/call; rejects Speech ASR URLs mistaken for Decision MCP (T70).
 - Settings → Custom MCP server (stdio or HTTP) seeded into workspace `.vibes/mcp.json` on spawn (T69).
 - First-run setup wizard (Vibes path → default model → Operations tip); `setupComplete` in settings (T60).
 - [docs/PACKAGING.md](docs/PACKAGING.md): dist cadence, SmartScreen, `CSC_*` / `WIN_CSC_LINK` signing for public beta (T61).

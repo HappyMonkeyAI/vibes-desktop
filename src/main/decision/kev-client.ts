@@ -262,7 +262,7 @@ export async function probeDecisionTools(options: {
   return {
     ok: false,
     error:
-      'Decision MCP reachable but tools/call failed — check URL (Unsloth :8888 needs an sk-unsloth… API key; classic KEV uses :8765).',
+      'Decision MCP reachable but tools/call failed — Unsloth :8888 needs sk-unsloth…; classic KEV is a separate MCP at …/mcp (do not use local Speech ASR on :8765).',
   };
 }
 
