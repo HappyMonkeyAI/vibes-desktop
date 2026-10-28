@@ -41,3 +41,7 @@ Bump `package.json` `version` when cutting a release; add a matching `CHANGELOG.
 - [PROGRESS.md](PROGRESS.md) — session log
 - [docs/adr/](docs/adr/) — decision records
 - `.agent/memories/` — long-term memory (LTM)
+
+## License
+
+[MIT](LICENSE) © Stephen Phillips
