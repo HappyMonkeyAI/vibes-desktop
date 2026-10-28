@@ -3,10 +3,33 @@ dist/
 out/
 release/
 *.log
+
+# Secrets / local env (keep *.example tracked)
 .env
+.env.*
+!.env.example
+*.pem
+*.pfx
+*.p12
+credentials.json
+**/secrets/**
+
 MCP.local.md
 .vibes/
 !/.vibes/config.example.json
+
+# Local tooling / agent chrome (not product source)
+.ijfw/
+.agent/design/
 .DS_Store
 Thumbs.db
+desktop.ini
 Screenshot 2026-10-13 170643.png
+
+# Large / generated dumps
+*.sql
+*.dump
+*.sqlite
+*.db
+!docs/**/*.sql
+
