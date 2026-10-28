@@ -84,6 +84,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T74 Live e2e: failure smoke uses unreachable LLM origin (LM Studio accepts unknown model ids) ✅ 2026-10-28
 - [x] T75 Hermetic mock Decision MCP — Settings probe + escalate→gate without LAN Unsloth/KEV ✅ 2026-10-28
 - [x] T76 Operations shows Decision on/off for Needs You (no tribal Settings dig) ✅ 2026-10-28
+- [x] T77 Cut **0.2.0** (unsigned public-beta candidate; Decision live smoke still open) ✅ 2026-10-28
 - [x] T63 First-run polish: Browse + validate `src/mcp/server.ts`, Test connection on model step; Settings path Browse ✅ 2026-10-27
 - [x] T64 First-run workspace pick → seeds Operations; empty-state guidance when no working directory ✅ 2026-10-27
 - [x] T65 Live first-mission smoke on local LM Studio `:1234` + app icon for NSIS; Decision Settings sk-unsloth copy ✅ 2026-10-27

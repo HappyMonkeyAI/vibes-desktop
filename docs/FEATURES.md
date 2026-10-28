@@ -1,6 +1,6 @@
 # Features — Vibes Desktop 0.1.1
 
-Operator-facing map of what ships in **0.1.x** (public-beta path toward **0.2.x**). Closed beta setup: [BETA.md](BETA.md). Packaging: [PACKAGING.md](PACKAGING.md). Design intent lives in [DESIGN.md](../DESIGN.md); acceptance criteria in [SPEC.md](../SPEC.md); release notes in [CHANGELOG.md](../CHANGELOG.md).
+Operator-facing map of what ships in **0.2.x** (public-beta candidate). Operator setup: [BETA.md](BETA.md). Packaging: [PACKAGING.md](PACKAGING.md). Design intent lives in [DESIGN.md](../DESIGN.md); acceptance criteria in [SPEC.md](../SPEC.md); release notes in [CHANGELOG.md](../CHANGELOG.md).
 
 ## First-run wizard
 

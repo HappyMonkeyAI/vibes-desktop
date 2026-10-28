@@ -26,7 +26,7 @@ Requires Node 22+, a Vibes checkout containing `src/mcp/server.ts` (first-run wi
 
 ## Version
 
-Current app version: **0.1.1** (`package.json`). User-facing release notes: [CHANGELOG.md](CHANGELOG.md). Feature map: [docs/FEATURES.md](docs/FEATURES.md). Beta setup: [docs/BETA.md](docs/BETA.md).
+Current app version: **0.2.0** (`package.json`). User-facing release notes: [CHANGELOG.md](CHANGELOG.md). Feature map: [docs/FEATURES.md](docs/FEATURES.md). Beta setup: [docs/BETA.md](docs/BETA.md).
 
 Bump `package.json` `version` when cutting a release; add a matching `CHANGELOG.md` section the same day; follow [docs/PACKAGING.md](docs/PACKAGING.md). Session detail stays in `PROGRESS.md` — do not duplicate full narrative into the changelog.
 

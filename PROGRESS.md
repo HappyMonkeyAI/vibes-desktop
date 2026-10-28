@@ -2,6 +2,14 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-28 — T77 cut 0.2.0
+
+**Done:** `package.json` → `0.2.0`; CHANGELOG `[0.2.0]` with Unreleased rolled in; README/BETA updated. Dist + GitHub Release `v0.2.0` (unsigned) when this lands. Live Decision T62 and CSC signing still block calling the public-beta goal **complete**.
+
+**Next:** T62; CSC; consider `gh repo edit --visibility public` only after Decision feels ready.
+
+---
+
 ## 2026-10-28 — T76 Operations Decision status
 
 **Done:** Operations workspace bar shows `Needs You: Decision on|off`; refreshes on Settings save + tab visibility. Empty-state hints Decision is optional.
