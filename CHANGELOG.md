@@ -10,6 +10,7 @@ Versioning: [SemVer](https://semver.org/) — `MAJOR.MINOR.PATCH` while pre-1.0 
 ### Added
 
 - MIT license — copyright Stephen Phillips (`LICENSE`).
+- CI: typecheck + hermetic tests on PR/`main` (T73).
 - Electron `appId` retargeted to `com.stephenphillips.vibesdesktop`; CONTRIBUTING (PRs target `main`) (T72).
 - Operator BYO-stack docs: BETA checklist, unsigned SmartScreen path, first-run Vibes clone hint (T71).
 - Decision Settings Test always deep-probes tools/call; rejects Speech ASR URLs mistaken for Decision MCP (T70).

@@ -2,6 +2,14 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-10-28 — T73 CI typecheck + test
+
+**Done:** `.github/workflows/ci.yml` — Node 22, `npm ci`, typecheck, hermetic `npm test` on PR/`main`. Live e2e stays opt-in locally.
+
+**Next:** T62 Decision; CSC; cut **0.2.0**.
+
+---
+
 ## 2026-10-28 — T72 appId + CONTRIBUTING + Jules register
 
 **Done:** `build.appId` → `com.stephenphillips.vibesdesktop`; CONTRIBUTING.md (PRs → `main`); Jules broker project registered. Jules GitHub source for this private repo still missing — handoff blocked until connected in Jules UI. GitHub default branch fixed to `main`.

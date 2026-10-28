@@ -11,9 +11,11 @@
 ```bash
 npm run typecheck
 npm test
-# optional packaging smoke
+# optional packaging smoke (Windows)
 npm run dist
 ```
+
+PRs to `main` also run [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (typecheck + hermetic `npm test`). Live mission/Decision smokes stay local (`VIBES_LIVE=1`, `VIBES_DECISION_LIVE=1`).
 
 Operator setup (BYO Vibes + local LLM): [docs/BETA.md](docs/BETA.md). Packaging / SmartScreen: [docs/PACKAGING.md](docs/PACKAGING.md).
 
