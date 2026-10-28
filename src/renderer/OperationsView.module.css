@@ -109,6 +109,22 @@
   font-style: italic;
 }
 
+.decisionOff,
+.decisionOn {
+  font-size: var(--type-11);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.decisionOff {
+  color: var(--text-dim);
+}
+
+.decisionOn {
+  color: var(--color-success-6, #00b42a);
+  font-weight: 600;
+}
+
 /* ---- Metrics ---- */
 .metrics {
   display: grid;

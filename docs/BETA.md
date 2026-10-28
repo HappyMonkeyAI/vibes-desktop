@@ -93,7 +93,7 @@ Default: builtin Whisper (downloads ONNX on first talk). Alternatives: OpenAI-co
 | BYO-stack stranger docs | Done — BETA checklist + PACKAGING + first-run clone hint (T71) |
 | Packaging appId / CONTRIBUTING | Done — `com.stephenphillips.vibesdesktop` + PRs→`main` (T72) |
 | CI on PR/`main` | Done — typecheck + hermetic tests (T73) |
-| Decision / Needs You when configured | Desktop wiring hermetic via mock MCP (T75); **live** Unsloth/KEV smoke (T62) still blocked — hosts down |
+| Decision / Needs You when configured | Desktop wiring hermetic (T75) + Operations Decision on/off cue (T76); **live** Unsloth/KEV smoke (T62) still blocked — hosts down |
 | Version cut `0.2.0` | After Decision smoke + (ideally) signed build |
 | GitHub visibility | Repo may stay private until Decision + packaging gates feel ready |
 
