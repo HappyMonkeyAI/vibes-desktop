@@ -3,7 +3,7 @@
   "hooks": {
     "sessionStart": [
       {
-        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/spine-brief.ps1",
+        "command": "spine --project . brief --cursor-hook",
         "timeout": 45
       }
     ]
