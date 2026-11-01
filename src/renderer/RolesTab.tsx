@@ -5,11 +5,13 @@ import type { RoleEndpointInput, RoleKey, RolesConfigView, TestConnectionResult 
 import styles from './RolesTab.module.css';
 
 /**
- * T7 — per-role endpoint configuration. Five forms (default / planner / executor /
- * reviewer / triage), each with base URL, model, context window, and an API key
- * field. A saved key never round-trips: the view carries a presence flag, and an
- * empty submitted key means "keep what's stored". Context window maps to vibes'
- * global CONTEXT_WINDOW (executor wins over default).
+ * T7 / T79 — per-role endpoint configuration. Five forms (default / planner /
+ * executor / reviewer / triage), each with base URL, model, context window,
+ * optional constitution (system prompt SoT), and an API key field. A saved key
+ * never round-trips: the view carries a presence flag, and an empty submitted
+ * key means "keep what's stored". Context window maps to vibes' global
+ * CONTEXT_WINDOW (executor wins over default). Constitutions write to
+ * `.vibes/role-constitutions.json` (child compose is T80).
  */
 
 const ROLE_LABELS: Record<RoleKey, string> = {
@@ -30,9 +32,16 @@ const ROLE_COLORS: Record<RoleKey, string> = {
   triage: '#ff9f43',
 };
 
-type RoleDraft = { baseUrl: string; model: string; contextWindow: string; apiKey: string; hasKey: boolean };
+type RoleDraft = {
+  baseUrl: string;
+  model: string;
+  contextWindow: string;
+  systemPrompt: string;
+  apiKey: string;
+  hasKey: boolean;
+};
 type Draft = Record<RoleKey, RoleDraft>;
-type RoleFieldKey = 'baseUrl' | 'model' | 'contextWindow' | 'apiKey';
+type RoleFieldKey = 'baseUrl' | 'model' | 'contextWindow' | 'systemPrompt' | 'apiKey';
 
 function toDraft(view: RolesConfigView): Draft {
   const draft = {} as Draft;
@@ -41,6 +50,7 @@ function toDraft(view: RolesConfigView): Draft {
       baseUrl: view[role].baseUrl,
       model: view[role].model,
       contextWindow: view[role].contextWindow ?? '',
+      systemPrompt: view[role].systemPrompt ?? '',
       apiKey: '',
       hasKey: view[role].hasKey,
     };
@@ -109,6 +119,25 @@ const RoleFields: React.FC<RoleFieldsProps> = ({ role, draft, inputSize, fieldsC
         size={inputSize}
       />
     </div>
+    <details className={`${styles.field} ${styles.fieldFull} ${styles.constitution}`}>
+      <summary className={styles.constitutionSummary}>
+        Constitution
+        <span className={styles.labelHint}> system prompt SoT</span>
+        {draft.systemPrompt.trim().length > 0 && (
+          <Tag color="arcoblue" size="small" style={{ marginLeft: 8 }}>set</Tag>
+        )}
+      </summary>
+      <p className={styles.fieldHint}>
+        Operator-owned source of truth for this role. Mission overlays (T80) may
+        refine a task but cannot rewrite this constitution.
+      </p>
+      <Input.TextArea
+        placeholder="You are the planner: break the mission into verifiable steps…"
+        value={draft.systemPrompt}
+        onChange={(v) => onChange('systemPrompt', v)}
+        autoSize={{ minRows: inputSize === 'small' ? 3 : 5, maxRows: 12 }}
+      />
+    </details>
   </div>
 );
 
@@ -173,6 +202,7 @@ const RolesTab: React.FC = () => {
           baseUrl: draft[role].baseUrl,
           model: draft[role].model,
           contextWindow: draft[role].contextWindow,
+          systemPrompt: draft[role].systemPrompt,
           apiKey: draft[role].apiKey,
         };
       }
@@ -212,9 +242,10 @@ const RolesTab: React.FC = () => {
       <div className={styles.header}>
         <h2 className={styles.title}>Role Endpoints</h2>
         <p className={styles.subtitle}>
-          Configure the base URL, model, context window, and API key for each role. The executor runs on the
-          default endpoint; its context window (or Default&apos;s) becomes vibes&apos; CONTEXT_WINDOW.
-          Use the expand control on a card for a larger editor on small screens.
+          Configure the base URL, model, context window, optional constitution, and API key for each
+          role. The executor runs on the default endpoint; its context window (or Default&apos;s)
+          becomes vibes&apos; CONTEXT_WINDOW. Constitutions sync to the workspace as
+          <code> .vibes/role-constitutions.json</code> on save/spawn.
         </p>
       </div>
 

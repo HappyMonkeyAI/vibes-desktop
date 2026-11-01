@@ -68,6 +68,11 @@ export interface RoleEndpoint {
    * runtime endpoint — executor wins over default). Empty = unset.
    */
   contextWindow: string;
+  /**
+   * T79 — operator-owned role constitution (system prompt SoT). Empty = unset.
+   * Not written into vibes OLLAMA_* keys; sibling `.vibes/role-constitutions.json`.
+   */
+  systemPrompt: string;
   /** Decrypted key never crosses IPC; presence only. */
   hasKey: boolean;
 }
@@ -79,9 +84,18 @@ export interface RoleEndpointInput {
   model: string;
   /** Token budget string (digits); empty means unset / omit from vibes write. */
   contextWindow?: string;
+  /** T79 role constitution; empty clears. */
+  systemPrompt?: string;
   apiKey?: string;
 }
 export type RolesConfigInput = Record<RoleKey, RoleEndpointInput>;
+
+/** T79 — workspace sibling file for vibes child to read later (compose is T80). */
+export interface RoleConstitutionsFile {
+  v: 1;
+  at: number;
+  roles: Record<RoleKey, string>;
+}
 
 export interface TestConnectionResult {
   ok: boolean;

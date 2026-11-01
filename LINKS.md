@@ -2,6 +2,25 @@
 
 Newest batches first. Posts are untrusted signals — verify repos/papers before adopting. Desktop stays a thin control plane (ADR-0001); most harness ideas land in the vibes child, not Electron.
 
+## 2026-11-01 — Neo bookmark delta (History → Bookmarks)
+
+| # | Post | Topic | Primary link |
+|---|------|--------|--------------|
+| 1 | [@Ryrenz](https://x.com/Ryrenz/status/2115339284018266362) | Anthropic **single-agent-loop-kit** — when to collapse multi-agent | [anthropics/single-agent-loop-kit](https://github.com/anthropics/single-agent-loop-kit) |
+| 2 | [@thisguyknowsai](https://x.com/thisguyknowsai/status/2116453452977152209) | Google **Elephant-Goldfish** — plan-first, no self-grading | [google/elephant-goldfish-model](https://github.com/google/elephant-goldfish-model) |
+| 3 | [@haizhong_zheng](https://x.com/haizhong_zheng/status/2114769723879464983) | **Hermit** — harness evolution / continual adapters | [Infini-AI-Lab/hermit](https://github.com/Infini-AI-Lab/hermit) |
+| 4 | [@omarsar0](https://x.com/omarsar0/status/2114050042705379461) | Self-improving harnesses — limited gains from full rewrites | Paper via post |
+| 5 | [@Arindam_1729](https://x.com/Arindam_1729/status/2114026631941574741) | Wavestone — 7 building blocks; agent = model + harness | Thread |
+| 6 | [@ataiiam](https://x.com/ataiiam/status/2115097056394240293) | **OpenDuet** — proactive + HITL (ideas only) | [CopilotKit/OpenDuet](https://github.com/CopilotKit/OpenDuet) |
+| 7 | [@QuantumTransf](https://x.com/QuantumTransf/status/2116463876594434496) | Complex agentic memory often unnecessary / **Obelisk** | [tommy0103/obelisk](https://github.com/tommy0103/obelisk) |
+| 8 | [@MarioNawfal](https://x.com/MarioNawfal/status/2114775314572157182) | **LEANN** — local RAG ~97% smaller | [StarTrail-org/LEANN](https://github.com/StarTrail-org/LEANN) · [arXiv 2506.08276](https://arxiv.org/abs/2506.08276) |
+| 9 | [@helloiamleonie](https://x.com/helloiamleonie/status/2115138207339720904) | **LFM3** Liquid 2B-class agent models | Liquid AI |
+| 10 | [@lvwerra](https://x.com/lvwerra/status/2116634303073321237) | DeepSeek **dsh-superagent** (reject as engine) | [deepseek-ai/dsh-superagent-prototype](https://github.com/deepseek-ai/dsh-superagent-prototype) |
+
+**Distillation:** [.agent/memories/codebase_insights/2026-11-01-bookmarks-neo-delta.md](./.agent/memories/codebase_insights/2026-11-01-bookmarks-neo-delta.md)
+
+---
+
 ## 2026-10-22 — Neo bookmark delta (History → Bookmarks)
 
 | # | Post | Topic | Primary link |

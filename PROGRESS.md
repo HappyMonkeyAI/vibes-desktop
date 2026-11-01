@@ -2,6 +2,24 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-11-01 — T62 Decision live smoke (Unsloth :8888)
+
+**Done:** Unsloth Studio `http://192.168.5.157:8888/mcp/` reachable. Settings already held Studio URL + `sk-unsloth…`. Added `scripts/decision-live-from-settings.mjs` (decrypt Settings token → probe `system_one` → `npm run test:decision-live`). Live shadow **2/2 pass**. Repo `.env` still points classic KEV `:8765` (timed out) — use Settings / this script for Studio.
+
+**Next:** Merge PR #30 (T79); CSC signing; optional Needs-You UI live drill; T80 when ready.
+
+---
+
+## 2026-11-01 — Bookmark plan + T79 role constitutions
+
+**Done:** Neo bookmark delta filed (LINKS + memories). Plan P11 tickets: **T79** shipped — per-role constitution (`systemPrompt`) in Roles UI/store → `.vibes/role-constitutions.json` on spawn + latest-workspace save; tests + typecheck green. **T81** research note (elephant-goldfish / single-agent-loop-kit). **T82** CONTEXT rules (model+harness, no auto-evolve). **T51** watchlist extended (LFM3, d1.1, LEANN, Obelisk). **T80** left open (overlay + vibes compose).
+
+**Evidence:** `npm test` 208 pass / 4 skip; `npm run typecheck`.
+
+**Next:** T80 when vibes child available; T62 when Unsloth up; CSC.
+
+---
+
 ## 2026-10-28 — T78 Decision live smoke one-liner
 
 **Done:** `scripts/decision-live-smoke.ps1` + `npm run test:decision-live`; shadow e2e accepts `UNSLOTH_API_KEY` for `:8888`. Hosts still down — script ready for T62 when Studio is up. Setup `0.2.0.exe` built locally; GitHub Release not published yet.

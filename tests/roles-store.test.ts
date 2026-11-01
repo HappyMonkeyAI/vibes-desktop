@@ -22,26 +22,45 @@ describe('RolesStore (T7)', () => {
     const store = new RolesStore(path.join(dir, 'fresh'), fakeCipher);
     const view = store.view();
     for (const role of ['default', 'planner', 'executor', 'reviewer', 'triage'] as const) {
-      expect(view[role]).toEqual({ baseUrl: '', model: '', contextWindow: '', hasKey: false });
+      expect(view[role]).toEqual({
+        baseUrl: '',
+        model: '',
+        contextWindow: '',
+        systemPrompt: '',
+        hasKey: false,
+      });
     }
   });
 
   it('persists endpoints and reports key presence without leaking the decrypted key', () => {
     const store = new RolesStore(dir, fakeCipher);
     store.save({
-      default: { baseUrl: 'http://a/v1', model: 'm-a', contextWindow: '8192', apiKey: 'secret-a' },
+      default: {
+        baseUrl: 'http://a/v1',
+        model: 'm-a',
+        contextWindow: '8192',
+        systemPrompt: 'You are default.',
+        apiKey: 'secret-a',
+      },
       planner: { baseUrl: '', model: '', apiKey: '' },
       executor: { baseUrl: '', model: '', apiKey: '' },
       reviewer: { baseUrl: '', model: '', apiKey: '' },
       triage: { baseUrl: '', model: '', apiKey: '' },
     });
     const view = store.view();
-    expect(view.default).toEqual({ baseUrl: 'http://a/v1', model: 'm-a', contextWindow: '8192', hasKey: true });
+    expect(view.default).toEqual({
+      baseUrl: 'http://a/v1',
+      model: 'm-a',
+      contextWindow: '8192',
+      systemPrompt: 'You are default.',
+      hasKey: true,
+    });
     // The on-disk file must NOT contain the plaintext key.
     const raw = readFileSync(path.join(dir, 'roles-config.json'), 'utf-8');
     expect(raw).not.toContain('secret-a');
     expect(raw).toContain('enc:');
     expect(raw).toContain('"contextWindow": "8192"');
+    expect(raw).toContain('You are default.');
   });
 
   it('round-trips a decrypted key via getKey', () => {
@@ -63,6 +82,7 @@ describe('RolesStore (T7)', () => {
       baseUrl: 'http://a/v1',
       model: 'm-b',
       contextWindow: '16384',
+      systemPrompt: 'You are default.',
       hasKey: true,
     });
     expect(store.getKey('default')).toBe('secret-a');
@@ -73,7 +93,35 @@ describe('RolesStore (T7)', () => {
     mkdirSync(corruptDir, { recursive: true });
     writeFileSync(path.join(corruptDir, 'roles-config.json'), '{ not json', 'utf-8');
     const store = new RolesStore(corruptDir, fakeCipher);
-    expect(store.view().default).toEqual({ baseUrl: '', model: '', contextWindow: '', hasKey: false });
+    expect(store.view().default).toEqual({
+      baseUrl: '',
+      model: '',
+      contextWindow: '',
+      systemPrompt: '',
+      hasKey: false,
+    });
+  });
+
+  it('round-trips systemPrompt and clears when empty string submitted', () => {
+    const store = new RolesStore(path.join(dir, 'prompt'), fakeCipher);
+    store.save({
+      default: { baseUrl: '', model: '', systemPrompt: 'Stay on rails.', apiKey: '' },
+      planner: { baseUrl: '', model: '', systemPrompt: 'Plan tightly.', apiKey: '' },
+      executor: { baseUrl: '', model: '', apiKey: '' },
+      reviewer: { baseUrl: '', model: '', apiKey: '' },
+      triage: { baseUrl: '', model: '', apiKey: '' },
+    });
+    expect(store.view().default.systemPrompt).toBe('Stay on rails.');
+    expect(store.input().planner.systemPrompt).toBe('Plan tightly.');
+    store.save({
+      default: { baseUrl: '', model: '', systemPrompt: '', apiKey: '' },
+      planner: { baseUrl: '', model: '', systemPrompt: 'Plan tightly.', apiKey: '' },
+      executor: { baseUrl: '', model: '', apiKey: '' },
+      reviewer: { baseUrl: '', model: '', apiKey: '' },
+      triage: { baseUrl: '', model: '', apiKey: '' },
+    });
+    expect(store.view().default.systemPrompt).toBe('');
+    expect(store.view().planner.systemPrompt).toBe('Plan tightly.');
   });
 
   it('normalizes contextWindow on save and ignores junk', () => {

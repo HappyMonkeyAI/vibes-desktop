@@ -170,6 +170,46 @@
   color: var(--text-muted);
 }
 
+.constitution {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--color-border-2);
+}
+
+.constitutionSummary {
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  user-select: none;
+}
+
+.constitutionSummary::-webkit-details-marker {
+  display: none;
+}
+
+.constitutionSummary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--text-muted);
+  transition: transform var(--motion-fast);
+}
+
+.constitution[open] > .constitutionSummary::before {
+  transform: rotate(90deg);
+}
+
+.constitution .fieldHint {
+  margin: 8px 0 6px;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

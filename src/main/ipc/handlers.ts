@@ -18,6 +18,7 @@ import { validateVibesCheckout } from '../settings/vibes-path';
 import { resolveDecisionMcpConfig } from '../decision/config';
 import { probeDecisionMcp } from '../decision/probe';
 import { readHarnessLesson } from '../harness/lesson-store';
+import { writeRoleConstitutions } from '../roles/constitutions-writer';
 import { announceToDaemon } from '../voice/announce';
 
 /** Base64 cap for one voice capture: ~25 MB of audio (the OpenAI transcriptions
@@ -43,11 +44,11 @@ export function emptySnapshot(): LedgerSnapshot {
 /** Five unconfigured role endpoints (P0 default; T7 makes this persistent). */
 export function emptyRolesView(): RolesConfigView {
   return {
-    default: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
-    planner: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
-    executor: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
-    reviewer: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
-    triage: { baseUrl: '', model: '', contextWindow: '', hasKey: false },
+    default: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', hasKey: false },
+    planner: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', hasKey: false },
+    executor: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', hasKey: false },
+    reviewer: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', hasKey: false },
+    triage: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', hasKey: false },
   };
 }
 
@@ -78,6 +79,15 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
     [channels.rolesSave]: async (_e, input) => {
       if (!rolesStore) return { ok: true }; // parity stub — nothing to persist in tests
       const ok = rolesStore.save(input as RolesConfigInput);
+      if (ok && workspaceHistoryStore) {
+        try {
+          const history = await workspaceHistoryStore.getHistory();
+          const latest = history[0]?.path?.trim();
+          if (latest) writeRoleConstitutions(latest, rolesStore.input());
+        } catch {
+          // History miss must not fail the Roles save.
+        }
+      }
       return { ok };
     },
     // Probe with the typed key, or — when the field is empty and the role is
