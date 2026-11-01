@@ -75,7 +75,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T60 First-run setup wizard (Vibes path → default role → mission tip) ✅ 2026-10-27
 - [x] T61 Packaging harden: author/metadata, signing docs (`CSC_*`), PACKAGING.md, BETA SmartScreen note ✅ 2026-10-27
 - [x] T61b Fix electron-builder 26 `win.signingHashAlgorithms` schema break; `npm run dist` → Setup 0.1.1.exe ✅ 2026-10-27
-- [ ] T62 Live Decision/Needs-You smoke on LAN — Unsloth `:8888` down (2026-10-28); needs `sk-unsloth…` when Studio is up; `:8765/health` is ASR (`qwen3-asr`), not classic KEV
+- [x] T62 Live Decision/Needs-You smoke on LAN — Unsloth `192.168.5.157:8888/mcp/` + Settings `sk-unsloth…` ✅ 2026-11-01 (`npx electron scripts/decision-live-from-settings.mjs` → decision-shadow 2/2; classic `:8765` still down / not required)
 - [x] T62b Decision Settings probe: Unsloth deep `system_one` check + sk-unsloth error surfacing ✅ 2026-10-27
 - [x] T70 Decision Test always deep tools/call; reject Speech ASR URLs mistaken for Decision; docs clarify `:8765` collision ✅ 2026-10-28
 - [x] T71 Stranger BYO docs: BETA checklist, PACKAGING SmartScreen interim, README operator path, first-run Vibes clone hint ✅ 2026-10-28
