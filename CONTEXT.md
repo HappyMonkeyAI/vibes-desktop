@@ -32,6 +32,8 @@ Electron desktop app (main + preload + renderer, three process types). The app i
 - The Vibes child process gets a minimal env (allowlist of OLLAMA_*/model keys) and its own cwd = the mission workspace. Never inherit the whole app environment.
 - Activity log entries are append-only JSONL in appData; the UI reads a snapshot + subscribes to new lines. No database.
 - Per-role endpoint config (default/planner/executor/reviewer/triage, each: baseUrl/model/apiKey) mirrors `.vibes/config.json` semantics so the app and the TUI stay interchangeable.
+- **Agent = model + harness** (Wavestone-style framing): Roles pick the model endpoint; harness behavior lives in vibes + operator constitutions / lessons — not a second engine in Electron (ADR-0001).
+- Role **constitutions** (T79): optional per-role system-prompt SoT in Roles UI → `roles-config.json` + workspace `.vibes/role-constitutions.json`. Compose with mission overlays is T80; never `nextPrompt = model.rewrite(constitution)`.
 - The "Activity is incomplete" banner from the wayland fork is NOT ported: with a single Vibes source, an empty ledger renders as "All quiet", never as an error.
 
 ## What not to do
@@ -41,6 +43,7 @@ Electron desktop app (main + preload + renderer, three process types). The app i
 - Show raw JSON-RPC errors in the UI; map them to the ledger status vocabulary (running/verifying/failed/zombie/blocked/pending/done/idle).
 - Record audio longer than needed; stop capture on silence timeout and delete the wav after transcription.
 - Bundle vibes' models or weights — yapsnap fetches its own ~80MB per language into its cache on first use.
+- Auto-evolve production system prompts / tools without operator visibility — full harness rewrites show weak held-out gains; keep constitutions operator-owned and overlays accept/reject (T80).
 
 ## Sources (research)
 
@@ -48,3 +51,4 @@ Electron desktop app (main + preload + renderer, three process types). The app i
 - `vibes-dashboard/server/vibes-bridge.js` — JSON-RPC child-process pattern, env allowlist
 - `vibes/.vibes/config.json` + `README.md` — current option surface (per-role models, CONTEXT_WINDOW, MAX_CONCURRENT_TASKS, MEMORY/CODEX/THINKING/STREAMING toggles, VIBES_LAUNCH_DIR)
 - `yapsnap` README — CPU-only sherpa-onnx transcription, `--lang auto`, offline after first run
+- [LINKS.md](./LINKS.md) — X bookmark watchlist (Harness², Elephant-Goldfish, LEANN, …); distill notes under `.agent/memories/codebase_insights/`

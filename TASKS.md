@@ -66,7 +66,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T48 Version + changelog + feature map — bump `0.1.0`, `CHANGELOG.md`, `docs/FEATURES.md`, README spine ✅ 2026-10-22
 - [x] T49 Tag `v0.1.0` + NSIS `dist/Vibes Desktop Setup 0.1.0.exe` (~219 MB) ✅ 2026-10-22
 - [x] T50 Needs-You + Unsloth Decision wired end-to-end ✅ 2026-10-22 — Settings Decision → Unsloth `:8888/mcp/`; vibes + desktop `system_one`; mission-service intervention→resolve unit; live decision shadow green
-- [ ] T51 Optional: Kev 4B in Unsloth Decision picker; Bark STT watchlist (bookmark delta)
+- [ ] T51 Optional: Kev 4B in Unsloth Decision picker; Bark STT watchlist; model/memory watchlist (LFM3, Liquid d1.1, LEANN, Obelisk — no deps)
 - [x] T55 Roles context window on model cards → persist + `CONTEXT_WINDOW` in `.vibes/config.json` (executor wins over default) ✅ 2026-10-26
 - [x] T56 Settings → Runtime subpage: MAX_STEPS / concurrent / YOLO / thinking / compaction / small-model → `.vibes/config.json` on spawn ✅ 2026-10-26
 - [x] T57 Runtime II: triage observer + LOCAL_MEMORY / MEMORY_ENABLED → `.vibes/config.json` on spawn ✅ 2026-10-26
@@ -98,6 +98,12 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T52 Vibes scheduler deadlock ✅ 2026-10-24 — soft-requeue deleted `runningTasks` before `finally` → second start raced → stuck `in_progress`; also loop exited during `awaiting_intervention`. Fix on vibes `ag/completion-gates`; tests `scheduler-t52-requeue-race` + deps stuck-in_progress
 - [x] T53 Laya Decision probe ✅ 2026-10-24 — Unsloth `system_one` **is** Laya (`laya-english`); no second stack; native `laya_preset`/guard deferred; note `.agent/memories/codebase_insights/2026-10-24-laya-decision-probe.md`
 - [x] T54 Escalate on low System One confidence ✅ 2026-10-26 — default floor 0.35; missing confidence (classic KEV) unchanged; `minConfidence: null` disables
+
+## P11 — Role constitutions + bookmark research (2026-11-01)
+- [x] T79 Roles constitution SoT: per-role `systemPrompt` in Roles UI → `roles-config.json` + `.vibes/role-constitutions.json` on spawn/save (desktop-only; child compose later) ✅ 2026-11-01
+- [ ] T80 Follow-on: mission overlay patches (`add`/`emphasize`/`forbid`) + Needs You accept + vibes child `constitution ⊕ overlay ⊕ lessons` compose
+- [x] T81 Research note: elephant-goldfish + Anthropic single-agent-loop-kit → harness/verify language (no runtime import) ✅ 2026-11-01 — `.agent/memories/codebase_insights/2026-11-01-elephant-goldfish-single-agent-loop.md`
+- [x] T82 CONTEXT: Wavestone model+harness + no auto-evolve prompt rewrite (ADR-0001) ✅ 2026-11-01
 
 ## P8 — Part A (harness / memory research → product)
 - [x] T29 Decision spike (probe): LAN **KEV MCP** `http://192.168.5.157:8765/mcp` — list_models + triage `kev_evaluate` (escalate ~4.5s) + shadow `kev_select_tool` (~80ms). APIs `:8008`/`:8009` not LAN-published (localhost on host). Notes in `2026-10-20-decision-model-kev-gutsy.md` ✅ 2026-10-20

@@ -6,6 +6,7 @@ import { LedgerStore } from './ledger/store';
 import { RolesStore } from './roles/store';
 import { makeSafeCipher } from './roles/safeCipher';
 import { writeVibesConfig } from './roles/config-writer';
+import { writeRoleConstitutions } from './roles/constitutions-writer';
 import { writeVibesMcpJson } from './roles/mcp-writer';
 import { createMissionService } from './mission/service';
 import { resolveDecisionMcpConfig } from './decision/config';
@@ -87,7 +88,8 @@ app.whenReady().then(() => {
     createBridge: (workspaceRoot) => {
       const decision = resolveDecisionMcpConfig(settingsStore);
       const settings = settingsStore.get();
-      writeVibesConfig(workspaceRoot, rolesStore.input(), decision, {
+      const rolesInput = rolesStore.input();
+      writeVibesConfig(workspaceRoot, rolesInput, decision, {
         maxSteps: settings.maxSteps,
         maxConcurrentTasks: settings.maxConcurrentTasks,
         yoloMode: settings.yoloMode,
@@ -102,6 +104,8 @@ app.whenReady().then(() => {
         doubleCheckCompletion: settings.doubleCheckCompletion,
         adversarialAudit: settings.adversarialAudit,
       });
+      // T79 — constitutions are not env keys; sibling file for vibes compose (T80).
+      writeRoleConstitutions(workspaceRoot, rolesInput);
       writeVibesMcpJson(
         workspaceRoot,
         {

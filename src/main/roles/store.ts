@@ -24,16 +24,34 @@ export const ENC_PREFIX = 'enc:';
 
 const CONFIG_FILE_NAME = 'roles-config.json';
 
-type StoredEndpoint = { baseUrl: string; model: string; contextWindow: string; apiKey: string };
+type StoredEndpoint = {
+  baseUrl: string;
+  model: string;
+  contextWindow: string;
+  systemPrompt: string;
+  apiKey: string;
+};
 type StoredConfig = Record<keyof RolesConfigView, StoredEndpoint>;
 
 export const EMPTY_ROLES_CONFIG: StoredConfig = {
-  default: { baseUrl: '', model: '', contextWindow: '', apiKey: '' },
-  planner: { baseUrl: '', model: '', contextWindow: '', apiKey: '' },
-  executor: { baseUrl: '', model: '', contextWindow: '', apiKey: '' },
-  reviewer: { baseUrl: '', model: '', contextWindow: '', apiKey: '' },
-  triage: { baseUrl: '', model: '', contextWindow: '', apiKey: '' },
+  default: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', apiKey: '' },
+  planner: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', apiKey: '' },
+  executor: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', apiKey: '' },
+  reviewer: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', apiKey: '' },
+  triage: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', apiKey: '' },
 };
+
+/** Soft cap for constitution text persisted in roles-config.json. */
+const MAX_SYSTEM_PROMPT_CHARS = 12_000;
+
+export function normalizeSystemPrompt(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  return trimmed.length > MAX_SYSTEM_PROMPT_CHARS
+    ? trimmed.slice(0, MAX_SYSTEM_PROMPT_CHARS)
+    : trimmed;
+}
 
 /** Digits-only positive int as string; anything else becomes empty (unset). */
 export function normalizeContextWindow(raw: unknown): string {
@@ -99,6 +117,7 @@ export class RolesStore {
           baseUrl: asString(entry.baseUrl),
           model: asString(entry.model),
           contextWindow: normalizeContextWindow(entry.contextWindow),
+          systemPrompt: normalizeSystemPrompt(entry.systemPrompt),
           apiKey: decryptKey(this.cipher, asString(entry.apiKey)),
         };
       };
@@ -121,6 +140,7 @@ export class RolesStore {
       baseUrl: e.baseUrl,
       model: e.model,
       contextWindow: e.contextWindow,
+      systemPrompt: e.systemPrompt,
       hasKey: e.apiKey.length > 0,
     });
     return {
@@ -140,6 +160,7 @@ export class RolesStore {
       baseUrl: e.baseUrl,
       model: e.model,
       contextWindow: e.contextWindow,
+      systemPrompt: e.systemPrompt,
       apiKey: encryptKey(cipher, e.apiKey),
     });
     const existing = this.load();
@@ -147,6 +168,11 @@ export class RolesStore {
       baseUrl: (inputRole.baseUrl ?? '').trim(),
       model: (inputRole.model ?? '').trim(),
       contextWindow: normalizeContextWindow(inputRole.contextWindow),
+      // Explicit field (including empty) replaces; omit keeps stored constitution.
+      systemPrompt:
+        inputRole.systemPrompt !== undefined
+          ? normalizeSystemPrompt(inputRole.systemPrompt)
+          : existingRole.systemPrompt,
       // An empty submitted key means "don't touch what's already encrypted".
       apiKey: inputRole.apiKey && inputRole.apiKey.length > 0 ? inputRole.apiKey : existingRole.apiKey,
     });
@@ -185,6 +211,7 @@ export class RolesStore {
       baseUrl: e.baseUrl,
       model: e.model,
       contextWindow: e.contextWindow,
+      systemPrompt: e.systemPrompt,
       apiKey: e.apiKey,
     });
     return {
