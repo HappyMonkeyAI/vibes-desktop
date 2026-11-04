@@ -29,7 +29,7 @@ Vibes checkout (Browse + `src/mcp/server.ts` check) → default model (optional 
 
 ### Roles
 
-Per-role base URL / model / **context window** (tokens) / **reasoning** (inherit/on/off + effort) / optional **constitution** (system-prompt source of truth, collapsed in the card) / API key (encrypted at rest). Test connection probes the OpenAI-compatible endpoint. Endpoint fields merge into workspace `.vibes/config.json` — executor’s context window (else Default’s) becomes vibes’ global `CONTEXT_WINDOW`. Executor/Default reasoning mode overrides Settings → Runtime `THINKING_MODE` when not Inherit. Constitutions → `.vibes/role-constitutions.json` (T80 compose); reasoning → `.vibes/role-reasoning.json` (effort API kwargs = vibes companion; T87 auto-suggest later).
+Per-role base URL / model / **context window** (tokens) / **reasoning** (inherit/on/off + effort) / **MCP tools** policy (server + tool allowlists, tool budget) / optional **constitution** (system-prompt SoT) / API key (encrypted at rest). Test connection probes the OpenAI-compatible endpoint. Endpoint fields merge into workspace `.vibes/config.json` — executor’s context window (else Default’s) becomes vibes’ global `CONTEXT_WINDOW`. Executor/Default reasoning mode overrides Settings → Runtime `THINKING_MODE` when not Inherit. Constitutions → `.vibes/role-constitutions.json` (T80); reasoning → `.vibes/role-reasoning.json`; MCP policy → `.vibes/role-mcp-policy.json` (T85 activation).
 
 ### Runtime
 
@@ -56,7 +56,7 @@ One-shot persist (dev): `KEV_MCP_URL=… KEV_MCP_AUTH_TOKEN=… npx electron scr
 
 ### Mission MCP tools
 
-Toggle **HTML Design Advisor**, plus a **multi-server MCP registry** (rows with enable/edit/remove, HTTP Probe, and Edit-as-JSON for a Cursor-style `mcpServers` object). Enabled servers merge into workspace `.vibes/mcp.json` on spawn. Legacy single custom MCP Settings migrate into the registry. Role/tool allowlists and small-model activation budgets are T84/T85 — not a marketplace.
+Toggle **HTML Design Advisor**, plus a **multi-server MCP registry** (rows with enable/edit/remove, HTTP Probe, and Edit-as-JSON for a Cursor-style `mcpServers` object). Enabled servers merge into workspace `.vibes/mcp.json` on spawn. Legacy single custom MCP Settings migrate into the registry. Per-role **MCP/tool allowlists + tool budget** (Roles → MCP tools; from context window or manual) write `.vibes/role-mcp-policy.json` on save/spawn — policy only, no auto-apply to the catalogue (T85 activates filters).
 
 ### Voice
 

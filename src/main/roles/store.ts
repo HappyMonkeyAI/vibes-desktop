@@ -9,6 +9,11 @@ import type {
   RolesConfigView,
 } from '@shared/channels';
 import { ROLE_REASONING_EFFORTS, ROLE_REASONING_MODES } from '@shared/channels';
+import {
+  normalizeMcpServerAllowlist,
+  normalizeMcpToolAllowlist,
+  normalizeMcpToolBudget,
+} from '@shared/mcpPolicy';
 
 /**
  * T7 — persistent per-role endpoint store. Mirrors the fork's rolesConfigStore:
@@ -39,6 +44,9 @@ type StoredEndpoint = {
   systemPrompt: string;
   reasoningMode: RoleReasoningMode;
   reasoningEffort: RoleReasoningEffort;
+  mcpServers: string[];
+  mcpTools: string[];
+  mcpToolBudget: string;
   apiKey: string;
 };
 type StoredConfig = Record<keyof RolesConfigView, StoredEndpoint>;
@@ -50,6 +58,9 @@ const EMPTY_ENDPOINT: StoredEndpoint = {
   systemPrompt: '',
   reasoningMode: 'inherit',
   reasoningEffort: 'inherit',
+  mcpServers: [],
+  mcpTools: [],
+  mcpToolBudget: '',
   apiKey: '',
 };
 
@@ -154,6 +165,9 @@ export class RolesStore {
           systemPrompt: normalizeSystemPrompt(entry.systemPrompt),
           reasoningMode: normalizeReasoningMode(entry.reasoningMode),
           reasoningEffort: normalizeReasoningEffort(entry.reasoningEffort),
+          mcpServers: normalizeMcpServerAllowlist(entry.mcpServers),
+          mcpTools: normalizeMcpToolAllowlist(entry.mcpTools),
+          mcpToolBudget: normalizeMcpToolBudget(entry.mcpToolBudget),
           apiKey: decryptKey(this.cipher, asString(entry.apiKey)),
         };
       };
@@ -179,6 +193,9 @@ export class RolesStore {
       systemPrompt: e.systemPrompt,
       reasoningMode: e.reasoningMode,
       reasoningEffort: e.reasoningEffort,
+      mcpServers: [...e.mcpServers],
+      mcpTools: [...e.mcpTools],
+      mcpToolBudget: e.mcpToolBudget,
       hasKey: e.apiKey.length > 0,
     });
     return {
@@ -201,6 +218,9 @@ export class RolesStore {
       systemPrompt: e.systemPrompt,
       reasoningMode: e.reasoningMode,
       reasoningEffort: e.reasoningEffort,
+      mcpServers: e.mcpServers,
+      mcpTools: e.mcpTools,
+      mcpToolBudget: e.mcpToolBudget,
       apiKey: encryptKey(cipher, e.apiKey),
     });
     const existing = this.load();
@@ -221,6 +241,18 @@ export class RolesStore {
         inputRole.reasoningEffort !== undefined
           ? normalizeReasoningEffort(inputRole.reasoningEffort)
           : existingRole.reasoningEffort,
+      mcpServers:
+        inputRole.mcpServers !== undefined
+          ? normalizeMcpServerAllowlist(inputRole.mcpServers)
+          : existingRole.mcpServers,
+      mcpTools:
+        inputRole.mcpTools !== undefined
+          ? normalizeMcpToolAllowlist(inputRole.mcpTools)
+          : existingRole.mcpTools,
+      mcpToolBudget:
+        inputRole.mcpToolBudget !== undefined
+          ? normalizeMcpToolBudget(inputRole.mcpToolBudget)
+          : existingRole.mcpToolBudget,
       // An empty submitted key means "don't touch what's already encrypted".
       apiKey: inputRole.apiKey && inputRole.apiKey.length > 0 ? inputRole.apiKey : existingRole.apiKey,
     });
@@ -262,6 +294,9 @@ export class RolesStore {
       systemPrompt: e.systemPrompt,
       reasoningMode: e.reasoningMode,
       reasoningEffort: e.reasoningEffort,
+      mcpServers: [...e.mcpServers],
+      mcpTools: [...e.mcpTools],
+      mcpToolBudget: e.mcpToolBudget,
       apiKey: e.apiKey,
     });
     return {

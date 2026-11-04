@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-11-04 — T84 per-role MCP/tool policy
+
+**Done:** Roles → MCP tools policy: server allowlist, tool allowlist, tool budget (auto from context window via `suggestToolBudget` or manual). Persist in Roles store; write `.vibes/role-mcp-policy.json` on save/spawn. Does **not** rewrite `mcp.json` (no auto-apply). T85 remains for vibes/DynamicMCPProxy activation.
+
+**Evidence:** `npm test` / `npm run typecheck` (this session).
+
+**Next:** T85 activation; optional Defiant Fable mission; Needs-You re-drill; CSC.
+
+---
+
 ## 2026-11-04 — T86 per-role reasoning settings
 
 **Done:** P13 tickets **T86** / **T87**. Shipped T86 — Roles UI mode (inherit/on/off) + effort dropdown (`low`…`spoon`); persist in Roles store; write `.vibes/role-reasoning.json` (incl. `{REASON:…}` chat markers) on save/spawn; executor/default override Runtime `THINKING_MODE` via `resolveThinkingModeFromRoles`. T87 filed (auto-suggest, operator-visible). Live Unsloth probe of Defiant Fable Q6_K on `.5.157` (Studio effort enum ≠ Heretic spoon/einstein kwargs).

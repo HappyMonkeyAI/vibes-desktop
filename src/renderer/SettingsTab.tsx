@@ -422,7 +422,8 @@ const SettingsTab: React.FC = () => {
             <p className={styles.hint}>
               Multi-server registry (Cursor-style). Enabled rows merge into{' '}
               <code>.vibes/mcp.json</code> on spawn. Probe checks HTTP initialize only —
-              stdio is validated when the vibes child starts. Role/tool budgets are T84/T85.
+              stdio is validated when the vibes child starts. Per-role allowlists/budgets:
+              Roles → MCP tools (T84); T85 activates filters.
             </p>
             <McpRegistrySection registry={mcpRegistry} onChange={setMcpRegistry} />
           </div>

@@ -9,17 +9,19 @@ import type {
   RolesConfigView,
   TestConnectionResult,
 } from '@shared/channels';
+import {
+  formatAllowlistForInput,
+  formatToolAllowlistForInput,
+  normalizeMcpServerAllowlist,
+  normalizeMcpToolAllowlist,
+  suggestToolBudget,
+} from '@shared/mcpPolicy';
 import styles from './RolesTab.module.css';
 
 /**
- * T7 / T79 / T86 — per-role endpoint configuration. Five forms (default /
- * planner / executor / reviewer / triage), each with base URL, model, context
- * window, optional constitution, reasoning mode/effort, and an API key field.
- * A saved key never round-trips: the view carries a presence flag, and an empty
- * submitted key means "keep what's stored". Context window maps to vibes'
- * global CONTEXT_WINDOW (executor wins over default). Constitutions →
- * `.vibes/role-constitutions.json` (T80 compose). Reasoning →
- * `.vibes/role-reasoning.json`; executor/default override Runtime THINKING_MODE.
+ * T7 / T79 / T86 / T84 — per-role endpoints: URL, model, context, reasoning,
+ * MCP/tool policy, constitution, API key. Constitutions → role-constitutions.json;
+ * reasoning → role-reasoning.json; MCP policy → role-mcp-policy.json (T85 activates).
  */
 
 const ROLE_LABELS: Record<RoleKey, string> = {
@@ -47,6 +49,9 @@ type RoleDraft = {
   systemPrompt: string;
   reasoningMode: RoleReasoningMode;
   reasoningEffort: RoleReasoningEffort;
+  mcpServersText: string;
+  mcpToolsText: string;
+  mcpToolBudget: string;
   apiKey: string;
   hasKey: boolean;
 };
@@ -58,6 +63,9 @@ type RoleFieldKey =
   | 'systemPrompt'
   | 'reasoningMode'
   | 'reasoningEffort'
+  | 'mcpServersText'
+  | 'mcpToolsText'
+  | 'mcpToolBudget'
   | 'apiKey';
 
 const REASONING_MODE_OPTIONS: { value: RoleReasoningMode; label: string }[] = [
@@ -85,6 +93,9 @@ function toDraft(view: RolesConfigView): Draft {
       systemPrompt: view[role].systemPrompt ?? '',
       reasoningMode: view[role].reasoningMode ?? 'inherit',
       reasoningEffort: view[role].reasoningEffort ?? 'inherit',
+      mcpServersText: formatAllowlistForInput(view[role].mcpServers ?? []),
+      mcpToolsText: formatToolAllowlistForInput(view[role].mcpTools ?? []),
+      mcpToolBudget: view[role].mcpToolBudget ?? '',
       apiKey: '',
       hasKey: view[role].hasKey,
     };
@@ -183,6 +194,57 @@ const RoleFields: React.FC<RoleFieldsProps> = ({ role, draft, inputSize, fieldsC
     </div>
     <details className={`${styles.field} ${styles.fieldFull} ${styles.constitution}`}>
       <summary className={styles.constitutionSummary}>
+        MCP tools
+        <span className={styles.labelHint}> policy (T84)</span>
+        {(draft.mcpServersText.trim() || draft.mcpToolsText.trim() || draft.mcpToolBudget.trim()) && (
+          <Tag color="arcoblue" size="small" style={{ marginLeft: 8 }}>set</Tag>
+        )}
+      </summary>
+      <p className={styles.fieldHint}>
+        Allowlists write to <code>.vibes/role-mcp-policy.json</code> only — they do not
+        rewrite <code>mcp.json</code>. T85 activates filtering in the vibes child.
+      </p>
+      <div className={styles.field}>
+        <label className={styles.label}>Server allowlist</label>
+        <Input
+          placeholder="html-design-advisor, desktop-custom"
+          value={draft.mcpServersText}
+          onChange={(v) => onChange('mcpServersText', v)}
+          size={inputSize}
+        />
+        <span className={styles.fieldHint}>
+          Keys from Settings → Mission MCP tools. Empty = unrestricted.
+        </span>
+      </div>
+      <div className={styles.field} style={{ marginTop: 8 }}>
+        <label className={styles.label}>Tool allowlist</label>
+        <Input.TextArea
+          placeholder={"read_file\nwrite_file"}
+          value={draft.mcpToolsText}
+          onChange={(v) => onChange('mcpToolsText', v)}
+          autoSize={{ minRows: 2, maxRows: 6 }}
+        />
+        <span className={styles.fieldHint}>One name per line (or commas). Empty = all tools.</span>
+      </div>
+      <div className={styles.field} style={{ marginTop: 8 }}>
+        <label className={styles.label}>
+          Tool budget <span className={styles.labelHint}>(max tools)</span>
+        </label>
+        <Input
+          placeholder={`auto ≈ ${suggestToolBudget(Number(draft.contextWindow.replace(/[_\s,]/g, '') || '0'))}`}
+          value={draft.mcpToolBudget}
+          onChange={(v) => onChange('mcpToolBudget', sanitizeContextWindowInput(v))}
+          size={inputSize}
+          inputMode="numeric"
+        />
+        <span className={styles.fieldHint}>
+          Empty uses context window ({suggestToolBudget(Number(draft.contextWindow.replace(/[_\s,]/g, '') || '0'))}{' '}
+          suggested). Manual digits override.
+        </span>
+      </div>
+    </details>
+    <details className={`${styles.field} ${styles.fieldFull} ${styles.constitution}`}>
+      <summary className={styles.constitutionSummary}>
         Constitution
         <span className={styles.labelHint}> system prompt SoT</span>
         {draft.systemPrompt.trim().length > 0 && (
@@ -267,6 +329,9 @@ const RolesTab: React.FC = () => {
           systemPrompt: draft[role].systemPrompt,
           reasoningMode: draft[role].reasoningMode,
           reasoningEffort: draft[role].reasoningEffort,
+          mcpServers: normalizeMcpServerAllowlist(draft[role].mcpServersText),
+          mcpTools: normalizeMcpToolAllowlist(draft[role].mcpToolsText),
+          mcpToolBudget: draft[role].mcpToolBudget,
           apiKey: draft[role].apiKey,
         };
       }
@@ -306,11 +371,11 @@ const RolesTab: React.FC = () => {
       <div className={styles.header}>
         <h2 className={styles.title}>Role Endpoints</h2>
         <p className={styles.subtitle}>
-          Configure the base URL, model, context window, reasoning, optional constitution, and API
-          key for each role. The executor runs on the default endpoint; its context window (or
-          Default&apos;s) becomes vibes&apos; CONTEXT_WINDOW. Constitutions sync as
-          <code> .vibes/role-constitutions.json</code>; reasoning as
-          <code> .vibes/role-reasoning.json</code> on save/spawn.
+          Configure endpoints, reasoning, MCP tool policy, constitution, and API key per role.
+          Executor context window (or Default&apos;s) becomes vibes&apos; CONTEXT_WINDOW.
+          Constitutions → <code>.vibes/role-constitutions.json</code>; reasoning →
+          <code>.vibes/role-reasoning.json</code>; MCP policy →
+          <code>.vibes/role-mcp-policy.json</code> (T85 activates filters).
         </p>
       </div>
 
