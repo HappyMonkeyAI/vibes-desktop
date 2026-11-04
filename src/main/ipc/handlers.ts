@@ -20,6 +20,7 @@ import { probeDecisionMcp } from '../decision/probe';
 import { readHarnessLesson } from '../harness/lesson-store';
 import { writeRoleConstitutions } from '../roles/constitutions-writer';
 import { probeHttpMcp } from '../roles/mcp-probe';
+import { writeRoleReasoning } from '../roles/reasoning-writer';
 import { announceToDaemon } from '../voice/announce';
 import type { McpProbeRequest } from '@shared/channels';
 
@@ -46,11 +47,26 @@ export function emptySnapshot(): LedgerSnapshot {
 /** Five unconfigured role endpoints (P0 default; T7 makes this persistent). */
 export function emptyRolesView(): RolesConfigView {
   return {
-    default: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', hasKey: false },
-    planner: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', hasKey: false },
-    executor: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', hasKey: false },
-    reviewer: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', hasKey: false },
-    triage: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', hasKey: false },
+    default: {
+      baseUrl: '', model: '', contextWindow: '', systemPrompt: '',
+      reasoningMode: 'inherit', reasoningEffort: 'inherit', hasKey: false,
+    },
+    planner: {
+      baseUrl: '', model: '', contextWindow: '', systemPrompt: '',
+      reasoningMode: 'inherit', reasoningEffort: 'inherit', hasKey: false,
+    },
+    executor: {
+      baseUrl: '', model: '', contextWindow: '', systemPrompt: '',
+      reasoningMode: 'inherit', reasoningEffort: 'inherit', hasKey: false,
+    },
+    reviewer: {
+      baseUrl: '', model: '', contextWindow: '', systemPrompt: '',
+      reasoningMode: 'inherit', reasoningEffort: 'inherit', hasKey: false,
+    },
+    triage: {
+      baseUrl: '', model: '', contextWindow: '', systemPrompt: '',
+      reasoningMode: 'inherit', reasoningEffort: 'inherit', hasKey: false,
+    },
   };
 }
 
@@ -85,7 +101,11 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
         try {
           const history = await workspaceHistoryStore.getHistory();
           const latest = history[0]?.path?.trim();
-          if (latest) writeRoleConstitutions(latest, rolesStore.input());
+          if (latest) {
+            const rolesInput = rolesStore.input();
+            writeRoleConstitutions(latest, rolesInput);
+            writeRoleReasoning(latest, rolesInput);
+          }
         } catch {
           // History miss must not fail the Roles save.
         }

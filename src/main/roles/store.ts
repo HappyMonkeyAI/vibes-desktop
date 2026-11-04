@@ -1,6 +1,14 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { RoleEndpoint, RoleEndpointInput, RolesConfigInput, RolesConfigView } from '@shared/channels';
+import type {
+  RoleEndpoint,
+  RoleEndpointInput,
+  RoleReasoningEffort,
+  RoleReasoningMode,
+  RolesConfigInput,
+  RolesConfigView,
+} from '@shared/channels';
+import { ROLE_REASONING_EFFORTS, ROLE_REASONING_MODES } from '@shared/channels';
 
 /**
  * T7 — persistent per-role endpoint store. Mirrors the fork's rolesConfigStore:
@@ -29,16 +37,28 @@ type StoredEndpoint = {
   model: string;
   contextWindow: string;
   systemPrompt: string;
+  reasoningMode: RoleReasoningMode;
+  reasoningEffort: RoleReasoningEffort;
   apiKey: string;
 };
 type StoredConfig = Record<keyof RolesConfigView, StoredEndpoint>;
 
+const EMPTY_ENDPOINT: StoredEndpoint = {
+  baseUrl: '',
+  model: '',
+  contextWindow: '',
+  systemPrompt: '',
+  reasoningMode: 'inherit',
+  reasoningEffort: 'inherit',
+  apiKey: '',
+};
+
 export const EMPTY_ROLES_CONFIG: StoredConfig = {
-  default: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', apiKey: '' },
-  planner: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', apiKey: '' },
-  executor: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', apiKey: '' },
-  reviewer: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', apiKey: '' },
-  triage: { baseUrl: '', model: '', contextWindow: '', systemPrompt: '', apiKey: '' },
+  default: { ...EMPTY_ENDPOINT },
+  planner: { ...EMPTY_ENDPOINT },
+  executor: { ...EMPTY_ENDPOINT },
+  reviewer: { ...EMPTY_ENDPOINT },
+  triage: { ...EMPTY_ENDPOINT },
 };
 
 /** Soft cap for constitution text persisted in roles-config.json. */
@@ -64,6 +84,20 @@ export function normalizeContextWindow(raw: unknown): string {
   const n = Number(digits);
   if (!Number.isFinite(n) || n <= 0) return '';
   return String(n);
+}
+
+export function normalizeReasoningMode(raw: unknown): RoleReasoningMode {
+  if (typeof raw === 'string' && (ROLE_REASONING_MODES as readonly string[]).includes(raw)) {
+    return raw as RoleReasoningMode;
+  }
+  return 'inherit';
+}
+
+export function normalizeReasoningEffort(raw: unknown): RoleReasoningEffort {
+  if (typeof raw === 'string' && (ROLE_REASONING_EFFORTS as readonly string[]).includes(raw)) {
+    return raw as RoleReasoningEffort;
+  }
+  return 'inherit';
 }
 
 function asString(value: unknown): string {
@@ -118,6 +152,8 @@ export class RolesStore {
           model: asString(entry.model),
           contextWindow: normalizeContextWindow(entry.contextWindow),
           systemPrompt: normalizeSystemPrompt(entry.systemPrompt),
+          reasoningMode: normalizeReasoningMode(entry.reasoningMode),
+          reasoningEffort: normalizeReasoningEffort(entry.reasoningEffort),
           apiKey: decryptKey(this.cipher, asString(entry.apiKey)),
         };
       };
@@ -141,6 +177,8 @@ export class RolesStore {
       model: e.model,
       contextWindow: e.contextWindow,
       systemPrompt: e.systemPrompt,
+      reasoningMode: e.reasoningMode,
+      reasoningEffort: e.reasoningEffort,
       hasKey: e.apiKey.length > 0,
     });
     return {
@@ -161,6 +199,8 @@ export class RolesStore {
       model: e.model,
       contextWindow: e.contextWindow,
       systemPrompt: e.systemPrompt,
+      reasoningMode: e.reasoningMode,
+      reasoningEffort: e.reasoningEffort,
       apiKey: encryptKey(cipher, e.apiKey),
     });
     const existing = this.load();
@@ -173,6 +213,14 @@ export class RolesStore {
         inputRole.systemPrompt !== undefined
           ? normalizeSystemPrompt(inputRole.systemPrompt)
           : existingRole.systemPrompt,
+      reasoningMode:
+        inputRole.reasoningMode !== undefined
+          ? normalizeReasoningMode(inputRole.reasoningMode)
+          : existingRole.reasoningMode,
+      reasoningEffort:
+        inputRole.reasoningEffort !== undefined
+          ? normalizeReasoningEffort(inputRole.reasoningEffort)
+          : existingRole.reasoningEffort,
       // An empty submitted key means "don't touch what's already encrypted".
       apiKey: inputRole.apiKey && inputRole.apiKey.length > 0 ? inputRole.apiKey : existingRole.apiKey,
     });
@@ -212,6 +260,8 @@ export class RolesStore {
       model: e.model,
       contextWindow: e.contextWindow,
       systemPrompt: e.systemPrompt,
+      reasoningMode: e.reasoningMode,
+      reasoningEffort: e.reasoningEffort,
       apiKey: e.apiKey,
     });
     return {

@@ -29,7 +29,7 @@ Vibes checkout (Browse + `src/mcp/server.ts` check) → default model (optional 
 
 ### Roles
 
-Per-role base URL / model / **context window** (tokens) / optional **constitution** (system-prompt source of truth, collapsed in the card) / API key (encrypted at rest). Test connection probes the OpenAI-compatible endpoint. Endpoint fields merge into workspace `.vibes/config.json` — executor’s context window (else Default’s) becomes vibes’ global `CONTEXT_WINDOW`. Constitutions persist in app Roles store and sync to `.vibes/role-constitutions.json` on save/spawn (child composition of constitution ⊕ overlay ⊕ lessons is T80).
+Per-role base URL / model / **context window** (tokens) / **reasoning** (inherit/on/off + effort) / optional **constitution** (system-prompt source of truth, collapsed in the card) / API key (encrypted at rest). Test connection probes the OpenAI-compatible endpoint. Endpoint fields merge into workspace `.vibes/config.json` — executor’s context window (else Default’s) becomes vibes’ global `CONTEXT_WINDOW`. Executor/Default reasoning mode overrides Settings → Runtime `THINKING_MODE` when not Inherit. Constitutions → `.vibes/role-constitutions.json` (T80 compose); reasoning → `.vibes/role-reasoning.json` (effort API kwargs = vibes companion; T87 auto-suggest later).
 
 ### Runtime
 

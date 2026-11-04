@@ -2,9 +2,19 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-11-04 — T86 per-role reasoning settings
+
+**Done:** P13 tickets **T86** / **T87**. Shipped T86 — Roles UI mode (inherit/on/off) + effort dropdown (`low`…`spoon`); persist in Roles store; write `.vibes/role-reasoning.json` (incl. `{REASON:…}` chat markers) on save/spawn; executor/default override Runtime `THINKING_MODE` via `resolveThinkingModeFromRoles`. T87 filed (auto-suggest, operator-visible). Live Unsloth probe of Defiant Fable Q6_K on `.5.157` (Studio effort enum ≠ Heretic spoon/einstein kwargs).
+
+**Evidence:** `npm test` / `npm run typecheck`; `scripts/probe-defiant-fable.mjs`.
+
+**Next:** Merge T86 PR; T84/T85; vibes companion for Studio-safe `reasoning_effort` kwargs.
+
+---
+
 ## 2026-11-04 — T83 MCP registry UX
 
-**Done:** Settings → Mission MCP tools is a multi-server registry (rows, modal edit, Edit-as-JSON, HTTP probe via `mcp:probe`). Persists `mcpRegistry` (migrates legacy `customMcp*`). Spawn writes all enabled servers into `.vibes/mcp.json` with managed-key cleanup. Filed T84 (role allowlist/budget) + T85 (vibes/proxy activation) as follow-ons for small-LLM tool soup.
+**Done:** Settings → Mission MCP tools is a multi-server registry (rows, modal edit, Edit-as-JSON, HTTP probe via `mcp:probe`). Persists `mcpRegistry` (migrates legacy `customMcp*`). Spawn writes all enabled servers into `.vibes/mcp.json` with managed-key cleanup. Filed T84 (role allowlist/budget) + T85 (vibes/proxy activation) as follow-ons for small-LLM tool soup. Merged PR #31.
 
 **Evidence:** typecheck; `mcp-registry` / `mcp-writer` / ipc-parity tests; full `npm test`.
 

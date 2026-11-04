@@ -34,6 +34,7 @@ Electron desktop app (main + preload + renderer, three process types). The app i
 - Per-role endpoint config (default/planner/executor/reviewer/triage, each: baseUrl/model/apiKey) mirrors `.vibes/config.json` semantics so the app and the TUI stay interchangeable.
 - **Agent = model + harness** (Wavestone-style framing): Roles pick the model endpoint; harness behavior lives in vibes + operator constitutions / lessons — not a second engine in Electron (ADR-0001).
 - Role **constitutions** (T79): optional per-role system-prompt SoT in Roles UI → `roles-config.json` + workspace `.vibes/role-constitutions.json`. Compose with mission overlays is T80; never `nextPrompt = model.rewrite(constitution)`.
+- Role **reasoning** (T86): per-role mode (`inherit`/`on`/`off`) + effort → `roles-config.json` + `.vibes/role-reasoning.json`. Executor/Default override Runtime `THINKING_MODE` on spawn; effort API kwargs need vibes companion (T87 auto-suggest later).
 - The "Activity is incomplete" banner from the wayland fork is NOT ported: with a single Vibes source, an empty ledger renders as "All quiet", never as an error.
 
 ## What not to do
