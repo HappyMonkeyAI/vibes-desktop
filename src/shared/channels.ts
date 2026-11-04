@@ -106,6 +106,18 @@ export interface RoleEndpoint {
   reasoningMode: RoleReasoningMode;
   /** T86 — effort level; sibling `.vibes/role-reasoning.json` (API kwargs = vibes companion). */
   reasoningEffort: RoleReasoningEffort;
+  /**
+   * T84 — MCP server keys this role may use (from Settings registry).
+   * Empty = unrestricted until T85 activation.
+   */
+  mcpServers: string[];
+  /** T84 — optional tool-name allowlist. Empty = all tools from allowed servers. */
+  mcpTools: string[];
+  /**
+   * T84 — max tools exposed to the model. Empty = auto from context window
+   * (`suggestToolBudget`). Manual digits override.
+   */
+  mcpToolBudget: string;
   /** Decrypted key never crosses IPC; presence only. */
   hasKey: boolean;
 }
@@ -123,6 +135,12 @@ export interface RoleEndpointInput {
   reasoningMode?: RoleReasoningMode;
   /** T86; omit keeps stored value. */
   reasoningEffort?: RoleReasoningEffort;
+  /** T84; omit keeps stored. Pass [] to clear. */
+  mcpServers?: string[];
+  /** T84; omit keeps stored. Pass [] to clear. */
+  mcpTools?: string[];
+  /** T84; omit keeps stored. Empty string = auto. */
+  mcpToolBudget?: string;
   apiKey?: string;
 }
 export type RolesConfigInput = Record<RoleKey, RoleEndpointInput>;
@@ -146,6 +164,22 @@ export interface RoleReasoningFile {
   v: 1;
   at: number;
   roles: Record<RoleKey, RoleReasoningEntry>;
+}
+
+/** T84 — per-role MCP/tool policy for T85 activation (desktop writes; vibes reads later). */
+export interface RoleMcpPolicyEntry {
+  servers: string[];
+  tools: string[];
+  toolBudget: number;
+  toolBudgetMode: 'auto' | 'manual';
+  contextWindow: number | null;
+}
+
+export interface RoleMcpPolicyFile {
+  v: 1;
+  at: number;
+  /** Policy only — does not rewrite `.vibes/mcp.json` (no auto-apply). */
+  roles: Record<RoleKey, RoleMcpPolicyEntry>;
 }
 
 export interface TestConnectionResult {

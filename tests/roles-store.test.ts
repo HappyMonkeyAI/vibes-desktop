@@ -29,6 +29,9 @@ describe('RolesStore (T7)', () => {
         systemPrompt: '',
         reasoningMode: 'inherit',
         reasoningEffort: 'inherit',
+        mcpServers: [],
+        mcpTools: [],
+        mcpToolBudget: '',
         hasKey: false,
       });
     }
@@ -57,6 +60,9 @@ describe('RolesStore (T7)', () => {
       systemPrompt: 'You are default.',
       reasoningMode: 'inherit',
       reasoningEffort: 'inherit',
+      mcpServers: [],
+      mcpTools: [],
+      mcpToolBudget: '',
       hasKey: true,
     });
     // The on-disk file must NOT contain the plaintext key.
@@ -89,6 +95,9 @@ describe('RolesStore (T7)', () => {
       systemPrompt: 'You are default.',
       reasoningMode: 'inherit',
       reasoningEffort: 'inherit',
+      mcpServers: [],
+      mcpTools: [],
+      mcpToolBudget: '',
       hasKey: true,
     });
     expect(store.getKey('default')).toBe('secret-a');
@@ -106,8 +115,32 @@ describe('RolesStore (T7)', () => {
       systemPrompt: '',
       reasoningMode: 'inherit',
       reasoningEffort: 'inherit',
+      mcpServers: [],
+      mcpTools: [],
+      mcpToolBudget: '',
       hasKey: false,
     });
+  });
+
+  it('round-trips MCP policy fields', () => {
+    const store = new RolesStore(path.join(dir, 'mcp-policy'), fakeCipher);
+    store.save({
+      default: {
+        baseUrl: '',
+        model: '',
+        mcpServers: ['html-design-advisor'],
+        mcpTools: ['read_file'],
+        mcpToolBudget: '10',
+        apiKey: '',
+      },
+      planner: { baseUrl: '', model: '', apiKey: '' },
+      executor: { baseUrl: '', model: '', apiKey: '' },
+      reviewer: { baseUrl: '', model: '', apiKey: '' },
+      triage: { baseUrl: '', model: '', apiKey: '' },
+    });
+    expect(store.view().default.mcpServers).toEqual(['html-design-advisor']);
+    expect(store.view().default.mcpTools).toEqual(['read_file']);
+    expect(store.view().default.mcpToolBudget).toBe('10');
   });
 
   it('round-trips reasoning mode and effort', () => {

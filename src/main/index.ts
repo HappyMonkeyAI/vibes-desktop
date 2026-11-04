@@ -8,6 +8,7 @@ import { makeSafeCipher } from './roles/safeCipher';
 import { writeVibesConfig } from './roles/config-writer';
 import { writeRoleConstitutions } from './roles/constitutions-writer';
 import { resolveThinkingModeFromRoles, writeRoleReasoning } from './roles/reasoning-writer';
+import { writeRoleMcpPolicy } from './roles/mcp-policy-writer';
 import { writeVibesMcpJson } from './roles/mcp-writer';
 import { createMissionService } from './mission/service';
 import { resolveDecisionMcpConfig } from './decision/config';
@@ -110,6 +111,8 @@ app.whenReady().then(() => {
       writeRoleConstitutions(workspaceRoot, rolesInput);
       // T86 — per-role effort/mode for vibes companion / Heretic chat markers.
       writeRoleReasoning(workspaceRoot, rolesInput);
+      // T84 — MCP/tool policy for T85 (does not rewrite mcp.json).
+      writeRoleMcpPolicy(workspaceRoot, rolesInput);
       {
         const registry = settings.mcpRegistry?.length
           ? settings.mcpRegistry

@@ -21,6 +21,7 @@ import { readHarnessLesson } from '../harness/lesson-store';
 import { writeRoleConstitutions } from '../roles/constitutions-writer';
 import { probeHttpMcp } from '../roles/mcp-probe';
 import { writeRoleReasoning } from '../roles/reasoning-writer';
+import { writeRoleMcpPolicy } from '../roles/mcp-policy-writer';
 import { announceToDaemon } from '../voice/announce';
 import type { McpProbeRequest } from '@shared/channels';
 
@@ -49,23 +50,28 @@ export function emptyRolesView(): RolesConfigView {
   return {
     default: {
       baseUrl: '', model: '', contextWindow: '', systemPrompt: '',
-      reasoningMode: 'inherit', reasoningEffort: 'inherit', hasKey: false,
+      reasoningMode: 'inherit', reasoningEffort: 'inherit',
+      mcpServers: [], mcpTools: [], mcpToolBudget: '', hasKey: false,
     },
     planner: {
       baseUrl: '', model: '', contextWindow: '', systemPrompt: '',
-      reasoningMode: 'inherit', reasoningEffort: 'inherit', hasKey: false,
+      reasoningMode: 'inherit', reasoningEffort: 'inherit',
+      mcpServers: [], mcpTools: [], mcpToolBudget: '', hasKey: false,
     },
     executor: {
       baseUrl: '', model: '', contextWindow: '', systemPrompt: '',
-      reasoningMode: 'inherit', reasoningEffort: 'inherit', hasKey: false,
+      reasoningMode: 'inherit', reasoningEffort: 'inherit',
+      mcpServers: [], mcpTools: [], mcpToolBudget: '', hasKey: false,
     },
     reviewer: {
       baseUrl: '', model: '', contextWindow: '', systemPrompt: '',
-      reasoningMode: 'inherit', reasoningEffort: 'inherit', hasKey: false,
+      reasoningMode: 'inherit', reasoningEffort: 'inherit',
+      mcpServers: [], mcpTools: [], mcpToolBudget: '', hasKey: false,
     },
     triage: {
       baseUrl: '', model: '', contextWindow: '', systemPrompt: '',
-      reasoningMode: 'inherit', reasoningEffort: 'inherit', hasKey: false,
+      reasoningMode: 'inherit', reasoningEffort: 'inherit',
+      mcpServers: [], mcpTools: [], mcpToolBudget: '', hasKey: false,
     },
   };
 }
@@ -105,6 +111,7 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
             const rolesInput = rolesStore.input();
             writeRoleConstitutions(latest, rolesInput);
             writeRoleReasoning(latest, rolesInput);
+            writeRoleMcpPolicy(latest, rolesInput);
           }
         } catch {
           // History miss must not fail the Roles save.
