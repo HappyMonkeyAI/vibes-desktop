@@ -27,6 +27,8 @@ describe('RolesStore (T7)', () => {
         model: '',
         contextWindow: '',
         systemPrompt: '',
+        reasoningMode: 'inherit',
+        reasoningEffort: 'inherit',
         hasKey: false,
       });
     }
@@ -53,6 +55,8 @@ describe('RolesStore (T7)', () => {
       model: 'm-a',
       contextWindow: '8192',
       systemPrompt: 'You are default.',
+      reasoningMode: 'inherit',
+      reasoningEffort: 'inherit',
       hasKey: true,
     });
     // The on-disk file must NOT contain the plaintext key.
@@ -83,6 +87,8 @@ describe('RolesStore (T7)', () => {
       model: 'm-b',
       contextWindow: '16384',
       systemPrompt: 'You are default.',
+      reasoningMode: 'inherit',
+      reasoningEffort: 'inherit',
       hasKey: true,
     });
     expect(store.getKey('default')).toBe('secret-a');
@@ -98,8 +104,38 @@ describe('RolesStore (T7)', () => {
       model: '',
       contextWindow: '',
       systemPrompt: '',
+      reasoningMode: 'inherit',
+      reasoningEffort: 'inherit',
       hasKey: false,
     });
+  });
+
+  it('round-trips reasoning mode and effort', () => {
+    const store = new RolesStore(path.join(dir, 'reasoning'), fakeCipher);
+    store.save({
+      default: {
+        baseUrl: '',
+        model: '',
+        reasoningMode: 'on',
+        reasoningEffort: 'xhigh',
+        apiKey: '',
+      },
+      planner: {
+        baseUrl: '',
+        model: '',
+        reasoningMode: 'off',
+        reasoningEffort: 'spoon',
+        apiKey: '',
+      },
+      executor: { baseUrl: '', model: '', apiKey: '' },
+      reviewer: { baseUrl: '', model: '', apiKey: '' },
+      triage: { baseUrl: '', model: '', apiKey: '' },
+    });
+    expect(store.view().default.reasoningMode).toBe('on');
+    expect(store.view().default.reasoningEffort).toBe('xhigh');
+    expect(store.view().planner.reasoningMode).toBe('off');
+    expect(store.view().planner.reasoningEffort).toBe('spoon');
+    expect(store.view().executor.reasoningMode).toBe('inherit');
   });
 
   it('round-trips systemPrompt and clears when empty string submitted', () => {

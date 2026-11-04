@@ -7,6 +7,7 @@ import { RolesStore } from './roles/store';
 import { makeSafeCipher } from './roles/safeCipher';
 import { writeVibesConfig } from './roles/config-writer';
 import { writeRoleConstitutions } from './roles/constitutions-writer';
+import { resolveThinkingModeFromRoles, writeRoleReasoning } from './roles/reasoning-writer';
 import { writeVibesMcpJson } from './roles/mcp-writer';
 import { createMissionService } from './mission/service';
 import { resolveDecisionMcpConfig } from './decision/config';
@@ -93,7 +94,8 @@ app.whenReady().then(() => {
         maxSteps: settings.maxSteps,
         maxConcurrentTasks: settings.maxConcurrentTasks,
         yoloMode: settings.yoloMode,
-        thinkingMode: settings.thinkingMode,
+        // T86 — executor/default role override wins over Runtime THINKING_MODE.
+        thinkingMode: resolveThinkingModeFromRoles(rolesInput, settings.thinkingMode !== false),
         contextCompactionEnabled: settings.contextCompactionEnabled,
         smallModelProfile: settings.smallModelProfile,
         triageEnabled: settings.triageEnabled,
@@ -106,6 +108,8 @@ app.whenReady().then(() => {
       });
       // T79 — constitutions are not env keys; sibling file for vibes compose (T80).
       writeRoleConstitutions(workspaceRoot, rolesInput);
+      // T86 — per-role effort/mode for vibes companion / Heretic chat markers.
+      writeRoleReasoning(workspaceRoot, rolesInput);
       {
         const registry = settings.mcpRegistry?.length
           ? settings.mcpRegistry

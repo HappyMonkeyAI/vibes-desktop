@@ -106,9 +106,13 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 - [x] T82 CONTEXT: Wavestone model+harness + no auto-evolve prompt rewrite (ADR-0001) ✅ 2026-11-01
 
 ## P12 — MCP registry + small-model tool budget (2026-11-04)
-- [x] T83 MCP registry UX: multi-server rows + JSON editor + HTTP probe/errors → `.vibes/mcp.json` (desktop Settings; migrate single customMcp*) ✅ 2026-11-04
+- [x] T83 MCP registry UX: multi-server rows + JSON editor + HTTP probe/errors → `.vibes/mcp.json` (desktop Settings; migrate single customMcp*) ✅ 2026-11-04 (PR #31)
 - [ ] T84 Per-role MCP/tool allowlist + tool budget from Roles context window (policy file; no auto-apply)
 - [ ] T85 Vibes/DynamicMCPProxy activation: task+role handshake filters tools before model sees catalogue (small-LLM critical)
+
+## P13 — Per-role reasoning (2026-11-04)
+- [x] T86 Roles reasoning: per-role mode (inherit/on/off) + effort dropdown → roles store + `.vibes/role-reasoning.json`; executor/default override Runtime `THINKING_MODE` on spawn ✅ 2026-11-04
+- [ ] T87 Follow-on: auto-suggest reasoning effort from role+task (operator-visible recommend → apply; no silent)
 
 ## P8 — Part A (harness / memory research → product)
 - [x] T29 Decision spike (probe): LAN **KEV MCP** `http://192.168.5.157:8765/mcp` — list_models + triage `kev_evaluate` (escalate ~4.5s) + shadow `kev_select_tool` (~80ms). APIs `:8008`/`:8009` not LAN-published (localhost on host). Notes in `2026-10-20-decision-model-kev-gutsy.md` ✅ 2026-10-20

@@ -62,6 +62,33 @@ export interface LedgerSnapshot {
 export type RoleKey = 'default' | 'planner' | 'executor' | 'reviewer' | 'triage';
 export const ROLE_KEYS: readonly RoleKey[] = ['default', 'planner', 'executor', 'reviewer', 'triage'];
 
+/**
+ * T86 — per-role thinking switch. `inherit` uses Settings → Runtime THINKING_MODE
+ * (for executor/default collapse into vibes' single THINKING_MODE key).
+ */
+export type RoleReasoningMode = 'inherit' | 'on' | 'off';
+export const ROLE_REASONING_MODES: readonly RoleReasoningMode[] = ['inherit', 'on', 'off'];
+
+/**
+ * T86 — effort ladder (Qwen 3.8 / Heretic-style). `inherit` means unset.
+ * Advanced `einstein` / `spoon` burn more reasoning tokens — use sparingly.
+ */
+export type RoleReasoningEffort =
+  | 'inherit'
+  | 'low'
+  | 'medium'
+  | 'xhigh'
+  | 'einstein'
+  | 'spoon';
+export const ROLE_REASONING_EFFORTS: readonly RoleReasoningEffort[] = [
+  'inherit',
+  'low',
+  'medium',
+  'xhigh',
+  'einstein',
+  'spoon',
+];
+
 export interface RoleEndpoint {
   baseUrl: string;
   model: string;
@@ -75,6 +102,10 @@ export interface RoleEndpoint {
    * Not written into vibes OLLAMA_* keys; sibling `.vibes/role-constitutions.json`.
    */
   systemPrompt: string;
+  /** T86 — thinking on/off/inherit Runtime. */
+  reasoningMode: RoleReasoningMode;
+  /** T86 — effort level; sibling `.vibes/role-reasoning.json` (API kwargs = vibes companion). */
+  reasoningEffort: RoleReasoningEffort;
   /** Decrypted key never crosses IPC; presence only. */
   hasKey: boolean;
 }
@@ -88,6 +119,10 @@ export interface RoleEndpointInput {
   contextWindow?: string;
   /** T79 role constitution; empty clears. */
   systemPrompt?: string;
+  /** T86; omit keeps stored value. */
+  reasoningMode?: RoleReasoningMode;
+  /** T86; omit keeps stored value. */
+  reasoningEffort?: RoleReasoningEffort;
   apiKey?: string;
 }
 export type RolesConfigInput = Record<RoleKey, RoleEndpointInput>;
@@ -97,6 +132,20 @@ export interface RoleConstitutionsFile {
   v: 1;
   at: number;
   roles: Record<RoleKey, string>;
+}
+
+/** T86 — per-role reasoning policy for vibes / OpenAI-compat hosts. */
+export interface RoleReasoningEntry {
+  mode: RoleReasoningMode;
+  effort: RoleReasoningEffort;
+  /** Heretic / Qwen chat marker when effort is set (e.g. `{REASON:xhigh}`). */
+  chatMarker: string;
+}
+
+export interface RoleReasoningFile {
+  v: 1;
+  at: number;
+  roles: Record<RoleKey, RoleReasoningEntry>;
 }
 
 export interface TestConnectionResult {

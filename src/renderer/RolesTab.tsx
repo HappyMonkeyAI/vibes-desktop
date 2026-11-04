@@ -1,17 +1,25 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Input, Message, Modal, Tag } from '@arco-design/web-react';
+import { Button, Input, Message, Modal, Select, Tag } from '@arco-design/web-react';
 import { FullScreen } from '@icon-park/react';
-import type { RoleEndpointInput, RoleKey, RolesConfigView, TestConnectionResult } from '@shared/channels';
+import type {
+  RoleEndpointInput,
+  RoleKey,
+  RoleReasoningEffort,
+  RoleReasoningMode,
+  RolesConfigView,
+  TestConnectionResult,
+} from '@shared/channels';
 import styles from './RolesTab.module.css';
 
 /**
- * T7 / T79 — per-role endpoint configuration. Five forms (default / planner /
- * executor / reviewer / triage), each with base URL, model, context window,
- * optional constitution (system prompt SoT), and an API key field. A saved key
- * never round-trips: the view carries a presence flag, and an empty submitted
- * key means "keep what's stored". Context window maps to vibes' global
- * CONTEXT_WINDOW (executor wins over default). Constitutions write to
- * `.vibes/role-constitutions.json` (child compose is T80).
+ * T7 / T79 / T86 — per-role endpoint configuration. Five forms (default /
+ * planner / executor / reviewer / triage), each with base URL, model, context
+ * window, optional constitution, reasoning mode/effort, and an API key field.
+ * A saved key never round-trips: the view carries a presence flag, and an empty
+ * submitted key means "keep what's stored". Context window maps to vibes'
+ * global CONTEXT_WINDOW (executor wins over default). Constitutions →
+ * `.vibes/role-constitutions.json` (T80 compose). Reasoning →
+ * `.vibes/role-reasoning.json`; executor/default override Runtime THINKING_MODE.
  */
 
 const ROLE_LABELS: Record<RoleKey, string> = {
@@ -37,11 +45,35 @@ type RoleDraft = {
   model: string;
   contextWindow: string;
   systemPrompt: string;
+  reasoningMode: RoleReasoningMode;
+  reasoningEffort: RoleReasoningEffort;
   apiKey: string;
   hasKey: boolean;
 };
 type Draft = Record<RoleKey, RoleDraft>;
-type RoleFieldKey = 'baseUrl' | 'model' | 'contextWindow' | 'systemPrompt' | 'apiKey';
+type RoleFieldKey =
+  | 'baseUrl'
+  | 'model'
+  | 'contextWindow'
+  | 'systemPrompt'
+  | 'reasoningMode'
+  | 'reasoningEffort'
+  | 'apiKey';
+
+const REASONING_MODE_OPTIONS: { value: RoleReasoningMode; label: string }[] = [
+  { value: 'inherit', label: 'Inherit Runtime' },
+  { value: 'on', label: 'On' },
+  { value: 'off', label: 'Off' },
+];
+
+const REASONING_EFFORT_OPTIONS: { value: RoleReasoningEffort; label: string }[] = [
+  { value: 'inherit', label: 'Inherit / unset' },
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'xhigh', label: 'XHigh' },
+  { value: 'einstein', label: 'Einstein (heavy)' },
+  { value: 'spoon', label: 'Spoon / Ultra (max)' },
+];
 
 function toDraft(view: RolesConfigView): Draft {
   const draft = {} as Draft;
@@ -51,6 +83,8 @@ function toDraft(view: RolesConfigView): Draft {
       model: view[role].model,
       contextWindow: view[role].contextWindow ?? '',
       systemPrompt: view[role].systemPrompt ?? '',
+      reasoningMode: view[role].reasoningMode ?? 'inherit',
+      reasoningEffort: view[role].reasoningEffort ?? 'inherit',
       apiKey: '',
       hasKey: view[role].hasKey,
     };
@@ -107,6 +141,34 @@ const RoleFields: React.FC<RoleFieldsProps> = ({ role, draft, inputSize, fieldsC
           Stored per role; vibes runtime budget uses Default / Executor.
         </span>
       )}
+    </div>
+    <div className={styles.field}>
+      <label className={styles.label}>Reasoning</label>
+      <Select
+        value={draft.reasoningMode}
+        onChange={(v) => onChange('reasoningMode', v as RoleReasoningMode)}
+        size={inputSize}
+        options={REASONING_MODE_OPTIONS}
+      />
+      {(role === 'default' || role === 'executor') && (
+        <span className={styles.fieldHint}>
+          Overrides Settings → Runtime THINKING_MODE when not Inherit.
+        </span>
+      )}
+    </div>
+    <div className={styles.field}>
+      <label className={styles.label}>
+        Effort <span className={styles.labelHint}>(Qwen / Heretic)</span>
+      </label>
+      <Select
+        value={draft.reasoningEffort}
+        onChange={(v) => onChange('reasoningEffort', v as RoleReasoningEffort)}
+        size={inputSize}
+        options={REASONING_EFFORT_OPTIONS}
+      />
+      <span className={styles.fieldHint}>
+        Stored in role-reasoning.json; API kwargs need vibes companion.
+      </span>
     </div>
     <div className={`${styles.field} ${styles.fieldFull}`}>
       <label className={styles.label}>
@@ -203,6 +265,8 @@ const RolesTab: React.FC = () => {
           model: draft[role].model,
           contextWindow: draft[role].contextWindow,
           systemPrompt: draft[role].systemPrompt,
+          reasoningMode: draft[role].reasoningMode,
+          reasoningEffort: draft[role].reasoningEffort,
           apiKey: draft[role].apiKey,
         };
       }
@@ -242,10 +306,11 @@ const RolesTab: React.FC = () => {
       <div className={styles.header}>
         <h2 className={styles.title}>Role Endpoints</h2>
         <p className={styles.subtitle}>
-          Configure the base URL, model, context window, optional constitution, and API key for each
-          role. The executor runs on the default endpoint; its context window (or Default&apos;s)
-          becomes vibes&apos; CONTEXT_WINDOW. Constitutions sync to the workspace as
-          <code> .vibes/role-constitutions.json</code> on save/spawn.
+          Configure the base URL, model, context window, reasoning, optional constitution, and API
+          key for each role. The executor runs on the default endpoint; its context window (or
+          Default&apos;s) becomes vibes&apos; CONTEXT_WINDOW. Constitutions sync as
+          <code> .vibes/role-constitutions.json</code>; reasoning as
+          <code> .vibes/role-reasoning.json</code> on save/spawn.
         </p>
       </div>
 
