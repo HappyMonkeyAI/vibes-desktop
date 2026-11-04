@@ -6,6 +6,8 @@
  * The renderer may only touch IPC through the typed surface in src/preload/index.d.ts.
  */
 
+import type { McpRegistryServer } from './mcpRegistry';
+
 /** Ledger status vocabulary — same accents as the wayland-fork mission-control page. */
 export const LEDGER_STATUSES = [
   'running',
@@ -245,15 +247,22 @@ export interface AppSettings {
   /**
    * Optional operator MCP server merged into workspace `.vibes/mcp.json` on spawn
    * (stdio command/args or HTTP URL). Thin registry — not a full marketplace.
+   * @deprecated T83 — prefer `mcpRegistry`; kept for one-release migration.
    */
   customMcpEnabled: boolean;
-  /** mcpServers key (sanitized on write). */
+  /** @deprecated T83 — prefer `mcpRegistry`. */
   customMcpName: string;
+  /** @deprecated T83 — prefer `mcpRegistry`. */
   customMcpCommand: string;
-  /** Whitespace-separated or JSON string array. */
+  /** @deprecated T83 — prefer `mcpRegistry`. */
   customMcpArgs: string;
-  /** When set, writes `{ url }` instead of stdio. */
+  /** @deprecated T83 — prefer `mcpRegistry`. */
   customMcpUrl: string;
+  /**
+   * T83 — multi-server MCP registry (Settings rows + JSON). Enabled entries
+   * merge into workspace `.vibes/mcp.json` on mission spawn.
+   */
+  mcpRegistry: McpRegistryServer[];
   /**
    * Mission runtime knobs → workspace `.vibes/config.json` on spawn (Settings → Runtime).
    * Defaults match vibes ConfigSchema.
@@ -387,7 +396,12 @@ export const channels = {
   missionSteer: 'mission:steer',
   /** Needs-You — resolve pending vibes intervention (retry/skip/fail/reply). */
   missionResolveIntervention: 'mission:resolve-intervention',
+  /** T83 — probe an HTTP MCP server (initialize handshake). */
+  mcpProbe: 'mcp:probe',
 } as const;
+
+export type McpProbeRequest = { url: string };
+export type McpProbeResult = { ok: boolean; error?: string; detail?: string };
 
 export type VoiceAnnounceTestResult = { ok: boolean; error?: string; id?: string };
 export type MissionSteerRequest = { message: string };

@@ -19,7 +19,9 @@ import { resolveDecisionMcpConfig } from '../decision/config';
 import { probeDecisionMcp } from '../decision/probe';
 import { readHarnessLesson } from '../harness/lesson-store';
 import { writeRoleConstitutions } from '../roles/constitutions-writer';
+import { probeHttpMcp } from '../roles/mcp-probe';
 import { announceToDaemon } from '../voice/announce';
+import type { McpProbeRequest } from '@shared/channels';
 
 /** Base64 cap for one voice capture: ~25 MB of audio (the OpenAI transcriptions
  *  limit), far beyond any push-to-talk clip. Guards main-process memory. */
@@ -242,6 +244,12 @@ export function createHandlerTable(options: HandlerTableOptions = {}): Record<Ch
         };
       }
       return probeDecisionMcp(config);
+    },
+    // T83 — HTTP MCP registry probe (initialize handshake, no bearer).
+    [channels.mcpProbe]: async (_e, reqArg) => {
+      const req = reqArg as McpProbeRequest;
+      const url = typeof req?.url === 'string' ? req.url : '';
+      return probeHttpMcp(url);
     },
     // T35 — latest harness lesson for Retry seed (null when absent / bad path).
     [channels.harnessLessonGet]: async (_e, workspaceRootArg) => {

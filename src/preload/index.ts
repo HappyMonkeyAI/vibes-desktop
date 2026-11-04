@@ -20,6 +20,8 @@ import {
   type VoiceTranscribeResult,
   type VoiceWarmResult,
   type DecisionProbeResult,
+  type McpProbeRequest,
+  type McpProbeResult,
   type HarnessLessonView,
   type MissionSteerRequest,
   type MissionSteerResult,
@@ -98,6 +100,9 @@ const api = {
   },
   decision: {
     test: (): Promise<DecisionProbeResult> => ipcRenderer.invoke(channels.decisionTest),
+  },
+  mcp: {
+    probe: (req: McpProbeRequest): Promise<McpProbeResult> => ipcRenderer.invoke(channels.mcpProbe, req),
   },
   harness: {
     latestLesson: (workspaceRoot: string): Promise<HarnessLessonView> =>
