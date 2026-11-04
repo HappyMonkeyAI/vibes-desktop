@@ -101,7 +101,8 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 
 ## P11 — Role constitutions + bookmark research (2026-11-01)
 - [x] T79 Roles constitution SoT: per-role `systemPrompt` in Roles UI → `roles-config.json` + `.vibes/role-constitutions.json` on spawn/save (desktop-only; child compose later) ✅ 2026-11-01
-- [ ] T80 Follow-on: mission overlay patches (`add`/`emphasize`/`forbid`) + Needs You accept + vibes child `constitution ⊕ overlay ⊕ lessons` compose
+- [x] T80a vibes child compose `constitution ⊕ overlay ⊕ lessons` + desktop overlay/lessons writers ✅ 2026-11-04
+- [ ] T80b Needs You accept → write `mission-overlay.json` patches (`add`/`emphasize`/`forbid`) from UI
 - [x] T81 Research note: elephant-goldfish + Anthropic single-agent-loop-kit → harness/verify language (no runtime import) ✅ 2026-11-01 — `.agent/memories/codebase_insights/2026-11-01-elephant-goldfish-single-agent-loop.md`
 - [x] T82 CONTEXT: Wavestone model+harness + no auto-evolve prompt rewrite (ADR-0001) ✅ 2026-11-01
 
@@ -113,6 +114,16 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 ## P13 — Per-role reasoning (2026-11-04)
 - [x] T86 Roles reasoning: per-role mode (inherit/on/off) + effort dropdown → roles store + `.vibes/role-reasoning.json`; executor/default override Runtime `THINKING_MODE` on spawn ✅ 2026-11-04
 - [ ] T87 Follow-on: auto-suggest reasoning effort from role+task (operator-visible recommend → apply; no silent)
+- [ ] T88 Dogfood (VRGallery + Defiant Fable 9B): planner max-task / stack-fence / install-before-evidence — capture harness gaps from live use; no silent auto-evolve
+  - [x] Stack fence merged vibes PR #33 + `wrapToolsWithStackFence`; `node scripts/prove-stack-fence.mjs` green on VRGallery ✅ 2026-11-04
+  - [x] Windows shell: `spawn /bin/bash ENOENT` reported success → merged vibes PR #34 ✅ 2026-11-04 (live npm via ComSpec)
+  - [x] Fence-in-trace: single-task temptation blocked `src/App.tsx` with Stack fence string ✅ 2026-11-04
+  - [x] Goal-judge false-fail on fence-only leaf → vibes PR #35 ✅ 2026-11-04
+  - [x] Goal-judge/evidence `spawn npm ENOENT` on Windows → vibes PR #36 (`npm.cmd` + shell) ✅ 2026-11-04
+  - [x] Live temptation e2e PASS after #34–#36 ✅ 2026-11-04 (~39s)
+  - [ ] Install-before-evidence coach
+  - [x] T80a constitution compose in vibes child ✅ 2026-11-04 (Needs You overlay UI = T80b)
+  - [ ] Headless e2e: terminalize mission on needs-you (else 25m hang)
 
 ## P8 — Part A (harness / memory research → product)
 - [x] T29 Decision spike (probe): LAN **KEV MCP** `http://192.168.5.157:8765/mcp` — list_models + triage `kev_evaluate` (escalate ~4.5s) + shadow `kev_select_tool` (~80ms). APIs `:8008`/`:8009` not LAN-published (localhost on host). Notes in `2026-10-20-decision-model-kev-gutsy.md` ✅ 2026-10-20

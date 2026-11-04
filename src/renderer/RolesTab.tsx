@@ -252,8 +252,8 @@ const RoleFields: React.FC<RoleFieldsProps> = ({ role, draft, inputSize, fieldsC
         )}
       </summary>
       <p className={styles.fieldHint}>
-        Operator-owned source of truth for this role. Mission overlays (T80) may
-        refine a task but cannot rewrite this constitution.
+        Operator-owned source of truth for this role. Mission overlays may
+        refine a task (add/emphasize/forbid) but cannot rewrite this constitution.
       </p>
       <Input.TextArea
         placeholder="You are the planner: break the mission into verifiable steps…"

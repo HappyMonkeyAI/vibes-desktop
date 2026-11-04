@@ -145,11 +145,32 @@ export interface RoleEndpointInput {
 }
 export type RolesConfigInput = Record<RoleKey, RoleEndpointInput>;
 
-/** T79 — workspace sibling file for vibes child to read later (compose is T80). */
+/** T79 — workspace sibling file; vibes child composes in T80. */
 export interface RoleConstitutionsFile {
   v: 1;
   at: number;
   roles: Record<RoleKey, string>;
+}
+
+/** T80 — mission overlay patch ops (refine only; cannot rewrite constitution). */
+export type MissionOverlayOp = 'add' | 'emphasize' | 'forbid';
+
+export interface MissionOverlayPatch {
+  op: MissionOverlayOp;
+  text: string;
+}
+
+export interface MissionOverlayFile {
+  v: 1;
+  at: number;
+  patches: MissionOverlayPatch[];
+}
+
+/** T80 — per-role lessons sibling for vibes compose. */
+export interface RoleLessonsFile {
+  v: 1;
+  at: number;
+  roles: Record<RoleKey, string[]>;
 }
 
 /** T86 — per-role reasoning policy for vibes / OpenAI-compat hosts. */
