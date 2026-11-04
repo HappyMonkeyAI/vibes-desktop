@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-11-04 — T85 role MCP policy activation (vibes)
+
+**Done:** Vibes reads desktop `.vibes/role-mcp-policy.json` via `applyRoleToolPolicy` / `buildMissionTools`. MCP server + TUI mission paths share the filtered catalogue (server/tool allowlists + budget; builtins first). Wired MCP/plugin tools into `mcp/server.ts` (previously builtins-only). Unit tests in `tests/role-mcp-policy.test.mjs` (4/4).
+
+**Evidence:** vibes `node --test tests/role-mcp-policy.test.mjs`; desktop docs/TASKS updated.
+
+**Next:** Land vibes PR `ag/t85-role-mcp-policy` + desktop docs PR; optional Defiant Fable mission; Needs-You; CSC.
+
+---
+
 ## 2026-11-04 — T84 per-role MCP/tool policy
 
 **Done:** Roles → MCP tools policy: server allowlist, tool allowlist, tool budget (auto from context window via `suggestToolBudget` or manual). Persist in Roles store; write `.vibes/role-mcp-policy.json` on save/spawn. Does **not** rewrite `mcp.json` (no auto-apply). T85 remains for vibes/DynamicMCPProxy activation.

@@ -201,8 +201,8 @@ const RoleFields: React.FC<RoleFieldsProps> = ({ role, draft, inputSize, fieldsC
         )}
       </summary>
       <p className={styles.fieldHint}>
-        Allowlists write to <code>.vibes/role-mcp-policy.json</code> only — they do not
-        rewrite <code>mcp.json</code>. T85 activates filtering in the vibes child.
+        Allowlists write to <code>.vibes/role-mcp-policy.json</code> (do not rewrite{' '}
+        <code>mcp.json</code>). Vibes applies them when building the mission tool catalogue.
       </p>
       <div className={styles.field}>
         <label className={styles.label}>Server allowlist</label>

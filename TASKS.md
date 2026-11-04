@@ -108,7 +108,7 @@ Status: `todo` → `doing` → `review` → `done`. One task per line; evidence 
 ## P12 — MCP registry + small-model tool budget (2026-11-04)
 - [x] T83 MCP registry UX: multi-server rows + JSON editor + HTTP probe/errors → `.vibes/mcp.json` (desktop Settings; migrate single customMcp*) ✅ 2026-11-04 (PR #31)
 - [x] T84 Per-role MCP/tool allowlist + tool budget from Roles context window (policy file; no auto-apply) ✅ 2026-11-04
-- [ ] T85 Vibes/DynamicMCPProxy activation: task+role handshake filters tools before model sees catalogue (small-LLM critical)
+- [x] T85 Vibes/DynamicMCPProxy activation: task+role handshake filters tools before model sees catalogue (small-LLM critical) ✅ 2026-11-04 — vibes `ag/t85-role-mcp-policy` reads `.vibes/role-mcp-policy.json`
 
 ## P13 — Per-role reasoning (2026-11-04)
 - [x] T86 Roles reasoning: per-role mode (inherit/on/off) + effort dropdown → roles store + `.vibes/role-reasoning.json`; executor/default override Runtime `THINKING_MODE` on spawn ✅ 2026-11-04
