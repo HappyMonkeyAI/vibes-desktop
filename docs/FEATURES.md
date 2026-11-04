@@ -56,7 +56,7 @@ One-shot persist (dev): `KEV_MCP_URL=… KEV_MCP_AUTH_TOKEN=… npx electron scr
 
 ### Mission MCP tools
 
-Toggle **HTML Design Advisor**, plus a **multi-server MCP registry** (rows with enable/edit/remove, HTTP Probe, and Edit-as-JSON for a Cursor-style `mcpServers` object). Enabled servers merge into workspace `.vibes/mcp.json` on spawn. Legacy single custom MCP Settings migrate into the registry. Per-role **MCP/tool allowlists + tool budget** (Roles → MCP tools; from context window or manual) write `.vibes/role-mcp-policy.json` on save/spawn — policy only, no auto-apply to the catalogue (T85 activates filters).
+Toggle **HTML Design Advisor**, plus a **multi-server MCP registry** (rows with enable/edit/remove, HTTP Probe, and Edit-as-JSON for a Cursor-style `mcpServers` object). Enabled servers merge into workspace `.vibes/mcp.json` on spawn. Legacy single custom MCP Settings migrate into the registry. Per-role **MCP/tool allowlists + tool budget** (Roles → MCP tools; from context window or manual) write `.vibes/role-mcp-policy.json` on save/spawn. Vibes **T85** loads that policy on mission start (`buildMissionTools`): server/tool allowlists + budget (builtins kept before MCP) before the model sees the catalogue.
 
 ### Voice
 
