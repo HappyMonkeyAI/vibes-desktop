@@ -2,6 +2,16 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-11-04 — Live Defiant Fable + T85 tool budget
+
+**Done:** Live mission smoke against Unsloth `.5.157` Defiant Fable Q6_K with `VIBES_LIVE_TOOL_BUDGET=6`. Harness: `scripts/live-t85-defiant.mjs` (Settings token → env) + live e2e accepts `VIBES_LIVE_API_KEY` / writes `role-mcp-policy.json`.
+
+**Evidence:** `npx electron scripts/live-t85-defiant.mjs` → `plans, executes` **1 passed** (~17s); hello.txt path green.
+
+**Next:** Needs-You UI re-drill; CSC signing; optional commit of live harness.
+
+---
+
 ## 2026-11-04 — T85 role MCP policy activation (vibes)
 
 **Done:** Vibes reads desktop `.vibes/role-mcp-policy.json` via `applyRoleToolPolicy` / `buildMissionTools`. MCP server + TUI mission paths share the filtered catalogue (server/tool allowlists + budget; builtins first). Wired MCP/plugin tools into `mcp/server.ts` (previously builtins-only). Unit tests in `tests/role-mcp-policy.test.mjs` (4/4).

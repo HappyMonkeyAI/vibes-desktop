@@ -5,6 +5,7 @@ import path from 'node:path';
 import { LedgerStore } from '../src/main/ledger/store';
 import { createMissionService, type MissionService } from '../src/main/mission/service';
 import { writeVibesConfig } from '../src/main/roles/config-writer';
+import { writeRoleMcpPolicy } from '../src/main/roles/mcp-policy-writer';
 import type { RolesConfigInput } from '@shared/channels';
 
 /**
@@ -23,6 +24,8 @@ const EXECUTOR_ORIGIN = (process.env.VIBES_LIVE_EXECUTOR_URL ?? 'http://127.0.0.
 const EXECUTOR_MODEL = process.env.VIBES_LIVE_EXECUTOR_MODEL ?? 'google/gemma-4-e2b';
 const REVIEWER_BASE = (process.env.VIBES_LIVE_REVIEWER_URL ?? 'http://127.0.0.1:1234/v1').replace(/\/$/, '');
 const REVIEWER_MODEL = process.env.VIBES_LIVE_REVIEWER_MODEL ?? 'google/gemma-4-e2b';
+const LIVE_API_KEY = (process.env.VIBES_LIVE_API_KEY ?? '').trim();
+const LIVE_TOOL_BUDGET = (process.env.VIBES_LIVE_TOOL_BUDGET ?? '').trim();
 const VIBES_CHECKOUT = process.env.VIBES_PATH || 'C:/Users/steph/Documents/development/vibes';
 
 const MISSION_TIMEOUT_MS = 8 * 60_000;
@@ -41,16 +44,48 @@ function makeWorkspace(input: RolesConfigInput, extras: Record<string, string> =
   // Minimize child side-features (memory/codex/hooks) that aren't under test.
   const configPath = path.join(dir, '.vibes', 'config.json');
   const current = JSON.parse(readFileSync(configPath, 'utf-8')) as Record<string, string>;
-  Object.assign(current, { MEMORY_ENABLED: 'false', CODEX_ENABLED: 'false', AGENT_HOOKS: 'false' }, extras);
+  Object.assign(current, {
+    MEMORY_ENABLED: 'false',
+    CODEX_ENABLED: 'false',
+    AGENT_HOOKS: 'false',
+    THINKING_MODE: 'enabled',
+    MAX_STEPS: '12',
+    ENABLE_REVIEWER: 'false',
+    ENABLE_ADVERSARIAL_AUDIT: 'false',
+    ENABLE_DOUBLE_CHECK_COMPLETION: 'false',
+  }, extras);
   writeFileSync(configPath, JSON.stringify(current, null, 2), 'utf-8');
+  // T85 — optional tight budget for small-model Defiant Fable drills.
+  if (LIVE_TOOL_BUDGET) {
+    writeRoleMcpPolicy(dir, {
+      ...input,
+      default: {
+        ...input.default,
+        contextWindow: input.default.contextWindow || '32768',
+        mcpToolBudget: LIVE_TOOL_BUDGET,
+      },
+      executor: {
+        ...input.executor,
+        contextWindow: input.executor.contextWindow || input.default.contextWindow || '32768',
+        mcpToolBudget: LIVE_TOOL_BUDGET,
+      },
+    });
+  }
   return dir;
 }
 
 function executorOnly(): RolesConfigInput {
   // Bare origin on purpose: writeVibesConfig must append /v1 (the URL bug
   // that made every mission 404-and-"done" in milliseconds).
+  const key = LIVE_API_KEY;
   return {
-    default: { baseUrl: EXECUTOR_ORIGIN, model: EXECUTOR_MODEL, apiKey: '' },
+    default: {
+      baseUrl: EXECUTOR_ORIGIN,
+      model: EXECUTOR_MODEL,
+      contextWindow: '32768',
+      mcpToolBudget: LIVE_TOOL_BUDGET || '',
+      apiKey: key,
+    },
     planner: { baseUrl: '', model: '', apiKey: '' },
     executor: { baseUrl: '', model: '', apiKey: '' },
     reviewer: { baseUrl: '', model: '', apiKey: '' },
@@ -72,8 +107,9 @@ async function waitForMissionRow(store: LedgerStore, request: string, timeoutMs:
 describe.runIf(process.env.VIBES_LIVE === '1')('live mission smoke (real child + real LLM)', () => {
   beforeAll(async () => {
     // Preflight: fail fast with a clear message instead of a 10-minute timeout.
+    const headers = LIVE_API_KEY ? { Authorization: `Bearer ${LIVE_API_KEY}` } : undefined;
     for (const url of [`${EXECUTOR_ORIGIN}/v1/models`, `${REVIEWER_BASE}/models`]) {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) }).catch((e) => {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000), headers }).catch((e) => {
         throw new Error(`endpoint unreachable: ${url} — ${e.message}`);
       });
       expect(res.ok, `endpoint ${url} responded ${res.status}`).toBe(true);
