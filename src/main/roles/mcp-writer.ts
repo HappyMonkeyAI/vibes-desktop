@@ -130,11 +130,15 @@ export function customMcpServerConfig(opts: {
 /**
  * Upsert or remove desktop-owned MCP entries. Returns path written, or null.
  * Refuses non-absolute workspace roots (same rule as writeVibesConfig).
+ *
+ * T83: `customs` may be a list (registry). A single `custom` remains supported.
+ * Desktop-managed keys from a previous write are replaced via `managedKeys`.
  */
 export function writeVibesMcpJson(
   workspaceRoot: string,
   advisor: HtmlDesignAdvisorMcpOptions,
-  custom?: CustomMcpOptions | null,
+  custom?: CustomMcpOptions | CustomMcpOptions[] | null,
+  opts?: { managedKeys?: string[] },
 ): string | null {
   if (!workspaceRoot || !path.isAbsolute(workspaceRoot)) return null;
   const target = vibesMcpPath(workspaceRoot);
@@ -149,17 +153,26 @@ export function writeVibesMcpJson(
       delete file.mcpServers[HTML_DESIGN_ADVISOR_KEY];
     }
 
-    if (custom) {
-      const name = sanitizeMcpServerName(custom.name);
-      const prev = custom.previousName ? sanitizeMcpServerName(custom.previousName) : '';
+    const customs = custom == null ? [] : Array.isArray(custom) ? custom : [custom];
+    const managed = new Set(
+      (opts?.managedKeys ?? []).map(sanitizeMcpServerName).filter(Boolean),
+    );
+    for (const c of customs) {
+      managed.add(sanitizeMcpServerName(c.name));
+      if (c.previousName) managed.add(sanitizeMcpServerName(c.previousName));
+    }
+    for (const key of managed) {
+      if (key === HTML_DESIGN_ADVISOR_KEY) continue;
+      delete file.mcpServers[key];
+    }
+
+    for (const c of customs) {
+      const name = sanitizeMcpServerName(c.name);
+      const prev = c.previousName ? sanitizeMcpServerName(c.previousName) : '';
       if (prev && prev !== name) delete file.mcpServers[prev];
-      if (custom.enabled) {
-        const entry = customMcpServerConfig(custom);
-        if (entry) file.mcpServers[name] = entry;
-        else delete file.mcpServers[name];
-      } else {
-        delete file.mcpServers[name];
-      }
+      if (!c.enabled) continue;
+      const entry = customMcpServerConfig(c);
+      if (entry) file.mcpServers[name] = entry;
     }
 
     mkdirSync(path.dirname(target), { recursive: true });

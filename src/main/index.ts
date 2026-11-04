@@ -106,21 +106,34 @@ app.whenReady().then(() => {
       });
       // T79 — constitutions are not env keys; sibling file for vibes compose (T80).
       writeRoleConstitutions(workspaceRoot, rolesInput);
-      writeVibesMcpJson(
-        workspaceRoot,
-        {
-          enabled: settings.htmlDesignAdvisorEnabled,
-          pythonCommand: settings.htmlDesignAdvisorPython || 'python',
-          workspace: settings.htmlDesignAdvisorWorkspace || undefined,
-        },
-        {
-          enabled: settings.customMcpEnabled,
-          name: settings.customMcpName,
-          command: settings.customMcpCommand,
-          args: settings.customMcpArgs,
-          url: settings.customMcpUrl,
-        },
-      );
+      {
+        const registry = settings.mcpRegistry?.length
+          ? settings.mcpRegistry
+          : [{
+              id: 'legacy-custom',
+              name: settings.customMcpName,
+              enabled: settings.customMcpEnabled,
+              command: settings.customMcpCommand,
+              args: settings.customMcpArgs,
+              url: settings.customMcpUrl,
+            }];
+        writeVibesMcpJson(
+          workspaceRoot,
+          {
+            enabled: settings.htmlDesignAdvisorEnabled,
+            pythonCommand: settings.htmlDesignAdvisorPython || 'python',
+            workspace: settings.htmlDesignAdvisorWorkspace || undefined,
+          },
+          registry.map((row) => ({
+            enabled: row.enabled,
+            name: row.name,
+            command: row.command,
+            args: row.args,
+            url: row.url,
+          })),
+          { managedKeys: registry.map((row) => row.name) },
+        );
+      }
       const llmEnv: Record<string, string> = {};
       if (decision) {
         llmEnv.KEV_MCP_URL = decision.url;

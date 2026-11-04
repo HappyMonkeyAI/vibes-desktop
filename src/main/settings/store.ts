@@ -1,6 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { AppSettings, AppSettingsSaveInput, SpeechEngine } from '@shared/channels';
+import {
+  emptyMcpRegistryServer,
+  migrateLegacyCustomMcp,
+  type McpRegistryServer,
+} from '@shared/mcpRegistry';
 import { ENC_PREFIX, decryptKey, encryptKey, type Cipher } from '../roles/store';
 
 /**
@@ -41,6 +46,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customMcpCommand: '',
   customMcpArgs: '',
   customMcpUrl: '',
+  mcpRegistry: [],
   // Vibes ConfigSchema defaults — written to workspace .vibes/config.json on spawn.
   maxSteps: 25,
   maxConcurrentTasks: 1,
@@ -83,6 +89,62 @@ function asString(value: unknown): string {
 function asEngine(value: unknown): SpeechEngine {
   if (value === 'server' || value === 'yapsnap' || value === 'builtin') return value;
   return 'builtin';
+}
+
+function parseRegistryRow(raw: unknown, index: number): McpRegistryServer | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  return emptyMcpRegistryServer({
+    id: asString(row.id) || `mcp-${index}`,
+    name: asString(row.name) || `server-${index}`,
+    enabled: typeof row.enabled === 'boolean' ? row.enabled : false,
+    url: asString(row.url),
+    command: asString(row.command),
+    args: asString(row.args),
+    lastProbeOk: typeof row.lastProbeOk === 'boolean' ? row.lastProbeOk : row.lastProbeOk === null ? null : null,
+    lastProbeError: asString(row.lastProbeError) || undefined,
+    lastProbedAt: typeof row.lastProbedAt === 'number' ? row.lastProbedAt : undefined,
+  });
+}
+
+/** Prefer persisted mcpRegistry; else migrate legacy single customMcp* fields. */
+export function resolveMcpRegistry(raw: Record<string, unknown>): McpRegistryServer[] {
+  if (Array.isArray(raw.mcpRegistry)) {
+    return raw.mcpRegistry
+      .map((row, i) => parseRegistryRow(row, i))
+      .filter((row): row is McpRegistryServer => row !== null);
+  }
+  return migrateLegacyCustomMcp({
+    enabled: typeof raw.customMcpEnabled === 'boolean' ? raw.customMcpEnabled : false,
+    name: asString(raw.customMcpName) || 'desktop-custom',
+    command: asString(raw.customMcpCommand),
+    args: asString(raw.customMcpArgs),
+    url: asString(raw.customMcpUrl),
+  });
+}
+
+/** Keep deprecated customMcp* in sync with the first registry row (compat). */
+function mirrorLegacyCustom(registry: McpRegistryServer[]): Pick<
+  AppSettings,
+  'customMcpEnabled' | 'customMcpName' | 'customMcpCommand' | 'customMcpArgs' | 'customMcpUrl'
+> {
+  const first = registry[0];
+  if (!first) {
+    return {
+      customMcpEnabled: false,
+      customMcpName: 'desktop-custom',
+      customMcpCommand: '',
+      customMcpArgs: '',
+      customMcpUrl: '',
+    };
+  }
+  return {
+    customMcpEnabled: first.enabled,
+    customMcpName: first.name || 'desktop-custom',
+    customMcpCommand: first.command,
+    customMcpArgs: first.args,
+    customMcpUrl: first.url,
+  };
 }
 
 /** Decrypt a stored secret; tolerate enc: prefix, legacy ciphertext, or plaintext. */
@@ -225,6 +287,7 @@ export class SettingsStore {
       customMcpCommand: asString(raw.customMcpCommand),
       customMcpArgs: asString(raw.customMcpArgs),
       customMcpUrl: asString(raw.customMcpUrl),
+      mcpRegistry: resolveMcpRegistry(raw),
       maxSteps: asPositiveInt(raw.maxSteps, DEFAULT_SETTINGS.maxSteps),
       maxConcurrentTasks: asPositiveInt(raw.maxConcurrentTasks, DEFAULT_SETTINGS.maxConcurrentTasks),
       yoloMode: asBool(raw.yoloMode, DEFAULT_SETTINGS.yoloMode),
@@ -306,14 +369,26 @@ export class SettingsStore {
         htmlDesignAdvisorWorkspace: asString(
           input.htmlDesignAdvisorWorkspace ?? currentView.htmlDesignAdvisorWorkspace,
         ),
-        customMcpEnabled: typeof input.customMcpEnabled === 'boolean'
-          ? input.customMcpEnabled
-          : currentView.customMcpEnabled,
-        customMcpName: asString(input.customMcpName ?? currentView.customMcpName)
-          || DEFAULT_SETTINGS.customMcpName,
-        customMcpCommand: asString(input.customMcpCommand ?? currentView.customMcpCommand),
-        customMcpArgs: asString(input.customMcpArgs ?? currentView.customMcpArgs),
-        customMcpUrl: asString(input.customMcpUrl ?? currentView.customMcpUrl),
+        ...(() => {
+          const mcpRegistry = Array.isArray(input.mcpRegistry)
+            ? input.mcpRegistry
+              .map((row, i) => parseRegistryRow(row, i))
+              .filter((row): row is McpRegistryServer => row !== null)
+            : currentView.mcpRegistry;
+          const legacy = Array.isArray(input.mcpRegistry)
+            ? mirrorLegacyCustom(mcpRegistry)
+            : {
+                customMcpEnabled: typeof input.customMcpEnabled === 'boolean'
+                  ? input.customMcpEnabled
+                  : currentView.customMcpEnabled,
+                customMcpName: asString(input.customMcpName ?? currentView.customMcpName)
+                  || DEFAULT_SETTINGS.customMcpName,
+                customMcpCommand: asString(input.customMcpCommand ?? currentView.customMcpCommand),
+                customMcpArgs: asString(input.customMcpArgs ?? currentView.customMcpArgs),
+                customMcpUrl: asString(input.customMcpUrl ?? currentView.customMcpUrl),
+              };
+          return { mcpRegistry, ...legacy };
+        })(),
         maxSteps: asPositiveInt(input.maxSteps ?? currentView.maxSteps, DEFAULT_SETTINGS.maxSteps),
         maxConcurrentTasks: asPositiveInt(
           input.maxConcurrentTasks ?? currentView.maxConcurrentTasks,

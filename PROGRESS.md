@@ -2,6 +2,34 @@
 
 Newest first. Each entry: date, what was done, evidence, what's next, open questions.
 
+## 2026-11-04 — T83 MCP registry UX
+
+**Done:** Settings → Mission MCP tools is a multi-server registry (rows, modal edit, Edit-as-JSON, HTTP probe via `mcp:probe`). Persists `mcpRegistry` (migrates legacy `customMcp*`). Spawn writes all enabled servers into `.vibes/mcp.json` with managed-key cleanup. Filed T84 (role allowlist/budget) + T85 (vibes/proxy activation) as follow-ons for small-LLM tool soup.
+
+**Evidence:** typecheck; `mcp-registry` / `mcp-writer` / ipc-parity tests; full `npm test`.
+
+**Next:** T84/T85 when ready; Needs-You UI drill retry; CSC.
+
+---
+
+## 2026-11-01 — Needs-You UI live drill (attempt)
+
+**Done:** Merged #30. Attempted T50b CDP Needs-You drill against Unsloth with app on `:9223`.
+
+**Result:** Decision MCP still green; full Needs-You UI path **not closed**.
+
+| Attempt | Outcome |
+|---------|---------|
+| 1 | Executor on dead Cloudflare tunnel → vibes scheduler deadlock; mission failed 0/1 without intervention |
+| 2 | Retargeted executor URL to `:8888` but kept stale key → run `401 Invalid or expired API key` |
+| 3 | Copied planner Studio key → default/executor; AgentWorld mission stayed `running` ~25m with no `needsHuman` / terminal status; stopped via bridge |
+
+**Helpers:** `scripts/t50b-fix-roles.mjs`, `scripts/t50b-copy-planner-key.mjs` (local drill only).
+
+**Open:** Re-run Needs-You with a faster executor model (or shorter MAX_STEPS) once AgentWorld is responsive; confirm completion-gate / Decision escalate sets `needsHuman` + Skip step. CSC still open.
+
+---
+
 ## 2026-11-01 — T62 Decision live smoke (Unsloth :8888)
 
 **Done:** Unsloth Studio `http://192.168.5.157:8888/mcp/` reachable. Settings already held Studio URL + `sk-unsloth…`. Added `scripts/decision-live-from-settings.mjs` (decrypt Settings token → probe `system_one` → `npm run test:decision-live`). Live shadow **2/2 pass**. Repo `.env` still points classic KEV `:8765` (timed out) — use Settings / this script for Studio.
